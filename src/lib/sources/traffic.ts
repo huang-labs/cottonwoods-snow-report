@@ -2,7 +2,7 @@ import { denverToUtc } from "../time";
 import type { TravelSegment, TravelTimesPayload, Webcam, WebcamsPayload } from "../types";
 import { decodeEntities } from "../metric";
 import { UDOT_CC_URL } from "./roads";
-import { assertValid, type SourceDefinition } from "./types";
+import { assertValid, MINUTE, type SourceDefinition } from "./types";
 
 export const TRAVEL_LAYER =
   "https://services.arcgis.com/pA2nEVnB6tquxgOW/arcgis/rest/services/CC_Routes_TT/FeatureServer/0";
@@ -71,6 +71,8 @@ export function parseTravelTimes(
 
 export const travelTimesSource: SourceDefinition<TravelTimesPayload> = {
   id: "traveltimes",
+  // The travel-time layer is not live (see docs); no need to poll it every run.
+  intervalMs: 15 * MINUTE,
   label: "Canyon travel times",
   category: "travel-times",
   required: false,

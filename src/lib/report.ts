@@ -1,5 +1,5 @@
 import { SOURCES } from "./sources";
-import type { SourceDefinition } from "./sources/types";
+import { CRON_INTERVAL_MS, type SourceDefinition } from "./sources/types";
 import type { ApiSource, Freshness, ReportResponse, Snapshot, SourceId, SourceRecord } from "./types";
 
 export const COLLECTION_INTERVAL_MIN = 5;
@@ -9,8 +9,16 @@ export const COLLECTION_INTERVAL_MIN = 5;
  */
 export const STALE_AFTER_MS = 22 * 60_000;
 
+/**
+ * Stale threshold for a source: four missed runs plus KV propagation at the
+ * 5-minute cadence, extended by a slower source's own collection interval.
+ */
+export function staleAfterMs(def: Pick<SourceDefinition, "intervalMs">): number {
+  return STALE_AFTER_MS + Math.max(0, (def.intervalMs ?? CRON_INTERVAL_MS) - CRON_INTERVAL_MS);
+}
+
 export function classify(
-  def: Pick<SourceDefinition, "reportMaxAgeMs">,
+  def: Pick<SourceDefinition, "reportMaxAgeMs" | "intervalMs">,
   rec: SourceRecord | undefined,
   now: Date,
 ): { freshness: Freshness; note: string } {
@@ -21,7 +29,7 @@ export function classify(
     };
   }
   const sinceSuccess = now.getTime() - Date.parse(rec.lastSuccessfulFetchAt);
-  if (sinceSuccess > STALE_AFTER_MS) {
+  if (sinceSuccess > staleAfterMs(def)) {
     return {
       freshness: "stale",
       note: `Collection failing${rec.consecutiveFailures ? ` (${rec.consecutiveFailures} consecutive failures)` : ""}; showing last successful data`,
