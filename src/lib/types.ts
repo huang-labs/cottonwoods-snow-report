@@ -61,6 +61,8 @@ export interface Snapshot {
   /** Time the collector last wrote the snapshot, ISO UTC. */
   writtenAt: string;
   sources: Partial<Record<SourceId, SourceRecord>>;
+  /** AI resort pick and its scheduling state. Absent until the AI binding is configured. */
+  recommendation?: RecommendationState;
 }
 
 export type SourceId =
@@ -316,6 +318,71 @@ export interface ResortCamsPayload {
   streamTitles: Record<string, string>;
 }
 
+// ---------- AI recommendation ----------
+
+export type CanyonId = "LCC" | "BCC";
+
+/**
+ * Road state of one canyon, derived in code from road notices and signs.
+ * "closed-expected-open" = closed now with a published (re)opening time.
+ */
+export type CanyonState = "open" | "closed-expected-open" | "closed" | "interlodge" | "unknown";
+
+export interface CanyonStatus {
+  canyon: CanyonId;
+  state: CanyonState;
+  /** Published (re)opening time while closed, ISO UTC. */
+  expectedOpenAt: string | null;
+  /** Announced upcoming closure (e.g. "will close at 10 PM"), ISO UTC when a time is given. */
+  closureAnnounced: { text: string; at: string | null } | null;
+  /** Traction / chain restrictions currently posted. */
+  restrictions: string[];
+  /** Road texts the state was derived from (seasonal gate notices excluded). */
+  evidence: string[];
+}
+
+export type RecommendationMode = "storm" | "fair";
+
+export interface Recommendation {
+  /** Denver calendar date (YYYY-MM-DD) the pick is for: today before 2 PM, tomorrow after. */
+  targetDate: string;
+  mode: RecommendationMode;
+  /** null = explicit "no pick". */
+  pick: PrimaryResortId | null;
+  /** One-line strategy, e.g. "Line up at the LCC mouth by 8:00 for the 9:30 opening". */
+  plan: string;
+  headline: string;
+  reasons: string[];
+  caveats: string[];
+  runnerUp: PrimaryResortId | null;
+  generatedAt: string;
+  /** Model id, or null for a rule-based "no pick" (no LLM call). */
+  model: string | null;
+  /** Why this update ran (scheduling trigger). */
+  trigger: string;
+}
+
+export interface RecommendationState {
+  current: Recommendation | null;
+  lastAttemptAt: string | null;
+  lastError: string | null;
+  consecutiveFailures: number;
+  /** Inputs of the current recommendation, for change detection (see recommend/schedule.ts). */
+  fingerprint: string | null;
+  criticalKey: string | null;
+  /** Reserved model requests per Denver day (two per attempt), for the daily cap. */
+  calls: { date: string; count: number };
+  /** Last time each resort was seen with lifts running (season detection). */
+  resortLastOperatingAt: Partial<Record<PrimaryResortId, string>>;
+}
+
+export interface ApiRecommendation extends Recommendation {
+  /** The pick is for a past day, or has not been refreshed for too long. */
+  outdated: boolean;
+  /** Recent update attempts are failing (the last good pick is still shown). */
+  failing: boolean;
+}
+
 // ---------- API response ----------
 
 export type Freshness =
@@ -347,4 +414,6 @@ export interface ReportResponse {
   sources: Record<SourceId, ApiSource>;
   /** Missing required sources — a v1 release blocker if persistently non-empty. */
   requiredMissing: SourceId[];
+  /** AI resort pick; null until one has been generated. */
+  recommendation: ApiRecommendation | null;
 }

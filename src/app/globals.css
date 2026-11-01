@@ -95,6 +95,18 @@ button, select { font: inherit; color: inherit; }
 .report-time { font-size: 1.05em; }
 .legend { color: var(--muted); font-size: 0.9em; margin: 0; }
 .legend .metric__missing, .legend .metric__na { font-size: 1em; }
+.badge--ai { color: var(--accent); background: rgba(124, 196, 255, 0.15); margin-left: 0.5em; }
+.row--recommended { background: rgba(124, 196, 255, 0.05); }
+.recommendation { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 0.6em; padding: 0.85em 1.2em; }
+.recommendation__heading { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5em 1.5em; flex-wrap: wrap; }
+.recommendation__eyebrow { color: var(--accent); font-weight: 600; }
+.recommendation h2 { font-size: 1.6em; margin: 0.25em 0; }
+.recommendation__plan { margin: 0.2em 0; font-weight: 600; }
+.recommendation__reasons { display: flex; flex-wrap: wrap; gap: 0.2em 2em; padding-left: 1.2em; margin: 0.4em 0; }
+.recommendation__reasons li { flex: 1 1 15em; }
+.recommendation__caveats { color: var(--warn); margin: 0.4em 0; }
+.recommendation--outdated { border-left-color: var(--warn); }
+.slide--regional { overflow-y: auto; }
 
 /* ---- resort ---- */
 .resort-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.15fr 1fr 0.85fr; gap: 1.2em; }

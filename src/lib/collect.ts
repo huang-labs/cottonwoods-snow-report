@@ -1,10 +1,11 @@
 import { createFetchContext, type CollectorSecrets } from "./http";
+import { planRecommendation, type RecommendationPlan, type RecommendEnv } from "./recommend";
 import { SOURCES } from "./sources";
 import { MINUTE, type SourceDefinition } from "./sources/types";
 import { readSnapshot, writeSnapshot, type KVLike } from "./store";
 import type { Snapshot, SourceId, SourceRecord } from "./types";
 
-export interface CollectorEnv extends CollectorSecrets {
+export interface CollectorEnv extends CollectorSecrets, RecommendEnv {
   SNOW_KV: KVLike;
 }
 
@@ -14,6 +15,8 @@ export interface CollectOptions {
   fetchImpl?: typeof fetch;
   /** Restrict to specific sources (manual runs). */
   only?: SourceId[];
+  /** Ask the model regardless of its schedule (manual runs). */
+  forceRecommendation?: boolean;
 }
 
 export interface CollectSummary {
@@ -22,6 +25,8 @@ export interface CollectSummary {
   results: Array<{ id: SourceId; ok: boolean; error?: string; ms: number }>;
   /** Sources not due this run (collected recently; see SourceDefinition.intervalMs). */
   skipped: SourceId[];
+  /** Recommendation outcome this run, when the AI binding is configured. */
+  recommendation?: { generatedAt: string | null; model: string | null; trigger: string | null; error: string | null };
 }
 
 /**
@@ -123,7 +128,25 @@ export async function runCollection(env: CollectorEnv, opts: CollectOptions = {}
     if (prev) snapshot.sources[def.id] = prev;
   }
   for (const { rec } of records) snapshot.sources[rec.id] = rec;
+  // The recommendation is derived from the fresh sources. Its bookkeeping goes
+  // into the same KV put; a model call (a few times an hour at most) waits until
+  // the source data is stored, then costs one more put.
+  let plan: RecommendationPlan | undefined;
+  try {
+    plan = planRecommendation(previous?.recommendation, snapshot, env, now, { force: opts.forceRecommendation });
+  } catch (err) {
+    console.error("recommendation: failed", err);
+  }
+  const carried = plan?.state ?? previous?.recommendation;
+  if (carried) snapshot.recommendation = carried;
+  snapshot.writtenAt = new Date().toISOString();
   await writeSnapshot(env.SNOW_KV, snapshot);
+  if (plan?.run) {
+    snapshot.recommendation = await plan.run();
+    await writeSnapshot(env.SNOW_KV, snapshot);
+  }
+  const ai = snapshot.recommendation;
+  const updatedNow = ai?.current?.generatedAt === now.toISOString();
   return {
     startedAt: now.toISOString(),
     durationMs: Date.now() - started,
@@ -134,5 +157,15 @@ export async function runCollection(env: CollectorEnv, opts: CollectOptions = {}
       ms,
     })),
     skipped,
+    ...(ai
+      ? {
+          recommendation: {
+            generatedAt: ai.current?.generatedAt ?? null,
+            model: updatedNow ? (ai.current?.model ?? null) : null,
+            trigger: updatedNow ? (ai.current?.trigger ?? null) : null,
+            error: ai.lastAttemptAt === now.toISOString() ? ai.lastError : null,
+          },
+        }
+      : {}),
   };
 }

@@ -1,6 +1,7 @@
 import { SOURCES } from "./sources";
 import { CRON_INTERVAL_MS, type SourceDefinition } from "./sources/types";
-import type { ApiSource, Freshness, ReportResponse, Snapshot, SourceId, SourceRecord } from "./types";
+import { targetFor } from "./recommend/digest";
+import type { ApiRecommendation, ApiSource, Freshness, RecommendationState, ReportResponse, Snapshot, SourceId, SourceRecord } from "./types";
 
 export const COLLECTION_INTERVAL_MIN = 5;
 /**
@@ -61,6 +62,21 @@ function publicRecord(rec: SourceRecord): SourceRecord {
   };
 }
 
+/** A pick not refreshed for this long (outside quiet hours' natural gap) is shown as outdated. */
+export const RECOMMENDATION_MAX_AGE_MS = 12 * 3_600_000;
+/** Consecutive failed model calls before the slide says updates are failing. */
+export const RECOMMENDATION_FAILING_AFTER = 3;
+
+export function publicRecommendation(state: RecommendationState | undefined, now: Date): ApiRecommendation | null {
+  const cur = state?.current;
+  if (!cur) return null;
+  return {
+    ...cur,
+    outdated: cur.targetDate !== targetFor(now).date || now.getTime() - Date.parse(cur.generatedAt) > RECOMMENDATION_MAX_AGE_MS,
+    failing: (state?.consecutiveFailures ?? 0) >= RECOMMENDATION_FAILING_AFTER,
+  };
+}
+
 export function buildReport(snapshot: Snapshot | null, now: Date = new Date(), defs: SourceDefinition[] = SOURCES): ReportResponse {
   const sources = {} as Record<SourceId, ApiSource>;
   const requiredMissing: SourceId[] = [];
@@ -97,5 +113,6 @@ export function buildReport(snapshot: Snapshot | null, now: Date = new Date(), d
     collectionIntervalMinutes: COLLECTION_INTERVAL_MIN,
     sources,
     requiredMissing,
+    recommendation: publicRecommendation(snapshot?.recommendation, now),
   };
 }

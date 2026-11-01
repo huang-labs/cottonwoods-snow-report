@@ -6,6 +6,8 @@ import { runCollection } from "./src/lib/collect";
 
 interface Env {
   SNOW_KV: KVNamespace;
+  AI: Ai;
+  AI_GATEWAY_ID?: string;
   UDOT_API_KEY?: string;
   COLLECTOR_CONTACT?: string;
 }
@@ -24,6 +26,7 @@ export default {
             durationMs: summary.durationMs,
             ok: summary.results.length - failed.length,
             skipped: summary.skipped,
+            recommendation: summary.recommendation,
             failed: failed.map((f) => ({ id: f.id, error: f.error })),
           }),
         );
