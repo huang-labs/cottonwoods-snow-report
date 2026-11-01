@@ -102,8 +102,7 @@ button, select { font: inherit; color: inherit; }
 .recommendation__eyebrow { color: var(--accent); font-weight: 600; }
 .recommendation h2 { font-size: 1.6em; margin: 0.25em 0; }
 .recommendation__plan { margin: 0.2em 0; font-weight: 600; }
-.recommendation__reasons { display: flex; flex-wrap: wrap; gap: 0.2em 2em; padding-left: 1.2em; margin: 0.4em 0; }
-.recommendation__reasons li { flex: 1 1 15em; }
+.recommendation__summary { margin: 0.4em 0; }
 .recommendation__caveats { color: var(--warn); margin: 0.4em 0; }
 .recommendation--outdated { border-left-color: var(--warn); }
 .slide--regional { overflow-y: auto; }

@@ -352,7 +352,8 @@ export interface Recommendation {
   /** One-line strategy, e.g. "Line up at the LCC mouth by 8:00 for the 9:30 opening". */
   plan: string;
   headline: string;
-  reasons: string[];
+  /** 2–3 sentences on why this pick; empty for a rule-based "no pick". Absent on picks stored before it existed. */
+  summary?: string;
   caveats: string[];
   runnerUp: PrimaryResortId | null;
   generatedAt: string;
