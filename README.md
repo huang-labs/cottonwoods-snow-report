@@ -1,6 +1,6 @@
 # Cottonwoods Snow Report
 
-A fullscreen, auto-rotating snow/conditions dashboard for a living-room TV. It covers the four Cottonwoods resorts (Alta, Snowbird, Solitude, and Brighton) with resort webcams. It also shows NWS mountain weather, University of Utah ensemble plumes (accumulated snow and snow-to-liquid ratio, on a Mountain Time axis), and canyon road status with UDOT webcams.
+A snow/conditions dashboard for phones and desktop browsers, with a full-screen slideshow mode for a living-room TV. It covers the four Cottonwoods resorts (Alta, Snowbird, Solitude, and Brighton) with resort webcams. It also shows NWS mountain weather, University of Utah ensemble plumes (accumulated snow and snow-to-liquid ratio, on a Mountain Time axis), and canyon road status with UDOT webcams.
 
 The product requirements live in [docs/IMPLEMENTATION_BRIEF.md](docs/IMPLEMENTATION_BRIEF.md). Source findings, design decisions, and known limitations are in [docs/IMPLEMENTATION_NOTES.md](docs/IMPLEMENTATION_NOTES.md).
 
@@ -13,7 +13,8 @@ One Next.js 16 app deployed as **one Cloudflare Worker** through `@opennextjs/cl
 - **Per-source cadence** (`intervalMs` on each source): resorts, roads, UDOT webcams and resort webcams every 5 min; NWS and travel times every 15 min; plumes every 30 min (new model runs appear about twice a day). A failed attempt is retried on the next 5-minute run, and manual `only` runs ignore intervals. The cron log line lists the `skipped` sources.
 - `GET /api/report` (`src/app/api/report/route.ts`) reads that snapshot and adds the freshness classification. It never contacts upstream sources.
 - **Plume panels:** when a new model run appears, the collector downloads each station's chart once, crops the Accumulated Snow and Snow-to-Liquid Ratio panels (`src/lib/plumeCrop.ts`, located from the chart's axes frames), and stores the PNGs in KV (`plume-panel:v1:<station>:<run>:<panel>`, 4-day TTL). `GET /api/plume/<station>/<run>/<panel>` serves them with long-lived caching. Later runs of the cron only HEAD-check the chart. If cropping fails, the slide shows the full original chart.
-- The page (`src/components/Dashboard.tsx`) is a client-side slideshow. It polls `/api/report` on load and every 60 s. The slide timer is independent of polling.
+- **Frontend:** each section is its own page: `/` (regional snowfall), `/weather`, `/plumes`, `/traffic`, `/alta`, `/snowbird`, `/solitude`, `/brighton`. Section list: `src/lib/sections.ts`; routes: `src/app/page.tsx` and `src/app/[section]/page.tsx`, prerendered static. `src/components/AppShell.tsx` sits in the root layout and polls `/api/report` on load and every 60 s, once for the whole app, so moving between pages doesn't refetch. Browse mode shows a sticky navbar (`NavBar.tsx`); on phones the section tabs scroll sideways.
+- **Slideshow (TV) mode:** the navbar's **▶ Slideshow** button goes full screen and rotates through the sections, starting from the current page (`Slideshow.tsx`). Controls: previous/next, pause, slide picker, seconds per slide (saved in the browser), fullscreen, exit. Exit, Escape, or leaving fullscreen returns to the page of the slide that was showing. The slide timer is independent of polling.
 - `POST /api/admin/collect` triggers a manual collection. It is disabled (404) unless the `ADMIN_TOKEN` secret is set, and then requires `Authorization: Bearer <token>`.
 
 Source adapters live in `src/lib/sources/*`. Each one has a pure parser (tested against captured responses in `test/fixtures/`) and a `collect()` that fetches.
@@ -34,13 +35,13 @@ Other useful commands:
 
 | Command | What it does |
 | --- | --- |
-| `npm test` | Vitest: parsers, timestamp semantics, partial failures, API output, playback/UI (jsdom) |
+| `npm test` | Vitest: parsers, timestamp semantics, partial failures, API output, navigation/slideshow UI (jsdom) |
 | `npm run typecheck` | `next typegen` (route types) then `tsc --noEmit` |
 | `npm run collect:once` | Runs one real collection in Node with in-memory KV and prints per-source status (`-- --json` prints the full API shape) |
 | `npm run preview` | OpenNext build, then serve the real Worker bundle locally in workerd |
 | `npm run preview:scheduled` | Same as `preview`, but with `wrangler dev --test-scheduled`. Trigger the cron with `curl "http://localhost:8787/__scheduled?cron=*/5+*+*+*+*"` |
 
-URL options: `?slide=<id>` picks the first slide (`regional`, `weather`, `plumes`, `traffic`, `alta`, `snowbird`, `solitude`, `brighton`). `?kiosk=1` starts playback without the start screen (useful as a TV bookmark). `&paused=1` starts paused.
+URL options: `?kiosk=1` on any page opens straight into the slideshow, starting at that page (use this as the TV bookmark, e.g. `/?kiosk=1`). `&paused=1` starts it paused. Browsers only allow fullscreen after a click or key press, so a kiosk bookmark starts windowed: press **F** or the Fullscreen control. Old `?slide=<id>` links redirect to that section's page; with `?kiosk=1` they still pick the first slide.
 
 > **Local dev caveat (macOS 27 / wrangler 4.156):** the local `workerd` runtime sometimes opens tens of thousands of loopback connections to itself. Once the ephemeral ports run out, any local request can briefly fail with `EADDRNOTAVAIL`. This reproduces with a minimal KV-only `getPlatformProxy()` config and no app code, so it is upstream tooling, not this app. It clears on its own; restart `npm run dev` if it persists.
 
@@ -80,18 +81,24 @@ To deploy by hand, set `CLOUDFLARE_API_TOKEN` (or run `npx wrangler login`), the
 | Stale — source failing | No successful fetch for more than 22 min (four missed runs plus KV propagation), extended by a slower source's interval (NWS/travel times 32 min, plumes 47 min); shows the last good payload |
 | Unavailable | Never collected successfully |
 
-Every slide shows the source report time (America/Denver) and the last successful check. Values distinguish **0″** (reported zero), **not reported** (the source left the field empty), and **n/a** (the source doesn't provide that measurement). Measurement windows keep each source's own label.
+Every section shows the source report time (America/Denver) and the last successful check. Values distinguish **0″** (reported zero), **not reported** (the source left the field empty), and **n/a** (the source doesn't provide that measurement). Measurement windows keep each source's own label.
+
+## Phone and desktop check
+
+- [ ] Phone (iOS Safari, Android Chrome): the navbar stays at the top while scrolling, the section tabs swipe sideways, the current tab stays in view, and tables scroll sideways rather than overflowing.
+- [ ] Desktop: each section fills the window below the navbar; back/forward and shared section links open the right section.
+- [ ] ▶ Slideshow enters fullscreen and rotates; Esc or Exit returns to the page of the slide that was showing.
 
 ## Real-TV smoke test (pending: Samsung The Frame, ~32″, not yet purchased)
 
 Desktop tests cannot certify these items:
 
 - [ ] Open the URL in the TV's built-in browser. Fonts are legible from the couch at 1080p/4K, and nothing overflows.
-- [ ] "Start fullscreen" enters fullscreen. If the browser refuses, note the fallback (the `?kiosk=1` bookmark still plays windowed).
-- [ ] Remote: ←/→ change slide; ↑/Enter reveals the controls and focuses Play/Pause; ←/→ move between controls; Enter activates; Back/Escape hides the controls. Note which media keys, if any, arrive.
+- [ ] The navbar's ▶ Slideshow enters fullscreen. If the browser refuses, note the fallback (the slideshow still plays windowed, and the `?kiosk=1` bookmark opens it directly).
+- [ ] Remote, in the slideshow: ←/→ change slide; ↑/Enter reveals the controls and focuses Play/Pause; ←/→ move between controls; Enter activates; Back/Escape hides the controls (Escape outside the controls exits the slideshow). Note which media keys, if any, arrive.
 - [ ] Slides advance every 20 s. Change the duration and confirm it persists across a reload.
 - [ ] Leave the TV running for 2+ hours: data timestamps keep advancing ("checked N min ago" stays under 10 min), webcams refresh, and there is no memory/performance degradation.
 - [ ] Unplug the network for 5 min: the "can't reach its server" notice appears, the last data stays visible, and it recovers on reconnect.
-- [ ] TV sleep/wake and power cycle: does the browser relaunch on the page? Does autoplay resume (persisted after the first explicit start)? Does the screensaver/Art Mode interrupt?
+- [ ] TV sleep/wake and power cycle: does the browser relaunch on the `?kiosk=1` bookmark and resume the slideshow? Does the screensaver/Art Mode interrupt?
 - [ ] Plume panels and UDOT and resort webcams load in the TV browser (cross-origin images, no CORS needed).
 - [ ] Solitude and Brighton cams are muted YouTube live embeds: check that they autoplay in the TV browser and that four players across the slideshow don't degrade it over hours.

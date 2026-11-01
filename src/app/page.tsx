@@ -1,5 +1,5 @@
-import Dashboard from "@/components/Dashboard";
+import { SectionView } from "@/components/SectionView";
 
 export default function Page() {
-  return <Dashboard />;
+  return <SectionView id="regional" />;
 }
