@@ -85,12 +85,11 @@ export function useNow(intervalMs = 30_000): Date {
 // ---------- Preferences (browser-local) ----------
 
 export interface Prefs {
+  /** Slideshow seconds per slide. */
   durationSec: number;
-  /** Set after the first explicit start so unattended reloads resume playback. */
-  autoplay: boolean;
 }
 
-export const DEFAULT_PREFS: Prefs = { durationSec: 20, autoplay: false };
+export const DEFAULT_PREFS: Prefs = { durationSec: 20 };
 export const PREFS_KEY = "cottonwoods-snow-report.prefs.v1";
 export const DURATION_CHOICES = [10, 15, 20, 30, 45, 60, 90, 120];
 
@@ -100,7 +99,7 @@ export function loadPrefs(storage: Pick<Storage, "getItem"> | undefined): Prefs 
     if (!raw) return DEFAULT_PREFS;
     const p = JSON.parse(raw) as Partial<Prefs>;
     const durationSec = typeof p.durationSec === "number" && p.durationSec >= 5 && p.durationSec <= 600 ? p.durationSec : DEFAULT_PREFS.durationSec;
-    return { durationSec, autoplay: p.autoplay === true };
+    return { durationSec };
   } catch {
     return DEFAULT_PREFS;
   }

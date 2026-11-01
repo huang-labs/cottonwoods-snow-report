@@ -1,91 +1,45 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import type { ReportResponse, SourceId } from "@/lib/types";
-import { formatAge, formatDenver } from "@/lib/time";
-import { DURATION_CHOICES, loadPrefs, savePrefs, useNow, useReport, useSlideTimer, type Prefs } from "./hooks";
-import { PlumeSlide } from "./slides/PlumeSlide";
-import { RegionalSlide } from "./slides/RegionalSlide";
-import { ResortSlide } from "./slides/ResortSlide";
-import { TrafficSlide } from "./slides/TrafficSlide";
-import { WeatherSlide } from "./slides/WeatherSlide";
+import { SECTIONS } from "@/lib/sections";
+import { formatDenver } from "@/lib/time";
+import { DataBanners, requestFullscreen, useDashboard } from "./dashboard-context";
+import { DURATION_CHOICES, useSlideTimer } from "./hooks";
+import { renderSection } from "./SectionView";
 
-export interface SlideDef {
-  id: string;
-  title: string;
-}
-
-export const SLIDES: SlideDef[] = [
-  { id: "regional", title: "Regional snowfall" },
-  { id: "weather", title: "Mountain weather" },
-  { id: "plumes", title: "Ensemble plumes" },
-  { id: "traffic", title: "Canyon roads" },
-  { id: "alta", title: "Alta" },
-  { id: "snowbird", title: "Snowbird" },
-  { id: "solitude", title: "Solitude" },
-  { id: "brighton", title: "Brighton" },
-];
-
-function renderSlide(id: string, report: ReportResponse, now: Date, loadedAt: number | null) {
-  switch (id) {
-    case "regional":
-      return <RegionalSlide report={report} now={now} />;
-    case "weather":
-      return <WeatherSlide source={report.sources.nws} now={now} />;
-    case "plumes":
-      return <PlumeSlide source={report.sources.plumes} now={now} />;
-    case "traffic":
-      return <TrafficSlide report={report} now={now} loadedAt={loadedAt} />;
-    default:
-      return <ResortSlide source={report.sources[id as SourceId]} now={now} cams={report.sources.resortcams} loadedAt={loadedAt} />;
-  }
-}
-
-function requestFullscreen() {
-  const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => void };
-  if (document.fullscreenElement) return;
-  if (el.requestFullscreen) void el.requestFullscreen().catch(() => undefined);
-  else el.webkitRequestFullscreen?.();
-}
-
-export default function Dashboard() {
-  const { report, loadedAt, error } = useReport(60_000);
-  const now = useNow(30_000);
-  const [prefs, setPrefs] = useState<Prefs | null>(null);
-  const [started, setStarted] = useState(false);
-  const [playing, setPlaying] = useState(false);
-  const [index, setIndex] = useState(0);
+/**
+ * Full-screen rotating slideshow (TV mode). Remote arrows/Enter arrive as
+ * keyboard events. Leaving fullscreen, Escape or the Exit button returns to
+ * browse mode on the page of the current slide.
+ */
+export function Slideshow({
+  initialIndex,
+  initialPlaying,
+  durationSec,
+  onDurationChange,
+  onExit,
+}: {
+  initialIndex: number;
+  initialPlaying: boolean;
+  durationSec: number;
+  onDurationChange: (sec: number) => void;
+  onExit: (index: number) => void;
+}) {
+  const data = useDashboard();
+  const { report, loadedAt, error, now } = data;
+  const [playing, setPlaying] = useState(initialPlaying);
+  const [index, setIndex] = useState(initialIndex);
   const [controlsVisible, setControlsVisible] = useState(true);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
   const pointerQuietUntil = useRef(0);
+  const indexRef = useRef(index);
+  indexRef.current = index;
+  const exit = useCallback(() => onExit(indexRef.current), [onExit]);
 
-  // Preferences load after mount (localStorage is browser-only).
-  // URL options: ?slide=<id> picks the first slide; ?kiosk=1 starts playback
-  // without the start screen (for a TV bookmark; fullscreen still needs a gesture).
-  useEffect(() => {
-    const p = loadPrefs(window.localStorage);
-    setPrefs(p);
-    const params = new URLSearchParams(window.location.search);
-    const initial = SLIDES.findIndex((s) => s.id === params.get("slide"));
-    if (initial >= 0) setIndex(initial);
-    if (p.autoplay || params.get("kiosk") === "1") {
-      setStarted(true);
-      setPlaying(params.get("paused") !== "1");
-    }
-  }, []);
-
-  const updatePrefs = useCallback((patch: Partial<Prefs>) => {
-    setPrefs((p) => {
-      const next = { ...(p ?? loadPrefs(undefined)), ...patch };
-      savePrefs(window.localStorage, next);
-      return next;
-    });
-  }, []);
-
-  const durationMs = (prefs?.durationSec ?? 20) * 1000;
-  const next = useCallback(() => setIndex((i) => (i + 1) % SLIDES.length), []);
-  const prev = useCallback(() => setIndex((i) => (i - 1 + SLIDES.length) % SLIDES.length), []);
+  const durationMs = durationSec * 1000;
+  const next = useCallback(() => setIndex((i) => (i + 1) % SECTIONS.length), []);
+  const prev = useCallback(() => setIndex((i) => (i - 1 + SECTIONS.length) % SECTIONS.length), []);
   useSlideTimer(index, playing, durationMs, next);
 
   const poke = useCallback(() => {
@@ -114,19 +68,27 @@ export default function Dashboard() {
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerdown", onMove);
+      if (hideTimer.current) clearTimeout(hideTimer.current);
     };
   }, [poke]);
 
-  const start = useCallback(
-    (fullscreen: boolean) => {
-      if (fullscreen) requestFullscreen();
-      setStarted(true);
-      setPlaying(true);
-      updatePrefs({ autoplay: true });
-      poke();
-    },
-    [poke, updatePrefs],
-  );
+  // Leaving fullscreen (browser Esc, system gesture) also leaves the slideshow.
+  // Windowed slideshows (kiosk bookmark, refused fullscreen) are unaffected.
+  useEffect(() => {
+    let wasFullscreen = Boolean(document.fullscreenElement);
+    const onChange = () => {
+      const doc = document as Document & { webkitFullscreenElement?: Element | null };
+      const isFullscreen = Boolean(document.fullscreenElement ?? doc.webkitFullscreenElement);
+      if (wasFullscreen && !isFullscreen) exit();
+      wasFullscreen = isFullscreen;
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    document.addEventListener("webkitfullscreenchange", onChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      document.removeEventListener("webkitfullscreenchange", onChange);
+    };
+  }, [exit]);
 
   // Global keys (TV remote arrows/enter arrive as keyboard events).
   useEffect(() => {
@@ -162,6 +124,9 @@ export default function Dashboard() {
         case "f":
           requestFullscreen();
           break;
+        case "Escape":
+          exit();
+          break;
         case "ArrowUp":
         case "ArrowDown":
         case "Enter":
@@ -175,9 +140,9 @@ export default function Dashboard() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [next, prev, poke]);
+  }, [next, prev, poke, exit]);
 
-  // Roving focus inside the control bar: Left/Right move focus, Escape leaves.
+  // Roving focus inside the control bar: Left/Right move focus, Escape/Back leaves the bar.
   const onControlsKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     const items = Array.from(controlsRef.current?.querySelectorAll<HTMLElement>("button, select") ?? []);
     const i = items.indexOf(document.activeElement as HTMLElement);
@@ -193,30 +158,21 @@ export default function Dashboard() {
     }
   };
 
-  const slide = SLIDES[index];
-  const apiStale = loadedAt !== null && now.getTime() - loadedAt > 3 * 60_000;
+  const slide = SECTIONS[index];
 
   return (
-    <div className={`app ${controlsVisible ? "" : "app--idle"}`}>
+    <div className={`app app--slideshow ${controlsVisible ? "" : "app--idle"}`}>
       <main className="stage" aria-live="off">
         {report ? (
           <div key={slide.id} className="slide-wrap">
-            {renderSlide(slide.id, report, now, loadedAt)}
+            {renderSection(slide.id, report, now, loadedAt)}
           </div>
         ) : (
           <div className="loading">{error ? `Could not load report: ${error}` : "Loading report…"}</div>
         )}
       </main>
 
-      {(error || apiStale) && report && (
-        <div className="offline">
-          Dashboard can’t reach its server ({error ?? "no response"}). Showing data loaded {formatAge(new Date(loadedAt!).toISOString(), now)}.
-        </div>
-      )}
-
-      {report && report.requiredMissing.length > 0 && (
-        <div className="required-missing">Required feeds unavailable: {report.requiredMissing.map((id) => report.sources[id].label).join(", ")}</div>
-      )}
+      <DataBanners data={data} overlay />
 
       <div
         ref={controlsRef}
@@ -239,7 +195,7 @@ export default function Dashboard() {
         </button>
         <button type="button" onClick={next} aria-label="Next slide">▶</button>
         <div className="slide-picker" role="group" aria-label="Choose slide">
-          {SLIDES.map((s, i) => (
+          {SECTIONS.map((s, i) => (
             <button
               type="button"
               key={s.id}
@@ -254,36 +210,21 @@ export default function Dashboard() {
         </div>
         <label className="duration">
           <span>Seconds per slide</span>
-          <select value={prefs?.durationSec ?? 20} onChange={(e) => updatePrefs({ durationSec: Number(e.target.value) })}>
+          <select value={durationSec} onChange={(e) => onDurationChange(Number(e.target.value))}>
             {DURATION_CHOICES.map((d) => (
               <option key={d} value={d}>{d}</option>
             ))}
           </select>
         </label>
         <button type="button" onClick={requestFullscreen}>Fullscreen</button>
-        <button type="button" onClick={() => updatePrefs({ autoplay: !(prefs?.autoplay ?? false) })} aria-pressed={prefs?.autoplay ?? false}>
-          Autoplay on load: {prefs?.autoplay ? "on" : "off"}
-        </button>
         <span className="controls__status">
           {report ? `Data ${formatDenver(report.generatedAt, now)}` : ""}
         </span>
+        <button type="button" className="controls__exit" onClick={exit}>Exit slideshow</button>
         <button type="button" className="controls__hide" onClick={hideControls} aria-label="Hide controls" title="Hide controls">
           ✕
         </button>
       </div>
-
-      {prefs && !started && (
-        <div className="start" role="dialog" aria-modal="true" aria-label="Start slideshow">
-          <h1>Cottonwoods Snow Report</h1>
-          <p>Rotating conditions dashboard. Collection runs every 5 minutes; this screen refreshes its data every minute.</p>
-          <div className="start__buttons">
-            <button type="button" autoFocus onClick={() => start(true)}>Start fullscreen</button>
-            <button type="button" onClick={() => start(false)}>Start in window</button>
-          </div>
-          <p className="muted small">Starting enables autoplay on future loads of this browser. Keys: ←/→ change slide, Space pause, F fullscreen, ↑/Enter controls.</p>
-        </div>
-      )}
     </div>
   );
 }
-
