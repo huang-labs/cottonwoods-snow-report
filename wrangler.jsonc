@@ -5,6 +5,14 @@
   "main": "./worker.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Served only on the custom domain (Cloudflare manages its DNS record and certificate).
+  "routes": [{ "pattern": "cottonwoods-snow-report.huang.mx", "custom_domain": true }],
+  "workers_dev": false,
+  "preview_urls": false,
+  "vars": {
+    // Contact appended to the collector's User-Agent (api.weather.gov asks clients to identify themselves).
+    "COLLECTOR_CONTACT": "https://cottonwoods-snow-report.huang.mx"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -18,8 +26,8 @@
   "kv_namespaces": [
     {
       "binding": "SNOW_KV",
-      // Replace with the id printed by `wrangler kv namespace create SNOW_KV` before deploying.
-      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
+      // Production namespace (account "Huang Inc."). Not a secret.
+      "id": "25451aae36fb40b68f530ee747940440"
     }
   ],
   // One global collection cron for every source category.

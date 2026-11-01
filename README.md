@@ -43,20 +43,31 @@ URL options: `?slide=<id>` picks the first slide (`regional`, `weather`, `plumes
 
 > **Local dev caveat (macOS 27 / wrangler 4.156):** the local `workerd` runtime sometimes opens tens of thousands of loopback connections to itself. Once the ephemeral ports run out, any local request can briefly fail with `EADDRNOTAVAIL`. This reproduces with a minimal KV-only `getPlatformProxy()` config and no app code, so it is upstream tooling, not this app. It clears on its own; restart `npm run dev` if it persists.
 
-## Deploying (not yet done; requires a Cloudflare account)
+## Production
 
-1. `npx wrangler login`
-2. Create the KV namespace and paste its id into `wrangler.jsonc` (`kv_namespaces[0].id`):
-   `npx wrangler kv namespace create SNOW_KV`
-3. Optional secrets:
-   - `npx wrangler secret put UDOT_API_KEY`: enables UDOT Traffic API events (closures, avalanche control) in the roads feed. Requires a free UDOT Traffic account and developer key.
-   - `npx wrangler secret put COLLECTOR_CONTACT`: contact text appended to the outbound User-Agent (NWS asks API clients to identify themselves).
-   - `npx wrangler secret put ADMIN_TOKEN`: only if you want the manual collect endpoint in production.
-4. `npm run deploy` (OpenNext build plus `wrangler deploy`). The cron trigger in `wrangler.jsonc` deploys with the Worker.
-5. Seed immediately instead of waiting up to five minutes, either with the admin endpoint (if `ADMIN_TOKEN` is set) or by waiting for the first cron. Check `wrangler tail` for the `{"event":"collection",…}` log line.
-6. Optional: attach a custom domain in the Cloudflare dashboard (Workers → the worker → Settings → Domains & Routes).
+Live at **https://cottonwoods-snow-report.huang.mx**. It runs as the Worker `cottonwoods-snow-report` on the Cloudflare account "Huang Inc." (Workers Paid).
 
-**Plan:** Workers **Paid** is required in practice. Cropping a new plume run costs roughly 100–130 ms CPU per station (PNG decode and encode), a few times a day, and an ordinary collection is close to the free plan's 10 ms CPU limit for cron invocations. KV usage is one snapshot write per run (288/day) plus four panel writes per new plume run plus one read per dashboard poll (1,440/day per open screen).
+| Piece | Where |
+| --- | --- |
+| Worker + cron (`*/5 * * * *`) | `wrangler.jsonc` |
+| KV namespace `SNOW_KV` | id `25451aae36fb40b68f530ee747940440` (in `wrangler.jsonc`) |
+| Domain | Workers custom domain `cottonwoods-snow-report.huang.mx` (DNS record + certificate managed by Cloudflare). `workers.dev` and preview URLs are disabled. |
+| Logs | Workers Logs (`observability.enabled`). Each cron logs one `{"event":"collection",…}` line. Live tail: `npx wrangler tail cottonwoods-snow-report` |
+| Plain vars | `COLLECTOR_CONTACT` (site URL, sent in the User-Agent) |
+
+**Deploys are automatic:** every push to `main` runs `.github/workflows/deploy.yml`. It typechecks and tests, then runs `npm run deploy` (OpenNext build + `wrangler deploy`). Pull requests are tested only. The workflow uses two repository secrets:
+
+- `CLOUDFLARE_API_TOKEN`: the user API token "cottonwoods-snow-report deploy (GitHub Actions)". It is limited to this account (Workers Scripts, Workers KV, Workers Tail, Account Settings read) and the `huang.mx` zone (Workers Routes, Zone read). To rotate it, roll the token in the dashboard (My Profile → API Tokens), then run `gh secret set CLOUDFLARE_API_TOKEN`.
+- `CLOUDFLARE_ACCOUNT_ID`.
+
+Optional secrets (`npx wrangler secret put …`):
+
+- `UDOT_API_KEY`: enables UDOT Traffic API events (closures, avalanche control). Requires a free UDOT Traffic developer key.
+- `ADMIN_TOKEN`: enables `POST /api/admin/collect`. Unset in production, so the route returns 404.
+
+To deploy by hand, set `CLOUDFLARE_API_TOKEN` (or run `npx wrangler login`), then run `npm run deploy`.
+
+**Plan:** Workers **Paid** is required. Cropping a new plume run costs roughly 100–130 ms CPU per station (PNG decode and encode), a few times a day, and an ordinary collection is close to the free plan's 10 ms CPU limit for cron invocations. KV usage is one snapshot write per run (288/day) plus four panel writes per new plume run plus one read per dashboard poll (1,440/day per open screen).
 
 ## Freshness semantics (what the badges mean)
 
