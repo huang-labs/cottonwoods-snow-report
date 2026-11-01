@@ -15,7 +15,7 @@ export function RecommendationCard({ recommendation: r, now }: { recommendation:
       </div>
       <h2>{r.headline}</h2>
       <p className="recommendation__plan">{r.plan}</p>
-      {!!r.reasons.length && <ul className="recommendation__reasons">{r.reasons.map((reason, i) => <li key={i}>{reason}</li>)}</ul>}
+      {r.summary && <p className="recommendation__summary">{r.summary}</p>}
       {!!r.caveats.length && <p className="recommendation__caveats">{r.caveats.join(" · ")}</p>}
       <div className="muted small">{r.runnerUp && <>Backup: {names[r.runnerUp]} · </>}{r.model ? "AI-generated · " : ""}Verify road access, terrain and parking before leaving.</div>
     </aside>

@@ -7,13 +7,15 @@ import type { ApiRecommendation } from "@/lib/types";
 
 const now = new Date("2026-12-01T15:00:00Z");
 const recommendation: ApiRecommendation = {
-  targetDate: "2026-12-01", pick: "alta", mode: "storm", plan: "Wait for the estimated 9:30 AM road opening.", headline: "Alta for deep powder", reasons: ["18″ overnight", "LCC opening estimate posted"], caveats: ["Opening time may slip"], runnerUp: "solitude", generatedAt: now.toISOString(), model: "test-model", trigger: "critical-change", outdated: false, failing: false,
+  targetDate: "2026-12-01", pick: "alta", mode: "storm", plan: "Wait for the estimated 9:30 AM road opening.", headline: "Alta for deep powder", summary: "Alta got 18″ overnight. LCC has a posted opening estimate.", caveats: ["Opening time may slip"], runnerUp: "solitude", generatedAt: now.toISOString(), model: "test-model", trigger: "critical-change", outdated: false, failing: false,
 };
 afterEach(cleanup);
 it("shows today's card, conditional plan, backup and recommended row", () => {
   render(<RegionalSlide now={now} report={{ ...buildReport(null, now), recommendation }} />);
   expect(screen.getByText(/Resort recommendation · Today's resort pick/)).toBeTruthy();
   expect(screen.getByText(recommendation.plan)).toBeTruthy();
+  expect(screen.getByText(recommendation.summary!)).toBeTruthy();
+  expect(document.querySelector(".recommendation li")).toBeNull();
   expect(screen.getByText(/Backup: Solitude/)).toBeTruthy();
   expect(screen.getByText("AI pick").closest("tr")?.textContent).toContain("Alta");
 });

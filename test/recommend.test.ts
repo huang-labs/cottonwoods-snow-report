@@ -29,9 +29,9 @@ function snapshot(open = true): Snapshot {
   return s;
 }
 function pick(): Recommendation {
-  return { targetDate: "2026-10-30", mode: "storm", pick: "alta", headline: "Alta for powder", plan: "Wait for the posted opening.", reasons: ["Deep snow"], caveats: [], runnerUp: "solitude", generatedAt: now.toISOString(), model: PRIMARY_MODEL, trigger: "target-day" };
+  return { targetDate: "2026-10-30", mode: "storm", pick: "alta", headline: "Alta for powder", plan: "Wait for the posted opening.", summary: "Alta has the deepest snow.", caveats: [], runnerUp: "solitude", generatedAt: now.toISOString(), model: PRIMARY_MODEL, trigger: "target-day" };
 }
-const result = { pick: "alta", headline: "Alta for powder", plan: "Wait for the posted opening.", reasons: ["Deep snow"], caveats: [], runnerUp: "solitude", changedBecause: "" };
+const result = { pick: "alta", headline: "Alta for powder", plan: "Wait for the posted opening.", summary: "Alta has the deepest snow.", caveats: [], runnerUp: "solitude", changedBecause: "" };
 
 describe("canyon access", () => {
   const classify = (text: string, at = now) => classifyCanyon("LCC", [{ canyon: "LCC", text }], at);
