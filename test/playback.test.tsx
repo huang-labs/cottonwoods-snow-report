@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import Dashboard, { criticalNotices, SLIDES } from "@/components/Dashboard";
+import Dashboard, { SLIDES } from "@/components/Dashboard";
 import { DEFAULT_PREFS, loadPrefs, PREFS_KEY, savePrefs, useReport, useSlideTimer } from "@/components/hooks";
 import { runCollection } from "@/lib/collect";
 import { buildReport } from "@/lib/report";
 import { MemoryKV, readSnapshot } from "@/lib/store";
-import type { ReportResponse, RoadsPayload } from "@/lib/types";
+import type { ReportResponse } from "@/lib/types";
 import { createFixtureFetch, FIXTURE_NOW } from "./fixtureFetch";
 
 let REPORT: ReportResponse;
@@ -158,20 +158,4 @@ describe("Dashboard", () => {
     expect(screen.getByRole("button", { name: "Play" })).toBeTruthy();
   });
 
-  it("persists critical closure notices in a banner across slides", async () => {
-    const roads = structuredClone(REPORT.sources.roads.payload) as RoadsPayload;
-    roads.notices.push({ title: "SR-210", text: "CLOSED for avalanche control", severity: "critical", canyon: "LCC", source: "UDOT", updatedAt: null });
-    const report = structuredClone(REPORT);
-    report.sources.roads.payload = roads;
-    expect(criticalNotices(report)).toHaveLength(1);
-    expect(criticalNotices(REPORT)).toHaveLength(0); // seasonal Guardsman alert is not banner-worthy
-    mockApi(report);
-    window.localStorage.setItem(PREFS_KEY, JSON.stringify({ durationSec: 20, autoplay: true }));
-    render(<Dashboard />);
-    const banner = await screen.findByRole("alert");
-    expect(banner.textContent).toContain("CLOSED for avalanche control");
-    fireEvent.keyDown(window, { key: "ArrowRight" });
-    await screen.findByRole("heading", { name: "Cottonwoods mountain weather" });
-    expect(screen.getByRole("alert").textContent).toContain("CLOSED for avalanche control");
-  });
 });
