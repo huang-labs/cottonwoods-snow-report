@@ -1,6 +1,7 @@
 import type { ApiSource, Metric, ReportResponse, ResortReport, SnowfallSet, SourceId } from "@/lib/types";
 import { formatAge, formatDenver } from "@/lib/time";
 import { FreshnessBadge, MetricValue } from "../ui";
+import { RecommendationCard } from "../RecommendationCard";
 
 const PRIMARY: SourceId[] = ["alta", "snowbird", "solitude", "brighton"];
 
@@ -21,13 +22,14 @@ function cell(r: ResortReport, key: (typeof COLUMNS)[number]["key"]): Metric {
   return r.snowfall[key];
 }
 
-function Row({ source, now }: { source: ApiSource; now: Date }) {
+function Row({ source, now, recommended }: { source: ApiSource; now: Date; recommended: boolean }) {
   const r = source.payload as ResortReport | null;
   return (
-    <tr className="row--primary">
+    <tr className={`row--primary${recommended ? " row--recommended" : ""}`}>
       <th scope="row">
         <div className="resort-name">{source.label}</div>
         <FreshnessBadge freshness={source.freshness} />
+        {recommended && <span className="badge badge--ai">AI pick</span>}
       </th>
       {COLUMNS.map((c) => {
         if (!r) return <td key={c.key} className="muted">—</td>;
@@ -67,13 +69,14 @@ export function RegionalSlide({ report, now }: { report: ReportResponse; now: Da
         </thead>
         <tbody>
           {PRIMARY.map((id) => (
-            <Row key={id} source={report.sources[id]} now={now} />
+            <Row key={id} source={report.sources[id]} now={now} recommended={report.recommendation?.pick === id && !report.recommendation.outdated && !report.recommendation.failing} />
           ))}
         </tbody>
       </table>
       <p className="legend">
         <span className="metric__value metric__value--zero">0″</span> reported zero · <span className="metric__missing">not reported</span> field empty in source · <span className="metric__na">n/a</span> not provided by source
       </p>
+      <RecommendationCard recommendation={report.recommendation} now={now} />
     </section>
   );
 }

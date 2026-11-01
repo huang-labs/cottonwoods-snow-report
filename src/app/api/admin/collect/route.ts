@@ -15,6 +15,9 @@ export async function POST(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
   const only = new URL(request.url).searchParams.getAll("source") as SourceId[];
-  const summary = await runCollection(env, { only: only.length ? only : undefined });
+  const summary = await runCollection(env, {
+    only: only.length ? only : undefined,
+    forceRecommendation: new URL(request.url).searchParams.get("recommend") === "force",
+  });
   return Response.json(summary, { headers: { "Cache-Control": "no-store" } });
 }
