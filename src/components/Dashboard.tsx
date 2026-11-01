@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import type { ReportResponse, ResortReport, RoadsPayload, SourceId } from "@/lib/types";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import type { ReportResponse, SourceId } from "@/lib/types";
 import { formatAge, formatDenver } from "@/lib/time";
 import { DURATION_CHOICES, loadPrefs, savePrefs, useNow, useReport, useSlideTimer, type Prefs } from "./hooks";
 import { PlumeSlide } from "./slides/PlumeSlide";
@@ -25,24 +25,6 @@ export const SLIDES: SlideDef[] = [
   { id: "solitude", title: "Solitude" },
   { id: "brighton", title: "Brighton" },
 ];
-
-/** Critical road/closure notices that persist across every slide. */
-export function criticalNotices(report: ReportResponse): Array<{ title: string; text: string; source: string }> {
-  const out: Array<{ title: string; text: string; source: string }> = [];
-  const roads = report.sources.roads?.payload as RoadsPayload | null;
-  for (const n of roads?.notices ?? []) {
-    if (n.severity === "critical" && (n.canyon === "LCC" || n.canyon === "BCC" || n.canyon === "both")) {
-      out.push({ title: n.title, text: n.text, source: n.source });
-    }
-  }
-  for (const id of ["alta", "snowbird", "solitude", "brighton"] as SourceId[]) {
-    const r = report.sources[id]?.payload as ResortReport | null;
-    for (const n of r?.notices ?? []) {
-      if (n.severity === "critical") out.push({ title: `${report.sources[id].label} — ${n.title}`, text: n.text, source: report.sources[id].label });
-    }
-  }
-  return out;
-}
 
 function renderSlide(id: string, report: ReportResponse, now: Date, loadedAt: number | null) {
   switch (id) {
@@ -198,22 +180,11 @@ export default function Dashboard() {
     }
   };
 
-  const banner = useMemo(() => (report ? criticalNotices(report) : []), [report]);
   const slide = SLIDES[index];
   const apiStale = loadedAt !== null && now.getTime() - loadedAt > 3 * 60_000;
 
   return (
     <div className={`app ${controlsVisible ? "" : "app--idle"}`}>
-      {banner.length > 0 && (
-        <div className="closure-banner" role="alert">
-          {banner.map((b, i) => (
-            <span key={i}>
-              <strong>{b.title}:</strong> {b.text}
-            </span>
-          ))}
-        </div>
-      )}
-
       <main className="stage" aria-live="off">
         {report ? (
           <div key={slide.id} className="slide-wrap">

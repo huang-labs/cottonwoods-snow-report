@@ -185,7 +185,6 @@ button, select { font: inherit; color: inherit; }
 .traffic-footer p { margin: 0; }
 
 /* ---- global overlays ---- */
-.closure-banner { background: #5c1414; color: #ffe1e1; padding: 0.6em 2.6em; font-size: 1.15em; display: flex; flex-wrap: wrap; gap: 0.3em 2em; border-bottom: 2px solid var(--bad); }
 .offline, .required-missing { position: fixed; top: 0.8em; right: 0.8em; background: #3b2a06; color: #ffe3a3; border: 1px solid var(--warn); border-radius: 0.5em; padding: 0.4em 0.9em; font-size: 0.9em; z-index: 5; }
 .required-missing { top: auto; bottom: 4.5em; background: #3b0f0f; color: #ffd0d0; border-color: var(--bad); }
 
