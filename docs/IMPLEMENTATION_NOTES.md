@@ -1,10 +1,12 @@
 # Implementation notes
 
-Findings from implementation on 2026-10-30, verified against the live sources and current docs. The brief (`IMPLEMENTATION_BRIEF.md`) is unchanged. Where a finding refines its preliminary reconnaissance, it is recorded here.
+Findings from implementation on 2026-10-30, verified against the live sources and current docs. Where a finding refines the brief's (`IMPLEMENTATION_BRIEF.md`) preliminary reconnaissance, it is recorded here. The brief itself was revised once, for the phone/desktop-first change below.
 
 ## Scope changes after v1 (2026-11-01, requested by the owner)
 
-These supersede the brief where they differ; the brief itself is unchanged.
+These supersede the brief where they differ.
+
+- **Phone/desktop-first navigation; the TV slideshow is a mode** (2026-11-01; the brief was revised to match). Each section is a static page (`/`, `/weather`, `/plumes`, `/traffic`, `/alta`, `/snowbird`, `/solitude`, `/brighton`) under a sticky navbar. The start dialog and the "autoplay on load" preference are gone, so a phone never lands in a rotating slideshow. **▶ Slideshow** in the navbar requests fullscreen from that click (browsers need a user gesture) and starts at the current section. Exit, Escape, or leaving fullscreen returns to the page of the slide that was showing. The TV bookmark is `?kiosk=1` (windowed until F or the Fullscreen control is pressed, as before). A saved `autoplay` value in older browser prefs is ignored. The report poller lives in the root layout's `AppShell`, so page changes don't refetch. On desktop each page fills the window below the navbar instead of scrolling as one long page, because the slide layouts (webcam and plume grids) size themselves to a fixed-height frame; below 900 px pages stack and scroll as before. Section pages share the site-wide live link-preview image; their titles are per section.
 
 - **Park City, Deer Valley and Snowbasin removed** (adapters, fixtures, regional rows). The regional slide lists only the four Cottonwoods resorts. Old snapshot records of removed sources are dropped on the next write.
 - **Plumes: two panels per station.** Only Accumulated Snow and Snow-to-Liquid Ratio are shown, for Alta-Collins and Silver Lake Brighton (four panels). They are cropped server-side. This replaces the brief's "show the original charts unmodified" for this product; the crop is pixel-for-pixel, apart from the UTC tick labels being cut off.

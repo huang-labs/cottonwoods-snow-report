@@ -1,13 +1,13 @@
 # Cottonwoods Snow Report — implementation brief
 
 Status: design interview complete; user accepted the decisions below and requested an implementation handoff.
-Date: 2026-10-29.
+Date: 2026-10-29. Revised 2026-11-01: the product is now phone/desktop-first, with the TV slideshow as a mode (see "Navigation, slideshow and design").
 
 ## Purpose and audience
 
-Build a fullscreen-capable, automatically rotating snow/conditions dashboard for a ski-house living-room TV in Cottonwood Heights. It supplies evidence for people to decide where and when to ski, plus morning excitement. It does not score resorts or recommend a destination.
+Build a snow/conditions dashboard read mainly on phones and desktop browsers, with a fullscreen, automatically rotating slideshow mode for a ski-house living-room TV in Cottonwood Heights. It supplies evidence for people to decide where and when to ski, plus morning excitement. It does not score resorts or recommend a destination.
 
-The owner is the primary audience and wants technically detailed information, including ensemble forecasts. Assume fluency with snow reports and plumes. Preserve scientific detail and precise measurement labels while making the main numbers readable across the room.
+The owner is the primary audience and wants technically detailed information, including ensemble forecasts. Assume fluency with snow reports and plumes. Preserve scientific detail and precise measurement labels while making the main numbers readable on a phone and, in slideshow mode, across the room.
 
 Primary resorts: Alta, Snowbird, Solitude, Brighton. Include Park City, Deer Valley, and Snowbasin in a compact regional snowfall comparison; they do not need dedicated resort slides. Park City is the working interpretation of the user's “PC”; access/pass entitlement is not a product feature.
 
@@ -18,15 +18,17 @@ Primary resorts: Alta, Snowbird, Solitude, Brighton. Include Park City, Deer Val
 - Add a scheduled handler to that same deployment for collection. OpenNext's documented custom Worker entrypoint is a researched route to combining Next.js request handling and `scheduled()`; verify the current integration before implementing.
 - One global cron, `*/5 * * * *`, collects all source categories every five minutes. This supersedes earlier 15-minute and split-frequency proposals.
 - Store the latest successful normalized data per source in Cloudflare KV. A SQL database, historical archive, separate collection microservice, and separate Pages deployment are outside v1.
-- Render the slideshow client-side. The browser fetches the stored API snapshot on initial load and every minute, independently of slide transitions. Page visits and API reads do not trigger upstream collection.
+- Render the dashboard client-side. The browser fetches the stored API snapshot on initial load and every minute, independently of page navigation and slide transitions. Page visits and API reads do not trigger upstream collection.
 - Keep collection credentials server-side. The public API exposes report data, not operational secrets or private configuration.
 - Access is public without authentication; an unlisted URL is acceptable. Include only public conditions data, never a household address. Browser preferences are stored locally.
 
 The user's final choice is full Next.js with backend routes, not the earlier static-export-plus-Worker proposal. A serverless Cloudflare runtime is explicitly acceptable; “no backend” originally meant avoiding a server to administer.
 
-## Slideshow and design
+## Navigation, slideshow and design
 
-Default content sequence (implementation may adjust ordering for readability):
+The dashboard is a set of sections, each with its own page and URL, reached from a fixed navbar that works on phones (sideways-scrolling tabs) and desktops. A navbar control enters a full-screen slideshow that rotates through the same sections for TV viewing. There is no start screen; nothing autoplays unless the slideshow is opened (or a `?kiosk=1` bookmark is used).
+
+Default section order (implementation may adjust ordering for readability):
 
 1. Regional snowfall comparison, centered on the four Cottonwoods resorts with compact secondary-resort rows.
 2. Near-term Cottonwoods mountain weather: snow timing, snow levels, temperature, wind/gusts, today/tomorrow and the next storm where available.
@@ -39,11 +41,13 @@ Default content sequence (implementation may adjust ordering for readability):
 
 Resort reports prioritize overnight, 24-hour, 48-hour and source-defined storm snowfall; base depth; temperature; wind/gusts; operational notices; individual lift status; notable named terrain openings; and report timestamps. Use source-provided definitions and units. Unsupported fields remain explicitly unavailable. Do not infer named terrain openings from aggregate counts or combine incompatible measurement windows.
 
-Traffic uses fixed canyon-segment travel times rather than house-to-resort routing. Include segment endpoints, road closures, traction restrictions, avalanche-control notices, and parking information when available. Important closure notices persist across slides. Webcams serve as evidence, not decorative backgrounds.
+Traffic uses fixed canyon-segment travel times rather than house-to-resort routing. Include segment endpoints, road closures, traction restrictions, avalanche-control notices, and parking information when available. Important closure notices persist across sections. Webcams serve as evidence, not decorative backgrounds.
 
-Use a clean modern dark design, strong typography, large titles and key values, restrained meaningful color, minimal decorative imagery, and a clear hierarchy for technical detail. Design for landscape TV viewing; adapt gracefully to ordinary desktop/mobile browsers. The intended TV is a not-yet-purchased Samsung The Frame, approximately 32 inches, current or prior model year. Exact browser behavior remains unverified. Do not require external TV hardware by default.
+Use a clean modern dark design, strong typography, large titles and key values, restrained meaningful color, minimal decorative imagery, and a clear hierarchy for technical detail. Design for phone and desktop browsing first; the slideshow must stay legible on a landscape TV. The intended TV is a not-yet-purchased Samsung The Frame, approximately 32 inches, current or prior model year. Exact browser behavior remains unverified. Do not require external TV hardware by default.
 
-Controls: one global adjustable slide duration, initially 20 seconds; pause/resume; previous/next; slide selection; and explicit fullscreen entry. Persist preferences in the browser. Support keyboard/remote-friendly focus and pointer controls. Playback should run unattended after explicit start. Hide inactive controls without losing accessibility. Phone-to-TV pairing/control is outside v1.
+Browse controls: a navbar with every section, the current one highlighted, plus the data time and the slideshow entry.
+
+Slideshow controls: one global adjustable slide duration, initially 20 seconds; pause/resume; previous/next; slide selection; explicit fullscreen entry; and exit back to browsing. Persist the duration in the browser. Support keyboard/remote-friendly focus and pointer controls. Playback runs unattended once started, and a bookmarkable URL starts it directly for the TV. Hide inactive controls without losing accessibility. Phone-to-TV pairing/control is outside v1.
 
 ## Freshness and failure semantics
 
@@ -87,7 +91,7 @@ Platform references:
 
 1. Establish the compatible Next.js/Cloudflare deployment skeleton and one end-to-end source path through collection, KV, API, and display. Completion: local runtime/build verifies both request and scheduled entrypoints; the real source's timestamps and normalized values are inspectable.
 2. Implement source adapters with independent failure handling and the remaining core feeds. Completion: required real snowfall feeds and latest-plume discovery work, or specific reproducible blockers are documented.
-3. Implement the complete slideshow and controls against the normalized contract. Completion: every agreed slide exists, missing/stale cases are explicit, preferences persist, and polling does not reset the slide timer.
-4. Validate and document operation. Completion: appropriate type/build/runtime checks and meaningful tests cover parsing, timestamp semantics, partial collection failures, API output, and playback behavior. Provide local setup, deployment/binding/cron instructions, source limitations, and a pending real-TV smoke-test checklist.
+3. Implement the section pages, navbar, slideshow and controls against the normalized contract. Completion: every agreed section exists, missing/stale cases are explicit, preferences persist, and polling does not reset the slide timer.
+4. Validate and document operation. Completion: appropriate type/build/runtime checks and meaningful tests cover parsing, timestamp semantics, partial collection failures, API output, and navigation/playback behavior. Provide local setup, deployment/binding/cron instructions, source limitations, and a pending real-TV smoke-test checklist.
 
 Deployment provisioning and real-TV certification depend on account access and hardware. Implement and test locally with available tooling; identify those remaining steps precisely. Do not claim deployed or TV-verified status without evidence. No production deployment, external resource provisioning, or PR publication is requested by this brief alone.

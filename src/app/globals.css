@@ -1,6 +1,7 @@
-/* Cottonwoods Snow Report — dark TV-first theme.
-   Sizes scale with viewport width so a 1920×1080 TV and a laptop look alike;
-   below 900px the layout stacks for phones. */
+/* Cottonwoods Snow Report — dark theme for phone/desktop browsing, with a
+   full-screen slideshow mode for TVs. Sizes scale with viewport width so a
+   laptop and a 1920×1080 TV look alike; below 900px the layout stacks and
+   scrolls for phones. */
 
 :root {
   --bg: #0b0f14;
@@ -26,16 +27,36 @@ body {
   line-height: 1.35;
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden;
 }
 h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 button, select { font: inherit; color: inherit; }
 .muted { color: var(--muted); }
 .small { font-size: 0.82em; }
 
-.app { position: fixed; inset: 0; display: flex; flex-direction: column; }
+/* Browse mode: sticky navbar over one section page. On desktop the page fills
+   the rest of the viewport (the slide layouts need a fixed-height frame). */
+.app--browse { min-height: 100dvh; display: flex; flex-direction: column; }
+.page { flex: 1; min-height: 0; position: relative; }
+/* Slideshow mode: the whole viewport. */
+.app--slideshow { position: fixed; inset: 0; display: flex; flex-direction: column; }
 .app--idle { cursor: none; }
 .stage { flex: 1; min-height: 0; position: relative; }
+
+/* ---- navbar ---- */
+.nav { position: sticky; top: 0; z-index: 20; background: rgba(11, 15, 20, 0.94); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.nav__bar { display: flex; align-items: center; gap: 0.5em 1.2em; padding: 0.55em 1.4em; }
+.nav__brand { font-weight: 800; font-size: 1.1em; color: var(--text); text-decoration: none; white-space: nowrap; letter-spacing: -0.01em; }
+.nav__tabs-wrap { flex: 1; min-width: 0; }
+.nav__tabs { list-style: none; margin: 0; padding: 0; display: flex; gap: 0.2em; overflow-x: auto; scrollbar-width: none; }
+.nav__tabs::-webkit-scrollbar { display: none; }
+.nav__tab { display: block; padding: 0.4em 0.8em; border-radius: 0.45em; color: var(--muted); text-decoration: none; white-space: nowrap; }
+.nav__tab:hover { color: var(--text); background: var(--panel-2); }
+.nav__tab[aria-current="page"] { color: var(--accent); background: rgba(124, 196, 255, 0.14); font-weight: 600; }
+.nav__end { display: flex; align-items: center; gap: 1em; margin-left: auto; }
+.nav__status { color: var(--muted); font-size: 0.85em; white-space: nowrap; }
+.nav__slideshow { background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: 0.45em; padding: 0.35em 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.nav__slideshow:hover { background: rgba(124, 196, 255, 0.12); }
+.nav__brand:focus-visible, .nav__tab:focus-visible, .nav__slideshow:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .slide-wrap { position: absolute; inset: 0; animation: fade-in 400ms ease-out; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 .loading { display: grid; place-items: center; height: 100%; font-size: 2em; color: var(--muted); }
@@ -196,9 +217,13 @@ button, select { font: inherit; color: inherit; }
 .cam__missing { flex: 1; display: grid; place-items: center; border: 1px dashed var(--line); border-radius: 0.4em; color: var(--muted); }
 .traffic-footer p { margin: 0; }
 
-/* ---- global overlays ---- */
-.offline, .required-missing { position: fixed; top: 0.8em; right: 0.8em; background: #3b2a06; color: #ffe3a3; border: 1px solid var(--warn); border-radius: 0.5em; padding: 0.4em 0.9em; font-size: 0.9em; z-index: 5; }
-.required-missing { top: auto; bottom: 4.5em; background: #3b0f0f; color: #ffd0d0; border-color: var(--bad); }
+/* ---- data banners: inline under the navbar; overlays in the slideshow ---- */
+.banner { margin: 0.6em 1.4em 0; border-radius: 0.5em; padding: 0.4em 0.9em; font-size: 0.9em; border: 1px solid; }
+.banner--offline { background: #3b2a06; color: #ffe3a3; border-color: var(--warn); }
+.banner--required-missing { background: #3b0f0f; color: #ffd0d0; border-color: var(--bad); }
+.banner--overlay { position: fixed; margin: 0; z-index: 5; }
+.banner--offline.banner--overlay { top: 0.8em; right: 0.8em; }
+.banner--required-missing.banner--overlay { bottom: 4.5em; right: 0.8em; }
 
 .controls {
   position: fixed; left: 50%; bottom: 1em; transform: translateX(-50%);
@@ -211,23 +236,17 @@ button, select { font: inherit; color: inherit; }
 .controls--hidden { opacity: 0; }
 .controls--hidden:focus-within { opacity: 1; }
 .controls button, .controls select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 0.45em; padding: 0.35em 0.8em; cursor: pointer; }
-.controls button:focus-visible, .controls select:focus-visible, .start button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.controls button:focus-visible, .controls select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .slide-picker { display: flex; gap: 0.25em; flex-wrap: wrap; }
 .slide-picker button { font-size: 0.85em; }
 .slide-picker .is-current { background: var(--accent); color: #04121f; border-color: var(--accent); font-weight: 700; }
 .duration { display: inline-flex; align-items: center; gap: 0.4em; color: var(--muted); font-size: 0.85em; }
 .controls__status { color: var(--muted); font-size: 0.8em; }
+.controls__exit { border-color: var(--accent) !important; color: var(--accent); }
 .controls__hide { color: var(--muted); }
 .progress { position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--line); border-radius: 0.8em 0.8em 0 0; overflow: hidden; }
 .progress__bar { height: 100%; background: var(--accent); transform-origin: left; animation-name: progress; animation-timing-function: linear; animation-fill-mode: forwards; }
 @keyframes progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-
-.start { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.2em; text-align: center; background: rgba(11, 15, 20, 0.96); padding: 2em; }
-.start h1 { font-size: 3.4em; }
-.start p { max-width: 50em; margin: 0; }
-.start__buttons { display: flex; gap: 1em; flex-wrap: wrap; justify-content: center; }
-.start button { font-size: 1.4em; padding: 0.6em 1.4em; border-radius: 0.6em; border: 1px solid var(--accent); background: var(--accent); color: #04121f; font-weight: 700; cursor: pointer; }
-.start button + button { background: transparent; color: var(--accent); }
 
 @media (prefers-reduced-motion: reduce) {
   .slide-wrap { animation: none; }
@@ -236,8 +255,7 @@ button, select { font: inherit; color: inherit; }
 /* ---- small screens: stack and scroll ---- */
 @media (max-width: 900px) {
   :root { --fs: 14px; }
-  body { overflow: auto; }
-  .app { position: static; min-height: 100vh; }
+  .app--slideshow { position: static; min-height: 100vh; }
   .slide-wrap { position: static; }
   .slide { height: auto; padding: 1em; }
   .slide__header h1 { font-size: 2em; }
@@ -259,4 +277,15 @@ button, select { font: inherit; color: inherit; }
   .controls { position: sticky; bottom: 0; transform: none; left: auto; max-width: none; border-radius: 0; }
   .controls--hidden { opacity: 1; }
   .controls__hide { display: none; }
+  .nav__bar { flex-wrap: wrap; padding: 0.5em 0.75em 0.35em; }
+  .nav__tabs-wrap { order: 3; flex-basis: 100%; margin: 0 -0.75em; }
+  .nav__tabs { padding: 0 0.75em 0.15em; }
+  .nav__tab { padding: 0.5em 0.85em; }
+  .banner { margin: 0.6em 0.75em 0; }
+}
+@media (max-width: 600px) {
+  .nav__status { display: none; }
+}
+@media (min-width: 901px) {
+  .app--browse { height: 100dvh; }
 }
