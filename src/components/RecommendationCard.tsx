@@ -5,12 +5,12 @@ const dateFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Denver", y
 const names = { alta: "Alta", snowbird: "Snowbird", solitude: "Solitude", brighton: "Brighton" };
 
 export function RecommendationCard({ recommendation: r, now }: { recommendation: ApiRecommendation | null | undefined; now: Date }) {
-  if (!r) return <aside className="recommendation"><h2>Ski recommendation</h2><p className="muted">Waiting for the first recommendation.</p></aside>;
+  if (!r) return <aside className="recommendation"><h2>AI ski recommendation</h2><p className="muted">Waiting for the first recommendation.</p></aside>;
   const day = r.targetDate === dateFmt.format(now) ? "Today's" : "Tomorrow's";
   return (
     <aside className={`recommendation${r.outdated || r.failing ? " recommendation--outdated" : ""}`} aria-label="Ski recommendation">
       <div className="recommendation__heading">
-        <span className="recommendation__eyebrow">{r.outdated ? `Pick for ${r.targetDate}` : `${day} ${r.model ? "AI" : "ski"} pick`} · {r.mode === "storm" ? "Powder priority" : "Easy day"}</span>
+        <span className="recommendation__eyebrow">AI ski recommendation · {r.outdated ? `Resort pick for ${r.targetDate}` : `${day} resort pick`} · {r.mode === "storm" ? "Powder priority" : "Easy day"}</span>
         <span className="muted small">Updated {formatAge(r.generatedAt, now)}{r.outdated ? " · Outdated" : ""}{r.failing ? " · Updates failing" : ""}</span>
       </div>
       <h2>{r.headline}</h2>
