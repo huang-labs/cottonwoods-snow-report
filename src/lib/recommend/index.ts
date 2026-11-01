@@ -34,7 +34,7 @@ export function ruleNoPick(digest: Digest, now: Date): Recommendation {
     pick: null,
     plan: digest.resorts.some((r) => r.inSeason) ? "Wait for official access restrictions to be lifted." : "Check back once lifts are running.",
     headline,
-    reasons: digest.resorts.map((r) => `${r.name}: ${r.lifts}`),
+    reasons: [],
     caveats: [],
     runnerUp: null,
     generatedAt: now.toISOString(),
