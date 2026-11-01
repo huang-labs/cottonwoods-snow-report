@@ -1,0 +1,7 @@
+NEXTJS_ENV=development
+# Enables POST /api/admin/collect locally (Authorization: Bearer <token>). Leave unset in production unless needed.
+ADMIN_TOKEN=change-me-local-only
+# Optional: UDOT Traffic developer API key (https://www.udottraffic.utah.gov/developers/doc)
+# UDOT_API_KEY=
+# Optional contact appended to the outbound User-Agent (NWS asks for one). Not exposed by the API.
+# COLLECTOR_CONTACT=
