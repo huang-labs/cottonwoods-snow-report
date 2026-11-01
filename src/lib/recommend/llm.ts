@@ -31,7 +31,7 @@ Rules:
 - There is no live crowd or canyon queue feed. Never assert that crowds are light or queues are short. Any wait or first-chair timing is an estimate, and a published road opening estimate is never a guaranteed or bounded wait.
 - Use only the data given; do not invent lift, road, or parking facts. Treat data marked stale/old or travel times marked not live with caution, and never cite non-live travel times as current.
 - If the previous pick is for the same day, keep it unless something material changed; say what changed in changedBecause (empty string if unchanged).
-- Write for a TV dashboard: headline at most 80 characters, plan at most 110 characters, 2–3 short reasons, 0–2 short caveats. Use ″ for inches. Times in local 12-hour format.`;
+- Write for a TV dashboard: headline at most 80 characters, plan at most 110 characters, a summary of 2–3 short plain sentences (at most 320 characters) explaining why this pick beats the alternatives, 0–2 short caveats. Use ″ for inches. Times in local 12-hour format.`;
 
 function schema(eligible: PrimaryResortId[]) {
   const picks = [...eligible, "none"];
@@ -42,12 +42,12 @@ function schema(eligible: PrimaryResortId[]) {
       pick: { type: "string", enum: picks },
       plan: { type: "string", description: "One-line strategy for the morning" },
       headline: { type: "string" },
-      reasons: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 3 },
+      summary: { type: "string", description: "2–3 short sentences on why this pick" },
       caveats: { type: "array", items: { type: "string" }, maxItems: 2 },
       runnerUp: { type: "string", enum: picks },
       changedBecause: { type: "string" },
     },
-    required: ["pick", "plan", "headline", "reasons", "caveats", "runnerUp", "changedBecause"],
+    required: ["pick", "plan", "headline", "summary", "caveats", "runnerUp", "changedBecause"],
   };
 }
 
@@ -73,7 +73,7 @@ export interface LlmPick {
   pick: PrimaryResortId | null;
   plan: string;
   headline: string;
-  reasons: string[];
+  summary: string;
   caveats: string[];
   runnerUp: PrimaryResortId | null;
 }
@@ -106,8 +106,8 @@ export function validatePick(raw: unknown, eligible: PrimaryResortId[]): LlmPick
   if (pick === undefined) throw new Error(`Model picked an ineligible resort: ${String(o.pick)}`);
   const headline = clip(o.headline, 80);
   if (!headline) throw new Error("Model output has no headline");
-  if (!clip(o.plan, 110) || !Array.isArray(o.reasons) || !o.reasons.length || !Array.isArray(o.caveats)) {
-    throw new Error("Model output is missing its plan, reasons or caveats");
+  if (!clip(o.plan, 110) || !clip(o.summary, 360) || !Array.isArray(o.caveats)) {
+    throw new Error("Model output is missing its plan, summary or caveats");
   }
   const runnerUp = asPick(o.runnerUp);
   if (runnerUp === undefined) throw new Error("Model returned an ineligible runner-up");
@@ -117,7 +117,7 @@ export function validatePick(raw: unknown, eligible: PrimaryResortId[]): LlmPick
     pick,
     plan: clip(o.plan, 110),
     headline,
-    reasons: list(o.reasons, 3, 140),
+    summary: clip(o.summary, 360),
     caveats: list(o.caveats, 2, 120),
     runnerUp: runnerUp === pick ? null : runnerUp,
   };
