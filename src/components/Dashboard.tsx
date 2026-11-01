@@ -58,6 +58,7 @@ export default function Dashboard() {
   const [controlsVisible, setControlsVisible] = useState(true);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
+  const pointerQuietUntil = useRef(0);
 
   // Preferences load after mount (localStorage is browser-only).
   // URL options: ?slide=<id> picks the first slide; ?kiosk=1 starts playback
@@ -93,9 +94,21 @@ export default function Dashboard() {
     hideTimer.current = setTimeout(() => setControlsVisible(false), 5000);
   }, []);
 
+  // Manual hide: drop focus (focus-within would keep the bar visible) and
+  // ignore pointer jitter briefly so the click itself doesn't re-show it.
+  const hideControls = useCallback(() => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    (document.activeElement as HTMLElement | null)?.blur();
+    pointerQuietUntil.current = Date.now() + 1000;
+    setControlsVisible(false);
+  }, []);
+
   useEffect(() => {
     poke();
-    const onMove = () => poke();
+    const onMove = () => {
+      if (Date.now() < pointerQuietUntil.current) return;
+      poke();
+    };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerdown", onMove);
     return () => {
@@ -254,6 +267,9 @@ export default function Dashboard() {
         <span className="controls__status">
           {report ? `Data ${formatDenver(report.generatedAt, now)}` : ""}
         </span>
+        <button type="button" className="controls__hide" onClick={hideControls} aria-label="Hide controls" title="Hide controls">
+          ✕
+        </button>
       </div>
 
       {prefs && !started && (

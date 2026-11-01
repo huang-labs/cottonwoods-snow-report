@@ -205,6 +205,7 @@ button, select { font: inherit; color: inherit; }
 .slide-picker .is-current { background: var(--accent); color: #04121f; border-color: var(--accent); font-weight: 700; }
 .duration { display: inline-flex; align-items: center; gap: 0.4em; color: var(--muted); font-size: 0.85em; }
 .controls__status { color: var(--muted); font-size: 0.8em; }
+.controls__hide { color: var(--muted); }
 .progress { position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--line); border-radius: 0.8em 0.8em 0 0; overflow: hidden; }
 .progress__bar { height: 100%; background: var(--accent); transform-origin: left; animation-name: progress; animation-timing-function: linear; animation-fill-mode: forwards; }
 @keyframes progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
@@ -245,4 +246,5 @@ button, select { font: inherit; color: inherit; }
   .plume__svg, .plume--full img { min-height: 40vh; }
   .controls { position: sticky; bottom: 0; transform: none; left: auto; max-width: none; border-radius: 0; }
   .controls--hidden { opacity: 1; }
+  .controls__hide { display: none; }
 }
