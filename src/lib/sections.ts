@@ -13,7 +13,7 @@ export type SectionGroup = "resorts";
 export const GROUP_LABELS: Record<SectionGroup, string> = { resorts: "Resorts" };
 
 export const SECTIONS: SectionDef[] = [
-  { id: "regional", title: "Regional snowfall", label: "Home" },
+  { id: "regional", title: "Regional snowfall", label: "Snowfall" },
   { id: "weather", title: "Mountain weather", label: "Weather" },
   { id: "plumes", title: "Ensemble plumes", label: "Plumes" },
   { id: "traffic", title: "Canyon roads", label: "Roads" },

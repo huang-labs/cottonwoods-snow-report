@@ -160,7 +160,7 @@ describe("browse mode", () => {
     // Non-resort sections are tabs; the resorts sit behind one "Resorts" dropdown.
     const links = screen.getAllByRole("link").filter((a) => a.closest("nav"));
     expect(links.map((a) => a.getAttribute("href"))).toEqual(SECTIONS.filter((s) => !s.group).map((s) => sectionHref(s.id)));
-    expect(screen.getByRole("link", { name: "Home" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("link", { name: "Snowfall" }).getAttribute("aria-current")).toBe("page");
     expect(screen.getByRole("button", { name: "Resorts" }).getAttribute("aria-expanded")).toBe("false");
     // Arrow keys scroll the page in browse mode; they don't change sections.
     fireEvent.keyDown(window, { key: "ArrowRight" });
