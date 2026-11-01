@@ -157,9 +157,11 @@ describe("browse mode", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Regional snowfall" })).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.queryByRole("toolbar", { name: "Slideshow controls" })).toBeNull();
+    // Non-resort sections are tabs; the resorts sit behind one "Resorts" dropdown.
     const links = screen.getAllByRole("link").filter((a) => a.closest("nav"));
-    expect(links.map((a) => a.getAttribute("href"))).toEqual(SECTIONS.map((s) => sectionHref(s.id)));
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(SECTIONS.filter((s) => !s.group).map((s) => sectionHref(s.id)));
     expect(screen.getByRole("link", { name: "Snowfall" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("button", { name: "Resorts" }).getAttribute("aria-expanded")).toBe("false");
     // Arrow keys scroll the page in browse mode; they don't change sections.
     fireEvent.keyDown(window, { key: "ArrowRight" });
     expect(screen.getByRole("heading", { level: 1, name: "Regional snowfall" })).toBeTruthy();
@@ -172,7 +174,12 @@ describe("browse mode", () => {
     for (const [i, title] of expected.entries()) {
       const view = renderAt(sectionHref(SECTIONS[i].id));
       expect(await screen.findByRole("heading", { level: 1, name: title })).toBeTruthy();
-      expect(screen.getByRole("link", { name: SECTIONS[i].label }).getAttribute("aria-current")).toBe("page");
+      if (SECTIONS[i].group) {
+        // The dropdown trigger names the current resort.
+        expect(screen.getByRole("button", { name: `Resorts · ${SECTIONS[i].label}` }).className).toContain("is-active");
+      } else {
+        expect(screen.getByRole("link", { name: SECTIONS[i].label }).getAttribute("aria-current")).toBe("page");
+      }
       if (SECTIONS[i].id === "plumes") {
         // Four cropped panels, each with a Mountain Time axis.
         expect(await screen.findAllByRole("img", { name: /times in Mountain Time/ })).toHaveLength(4);
@@ -183,6 +190,31 @@ describe("browse mode", () => {
       }
       view.unmount();
     }
+  });
+
+  it("Resorts dropdown lists the resort pages and works from the keyboard", async () => {
+    mockApi(REPORT);
+    renderAt("/snowbird");
+    await screen.findByRole("heading", { level: 1, name: "Snowbird" });
+    const trigger = screen.getByRole("button", { name: "Resorts · Snowbird" });
+
+    fireEvent.click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    const items = ["Alta", "Snowbird", "Solitude", "Brighton"].map((name) => screen.getByRole("link", { name }));
+    expect(items.map((a) => a.getAttribute("href"))).toEqual(["/alta", "/snowbird", "/solitude", "/brighton"]);
+    expect(items[1].getAttribute("aria-current")).toBe("page");
+    // Clicking outside closes it.
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole("link", { name: "Alta" })).toBeNull();
+
+    // ↓ opens with focus on the current resort; ↓ moves on; Escape returns to the trigger.
+    fireEvent.keyDown(trigger, { key: "ArrowDown" });
+    expect(document.activeElement).toBe(screen.getByRole("link", { name: "Snowbird" }));
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowDown" });
+    expect(document.activeElement).toBe(screen.getByRole("link", { name: "Solitude" }));
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    expect(screen.queryByRole("link", { name: "Solitude" })).toBeNull();
+    expect(document.activeElement).toBe(trigger);
   });
 
   it("renders explicit unavailable states when nothing has been collected", async () => {
