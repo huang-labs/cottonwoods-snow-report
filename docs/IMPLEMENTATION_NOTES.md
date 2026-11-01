@@ -75,4 +75,4 @@ The documentation (2026-10-30) confirms a developer key is required (`key` query
 - Real snowfall for all four primary resorts: **working** (Alta, Snowbird, Solitude, Brighton all collect and validate from the Worker runtime under local workerd).
 - Latest Utah plumes: **working** (dynamic run discovery plus image check).
 - Degradable: NWS, roads, UDOT webcams and resort webcams work. Travel times are collected but flagged not live. UDOT API events need a key.
-- Production fetch behavior from Cloudflare's network (as opposed to local workerd) is **unverified until deployment**. In particular, resort CDNs may treat Cloudflare egress differently. Check `wrangler tail` after the first cron.
+- Deployed 2026-11-01 to https://cottonwoods-snow-report.huang.mx (see README → Production). First production cron (18:10 UTC): all 10 sources collected successfully from Cloudflare's network, with no resort CDN blocking. That run cropped a new plume run and used 1.5 s CPU (3.1 s wall time). The first tick after the cron trigger was created (18:00) did not fire; schedules took a few minutes to become active.
