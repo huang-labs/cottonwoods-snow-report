@@ -57,6 +57,7 @@ export function RegionalSlide({ report, now }: { report: ReportResponse; now: Da
         <h1>Regional snowfall</h1>
         <p className="slide__sub">Resort-reported totals. Measurement windows and sites are source-defined and not strictly comparable — each cell shows the resort’s own label.</p>
       </header>
+      <RecommendationCard recommendation={report.recommendation} now={now} />
       <table className="snow-table">
         <thead>
           <tr>
@@ -76,7 +77,6 @@ export function RegionalSlide({ report, now }: { report: ReportResponse; now: Da
       <p className="legend">
         <span className="metric__value metric__value--zero">0″</span> reported zero · <span className="metric__missing">not reported</span> field empty in source · <span className="metric__na">n/a</span> not provided by source
       </p>
-      <RecommendationCard recommendation={report.recommendation} now={now} />
     </section>
   );
 }
