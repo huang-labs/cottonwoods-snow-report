@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Department of Atmospheric Sciences - Weather Center</title>
+
+    <!-- SciAnimator CSS -->
+    <link rel="stylesheet" href="scripts/scianimator/std/assets/css/scianimator.css" />
+    
+    <!-- University Theme CSS -->
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="assets/vendor/aos.css">
+    <link rel="stylesheet" href="assets/css/overrides.css">
+    <style>
+      .uu-bottom-header .uu-header-title h1 span {
+        color: #d0d0d0;
+      }
+    </style>
+</head>
+
+<body class="uu-body">
+
+    <!-- MAIN PAGE CONTAINER -->
+    <div id="page" class="site uu-page-container">
+        <a class="skip-link" href="#primary">Skip to main content</a>
+        
+        <!-- HEADER -->
+			<header id="header" class="uu-header" style="position: relative; z-index: 99999;">
+            <div class="uu-bottom-header">
+
+                <div id="header_logo" class="uu-header-logo">
+                    <a href="https://www.utah.edu/" rel="home" aria-label="University of Utah home"></a>
+                </div>
+                
+                <div class="uu-header-title">
+                    <a href="https://www.atmos.utah.edu/">
+                        <h1>
+                            Department of Atmospheric Sciences
+                            <span>Weather Center</span>
+                        </h1>
+                    </a>
+                </div>
+
+            </div>
+        </header>
+
+
+        <!-- LEGACY PHP APPLICATION INJECTION POINT -->
+        <div class="content-shell">
+        <div class="page-shell">
+            <nav id="sidenav" class="uu-sidenav" aria-label="Forecast navigation">
+              <div class="uu-sidenav-header">
+                <div class="uu-sidenav-header-logo">
+                  <a href="index.php" class="uu-sidenav-dept-logo">
+                    <img src="assets/img/uu-logo-hrz.png" alt="University of Utah Logo" title="University of Utah">
+                  </a>
+                </div>
+              </div>
+      
+              <div class="uu-sidenav-menu-block">
+                <h3>Forecast Systems</h3><hr class="left">
+                <ul class="sidenav-menu" rel="top">
+		<li class="menu-accordion" data-forecast-type="gfs0p25"><a class="menu-link" href='index.php?t=gfs0p25&r=WS&d=SY'><span style="position:static !important; left:auto !important; display:inline !important;">GFS-0p25deg</span></a><span class="menu-toggle" role="button" aria-label="Toggle GFS-0p25deg submenu" aria-expanded="false"></span></li><li class="menu-accordion" data-forecast-type="gfssflux"><a class="menu-link" href='index.php?t=gfssflux&r=IM&d=HP'><span style="position:static !important; left:auto !important; display:inline !important;">GFS-13km</span></a><span class="menu-toggle" role="button" aria-label="Toggle GFS-13km submenu" aria-expanded="false"></span></li><li class="menu-accordion" data-forecast-type="hres"><a class="menu-link" href='index.php?t=hres&r=WS&d=SY'><span style="position:static !important; left:auto !important; display:inline !important;">ECMWF HRES</span></a><span class="menu-toggle" role="button" aria-label="Toggle ECMWF HRES submenu" aria-expanded="false"></span></li><li class="menu-accordion" data-forecast-type="aifs"><a class="menu-link" href='index.php?t=aifs&r=WS&d=SY'><span style="position:static !important; left:auto !important; display:inline !important;">ECMWF AIFS</span></a><span class="menu-toggle" role="button" aria-label="Toggle ECMWF AIFS submenu" aria-expanded="false"></span></li><li class="menu-accordion" data-forecast-type="hrrrext"><a class="menu-link" href='index.php?t=hrrrext&r=IM&d=CR'><span style="position:static !important; left:auto !important; display:inline !important;">HRRR (48 h)</span></a><span class="menu-toggle" role="button" aria-label="Toggle HRRR (48 h) submenu" aria-expanded="false"></span></li><li class="menu-accordion" data-forecast-type="hrrr"><a class="menu-link" href='index.php?t=hrrr&r=IM&d=CR'><span style="position:static !important; left:auto !important; display:inline !important;">HRRR (18 h)</span></a><span class="menu-toggle" role="button" aria-label="Toggle HRRR (18 h) submenu" aria-expanded="false"></span></li>
+      <div class="uu-sidenav-menu-block snow-guidance-block">
+
+              <h3>Snow Guidance</h3>
+              <div style="font-size: 0.78em; line-height: 1; margin: -2px 0 2px; opacity: 0.85;">Experimental</div><hr class="left">
+                <ul class="sidenav-menu" rel="top">
+		<li class="menu-accordion" data-forecast-type="hrrrqsf"><a class="menu-link" href='index.php?t=hrrrqsf&r=WE&d=48HS'><span style="position:static !important; left:auto !important; display:inline !important;">HRRR-Snow</span></a><span class="menu-toggle" role="button" aria-label="Toggle HRRR-Snow submenu" aria-expanded="false"></span></li>
+		<li class="menu-accordion" data-forecast-type="rrfsqsf"><a class="menu-link" href='index.php?t=rrfsqsf&r=WE&d=60HS'><span style="position:static !important; left:auto !important; display:inline !important;">RRFS Snow Ensemble</span></a><span class="menu-toggle" role="button" aria-label="Toggle RRFS Snow Ensemble submenu" aria-expanded="false"></span></li>			<li class="menu-accordion" data-forecast-type="ensgefsds"><a class="menu-link" aria-current="page" href='index.php?t=ensgefsds&r=WE&d=240HS'><span style="position:static !important; left:auto !important; display:inline !important;">Utah Snow Ensemble</span></a><span class="menu-toggle" role="button" aria-label="Toggle Utah Snow Ensemble submenu" aria-expanded="false"></span></li><li class="subnav">
+<ul class="sub-menu">
+<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=240HS&r=WE"><span>Western US</span></a></li>
+<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=240HS&r=NW"><span>Northwest</span></a></li>
+<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=240HS&r=SW"><span>Southwest</span></a></li>
+<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=240HS&r=NU"><span>Northern Utah</span></a></li>
+<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=240HS&r=WF"><span>Wasatch Front</span></a></li>
+<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=240HS&r=CO"><span>Colorado</span></a></li>
+<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=240HS&r=SN"><span>Sierra Nevada</span></a></li>
+                                       <li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CLN"><span>Plumes</span></a></li>
+                                                                                              <li class="subnav">
+                        		            <ul class="sub-menu">
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CLN"><span>Alta-Collins, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KSLC"><span>Salt Lake City, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=ALPCC"><span>Alpine CC, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=SND"><span>Sundance-Arrowhead, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=PKCU1"><span>Silver Lake Brighton, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=DVO"><span>Deer Valley-Ontario, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=PCB"><span>PCMR Base, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=PKC"><span>PCMR Summit, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CDYBK"><span>Canyons-Daybreak, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=DPEAK"><span>Diamond Peak, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=SNI"><span>Snowbasin-Mid Bowl, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=BLPU1"><span>Ben Lomond Pk Snotel, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=UTPWD"><span>Powder Mountain, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=SCRA"><span>SCRA, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=TGLU1"><span>Tony Grove Snotel, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=TRLU1"><span>Trial Lake, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=WDYPK"><span>Windy Peak, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=PCCAT"><span>Upper Weber, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=SEE"><span>Seeley Creek, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=ABAUT"><span>Abajo Peak, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=LSMU1"><span>La Sal Mts Snotel, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=EAGPT"><span>Eagle Point, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=BHEAD"><span>Brianhead, UT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KBOU"><span>Boulder, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=TOWC2"><span>Tower Snotel, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=STORM"><span>Storm Peak Lab, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KSBS"><span>Steamboat Springs, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KC07"><span>Walton Peak, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CACMP"><span>Cameron Pass, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CABTP"><span>Berthoud Pass, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=SCEC2"><span>E Eisenhower Tunnel, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KEYSS"><span>Keystone Summit, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CO070"><span>Vail Pass, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CO056"><span>Monarch Pass, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KASE"><span>Aspen-Pitkin Airport, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CAAXT"><span>Aspen Resort Summit, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=SMASS"><span>Snowmass Cirque, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CAMCP"><span>McClure Pass, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=RMPC2"><span>Red Mt Pass Snotel, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CAGMS"><span>Grand Mesa Skyway, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CBS"><span>Crested Butte-Banana, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KGUC"><span>Gunnison-CB Airport, CO</span></a></li> 
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KTEX"><span>Telluride Airport, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KDRO"><span>Durango Airport, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=WEP"><span>West Elk Peak, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KGJT"><span>Grand Junction Airport, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CACBP"><span>Coal Bank Pass, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CAWCP"><span>Wolf Creek Pass, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CUMC2"><span>Cumbres Trestle, CO</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=BIGMS"><span>Big Mountain Summit, MT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=NOIM8"><span>Noisy Basin, MT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=TURMT"><span>Tunnel Ridge, MT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=MSPM8"><span>Moss Peak, MT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=LMTMT"><span>Big Sky-Lone Mt, MT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=LPSI1"><span>Lolo Pass, MT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=FSHM8"><span>Fisher Creek Snotel, MT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=SHFM8"><span>Shower Falls Snotel, MT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=BBALP"><span>Bridger Bowl Alpine Stat, MT</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=BKSI1"><span>Big Creek Summit, ID</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=BASI1"><span>Banner Summit, ID</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=TTSID"><span>Lower Titus, ID</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=MTLPS"><span>Lookout Pass, ID</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=SVSID"><span>Sun Valley Study Plot, ID</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=STLPK"><span>Sawtell Peak, ID</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=WWA01"><span>Bogus Basin, ID</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=GTFM"><span>Freds Mt, WY</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=JHRV"><span>JHMR-Rendezvous Bowl, WY</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=SYLP"><span>Sylvan Pass, WY</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=SSFNM"><span>Ski Santa Fe Base, NM</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=TAONM"><span>Taos Ski Area, NM</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KRQE"><span>Window Rock, AZ</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=ASBTP"><span>Arizona Snowbowl Top, AZ</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KFLG"><span>Flagstaff, AZ</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KPRC"><span>Prescott, AZ</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KSOW"><span>Show Low, AZ</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=HUR53"><span>Hurricane Ridge, WA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=WAP55"><span>Washington Pass, WA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=TUM42"><span>Tumwater Mountain, WA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=SNO30"><span>Snoqualmie Pass, WA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=SASW1"><span>Sasse Ridge, WA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=HOLDV"><span>Holden Village, WA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=MISR"><span>Mission Ridge Midway, WA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=MTB42"><span>Mt. Baker-Heather Mead., WA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=TSTEV"><span>Stevens Pass, WA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CMT"><span>Crystal Mt Base, WA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=PVC54"><span>Paradise RS, WA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=WPS45"><span>White Pass Base, WA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=TIM59"><span>Timberline Lodge, OR</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=OD110"><span>Santiam Pass, OR</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=MBB"><span>Mt. Bachelor Base, OR</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=BURGP"><span>Burger Pass, OR</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=LMLN2"><span>Lamoille Canyon, NV</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=CSSL"><span>Central Sierra Snow Lab, CA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=SRAC1"><span>Sonora Pass, CA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=KWOOD"><span>Kirkwood, CA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=MTH04"><span>Mammoth Mt. Main Base, CA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=MSSKI"><span>Mt. Shasta Ski Bowl, CA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=PALT"><span>Palisades-Tahoe Base, CA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=MBNCA"><span>Mt. Baldy Notch, CA</span></a></li>
+							<li><a href="index.php?runcode=2026103012&t=ensgefsds&d=PL&r=BBEAR"><span>Big Bear Summit, CA</span></a></li>
+                                                    </ul>
+                                                </li>
+                                       				<li><a href="https://wasatchweatherweenies.blogspot.com/2024/09/the-utah-snow-ensemble.html"><span>Info on This Product</span></a></li>
+                                </ul>
+                        </li>
+		
+				<li><a href="http://weather.utah.edu/text/ensgefsdslccforecast.html"><span>Little Cottonwood (USE)</span></a></li>
+				<li><a href="https://home.chpc.utah.edu/~steenburgh/ml/gfslccforecast.html"><span>Little Cottonwood (GFS)</span></a></li>
+				<li><a href="https://home.chpc.utah.edu/~steenburgh/ml/hrrrlccforecast.html"><span>Little Cottonwood (HRRR)</span></a></li>
+				<li><a href="https://home.chpc.utah.edu/~steenburgh/ml/hrrrsnowbasinforecast.html"><span>Snowbasin (HRRR)</span></a></li>
+				<li><a href="http://weather.utah.edu/text/LAKE_EFFECT.txt"><span>Great Salt Lake Effect</span></a></li>
+        </ul>
+      </div>
+
+        </div>
+        </nav>
+        <main id="primary" tabindex="-1">
+            <div id="content">
+                <div class="run-controls">
+                    <div class="run-controls-top">
+                        <div class="run-controls-title">
+                            <h2><span class="run-label">Initialization:</span> 2026103012</h2>
+                        </div>
+                        <div class="run-controls-forms">
+                            <form method="get" action="index.php">
+                                <span class="run-controls-label">View Different Run (YYYYMMDDHH):</span>
+                                <label class="sr-only" for="runcode">Model initialization time (YYYYMMDDHH)</label>
+                                <input type="text" name="runcode" id="runcode"/>
+                                <input type="submit" value="go" />
+                                <input type="hidden" name="t" value="ensgefsds"/>
+                                <input type="hidden" name="r" value="CLN" />
+                                <input type="hidden" name="d" value="PL" />
+                            </form>
+                            <span class="run-controls-or">or</span>
+                            <form method="get" action="index.php">
+                                <input type="submit" value="current"/>
+                                <input type="hidden" name="t" value="ensgefsds"/>
+                                <input type="hidden" name="r" value="CLN" />
+                                <input type="hidden" name="d" value="PL" />
+                            </form>
+                        </div>
+                    </div>
+                    <div id="scianimator1"></div>
+                    <section class="forecast-summary" aria-labelledby="forecast-summary-heading">
+                        <h3 id="forecast-summary-heading">Graphics Summary</h3>
+                            <p>
+                                This page displays analysis and/or forecast graphics for the selected model, region, and diagnostic.
+                            Current selection: Utah Snow Ensemble,
+                            Alta-Collins, UT,
+                            Plumes,
+                            2026103012 initialization.
+                        </p>
+                    </section>
+                </div>
+            </div>
+        </main>
+        <!-- END PRIMARY -->
+
+	<!-- FOOTER -->
+        <div class="uu-bottom-footer" style="margin-top: 0;">
+            <div class="uu-bottom-footer-container">
+                <div class="uu-footer-links" style="flex: 1 1 100%; text-align: center; text-transform: none;">
+                    <p>
+                        This service is based on data and products of the National Centers for Environmental Prediction (NCEP), the European Center for Medium Range Weather Forecasting (ECMWF), and the University of Utah. These groups do not accept any liability whatsoever for any error or omission in the data, their availability, or for any loss or damage arising from their use. All images &copy;2026 The University of Utah. ECMWF data &copy;2026 ECMWF.
+                    </p>
+                </div>
+            </div>
+        </div>
+        </div>
+
+    </div>
+    <!-- END PAGE CONTAINER -->
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentForecastType = "ensgefsds";
+            const currentRegion = "CLN";
+            const currentDiagnostic = "PL";
+            const sidenav = document.getElementById('sidenav');
+            const topItems = Array.from(document.querySelectorAll('.sidenav-menu > li.menu-accordion'));
+            const submenuItems = Array.from(document.querySelectorAll('#sidenav li'));
+            let submenuIndex = 0;
+
+            function getMenuDepth(link) {
+                let depth = 0;
+                let node = link.parentElement;
+                while (node) {
+                    if (node.classList && node.classList.contains('subnav')) {
+                        depth += 1;
+                    }
+                    node = node.parentElement;
+                }
+                return depth;
+            }
+
+	            function markCurrentMenuLinks() {
+	                if (!sidenav) {
+	                    return;
+	                }
+	                const depth1RegionCounts = new Map();
+	                Array.from(sidenav.querySelectorAll('a[href]')).forEach(function(link) {
+	                    const url = new URL(link.href, window.location.href);
+	                    const linkForecast = (url.searchParams.get('t') || '').toLowerCase();
+	                    const linkRegion = (url.searchParams.get('r') || '').toUpperCase();
+	                    const depth = getMenuDepth(link);
+	                    if (depth === 1) {
+	                        const key = linkForecast + '|' + linkRegion;
+	                        depth1RegionCounts.set(key, (depth1RegionCounts.get(key) || 0) + 1);
+	                    }
+	                });
+	                Array.from(sidenav.querySelectorAll('a[href]')).forEach(function(link) {
+	                    const url = new URL(link.href, window.location.href);
+	                    const linkForecast = (url.searchParams.get('t') || '').toLowerCase();
+	                    const linkRegion = (url.searchParams.get('r') || '').toUpperCase();
+	                    const linkDiagnostic = (url.searchParams.get('d') || '').toUpperCase();
+	                    const depth = getMenuDepth(link);
+	                    let isCurrent = false;
+
+	                    if (depth === 0) {
+	                        isCurrent = linkForecast === currentForecastType;
+	                    } else if (depth === 1) {
+	                        const duplicateRegionGroup = depth1RegionCounts.get(linkForecast + '|' + linkRegion) > 1;
+	                        if (duplicateRegionGroup) {
+	                            isCurrent = linkForecast === currentForecastType && linkDiagnostic === currentDiagnostic;
+	                        } else {
+	                            isCurrent = linkForecast === currentForecastType && linkRegion !== '' && linkRegion === currentRegion;
+	                        }
+	                    } else {
+	                        isCurrent = linkForecast === currentForecastType && linkDiagnostic !== '' && linkDiagnostic === currentDiagnostic && linkRegion === currentRegion;
+	                    }
+
+	                    if (isCurrent) {
+	                        link.setAttribute('aria-current', 'page');
+	                    } else {
+                        link.removeAttribute('aria-current');
+                    }
+                });
+            }
+
+            function getDirectChildButton(item) {
+                return Array.from(item.children).find(function(child) {
+                    return child.matches && child.matches('.menu-toggle');
+                }) || null;
+            }
+
+            function getVisibleMenuTargets() {
+                if (!sidenav) {
+                    return [];
+                }
+                return Array.from(sidenav.querySelectorAll('a')).filter(function(target) {
+                    return !target.closest('[hidden]');
+                });
+            }
+
+            function focusTargetAtOffset(currentTarget, offset) {
+                const targets = getVisibleMenuTargets();
+                const index = targets.indexOf(currentTarget);
+                if (index === -1) {
+                    return;
+                }
+                const nextTarget = targets[index + offset];
+                if (nextTarget) {
+                    nextTarget.focus();
+                }
+            }
+
+            function focusFirstChild(item) {
+                const submenu = item.nextElementSibling;
+                if (!submenu || !submenu.classList.contains('subnav') || submenu.hidden) {
+                    return;
+                }
+                const nextTarget = submenu.querySelector('a');
+                if (nextTarget) {
+                    nextTarget.focus();
+                }
+            }
+
+            function handleMenuKeydown(event, item, button, openSubmenuFn, closeSubmenuFn) {
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    focusTargetAtOffset(button, 1);
+                    return true;
+                }
+                if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    focusTargetAtOffset(button, -1);
+                    return true;
+                }
+                if (event.key === 'ArrowRight') {
+                    event.preventDefault();
+                    if (openSubmenuFn) {
+                        openSubmenuFn();
+                    }
+                    focusFirstChild(item);
+                    return true;
+                }
+                if (event.key === 'ArrowLeft') {
+                    event.preventDefault();
+                    if (closeSubmenuFn) {
+                        closeSubmenuFn();
+                    }
+                    button.focus();
+                    return true;
+                }
+                if (event.key === 'Home') {
+                    event.preventDefault();
+                    const targets = getVisibleMenuTargets();
+                    if (targets[0]) {
+                        targets[0].focus();
+                    }
+                    return true;
+                }
+                if (event.key === 'End') {
+                    event.preventDefault();
+                    const targets = getVisibleMenuTargets();
+                    if (targets.length) {
+                        targets[targets.length - 1].focus();
+                    }
+                    return true;
+                }
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    if (closeSubmenuFn) {
+                        closeSubmenuFn();
+                    }
+                    button.focus();
+                    return true;
+                }
+                return false;
+            }
+
+            function updateDisclosureButton(button, isOpen, labelText) {
+                if (!button) {
+                    return;
+                }
+                const baseLabel = labelText || button.dataset.label || '';
+                button.dataset.label = baseLabel;
+                button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                button.setAttribute('aria-label', (isOpen ? 'Collapse ' : 'Expand ') + baseLabel + ' submenu');
+            }
+
+            function closeAllModelSections() {
+                topItems.forEach(function(item) {
+                    const submenu = item.nextElementSibling;
+                    if (submenu && submenu.classList.contains('subnav')) {
+                        item.classList.remove('is-open');
+                        const button = getDirectChildButton(item);
+                        updateDisclosureButton(button, false, item.querySelector('a') ? item.querySelector('a').textContent.trim() : '');
+                        submenu.hidden = true;
+                        closeDescendantDisclosures(submenu);
+                    }
+                });
+            }
+
+            function closeDescendantDisclosures(container) {
+                const nestedOpenItems = Array.from(container.querySelectorAll('li.menu-disclosure.is-open'));
+                nestedOpenItems.reverse().forEach(function(nestedItem) {
+                    const nestedSubmenu = nestedItem.nextElementSibling;
+                const nestedButton = nestedItem.querySelector('.menu-toggle');
+                    nestedItem.classList.remove('is-open');
+                    updateDisclosureButton(nestedButton, false, nestedButton ? nestedButton.dataset.label : '');
+                    if (nestedSubmenu && nestedSubmenu.classList.contains('subnav')) {
+                        nestedSubmenu.hidden = true;
+                    }
+                });
+            }
+
+            function closeDisclosure(item) {
+                const submenu = item.nextElementSibling;
+                if (!submenu || !submenu.classList.contains('subnav')) {
+                    return;
+                }
+                item.classList.remove('is-open');
+                const button = getDirectChildButton(item);
+                updateDisclosureButton(button, false, item.querySelector('a') ? item.querySelector('a').textContent.trim() : '');
+                submenu.hidden = true;
+                closeDescendantDisclosures(submenu);
+            }
+
+            function openDisclosure(item) {
+                const submenu = item.nextElementSibling;
+                if (!submenu || !submenu.classList.contains('subnav')) {
+                    return;
+                }
+                item.classList.add('is-open');
+                const button = getDirectChildButton(item);
+                updateDisclosureButton(button, true, item.querySelector('a') ? item.querySelector('a').textContent.trim() : '');
+                submenu.hidden = false;
+            }
+
+            function setupDisclosureItem(item, openByDefault) {
+                const submenu = item.nextElementSibling;
+                const link = item.querySelector('a');
+                if (!submenu || !submenu.classList.contains('subnav') || !link) {
+                    return;
+                }
+
+                item.classList.add('menu-disclosure');
+                let button = getDirectChildButton(item);
+                if (!button) {
+                    button = document.createElement('span');
+                    button.className = 'menu-toggle';
+                    button.setAttribute('role', 'button');
+                    link.insertAdjacentElement('afterend', button);
+                }
+                button.setAttribute('tabindex', '-1');
+                button.addEventListener('focus', function() {
+                    if (link && document.activeElement !== link) {
+                        link.focus({ preventScroll: true });
+                    }
+                });
+
+                if (!submenu.id) {
+                    submenu.id = 'submenu-' + submenuIndex++;
+                }
+                button.setAttribute('aria-haspopup', 'true');
+                button.setAttribute('aria-controls', submenu.id);
+                button.dataset.label = link.textContent.trim();
+                updateDisclosureButton(button, openByDefault, button.dataset.label);
+
+                if (openByDefault) {
+                    item.classList.add('is-open');
+                    submenu.hidden = false;
+                } else {
+                    item.classList.remove('is-open');
+                    submenu.hidden = true;
+                }
+
+                button.addEventListener('click', function() {
+                    const isOpen = item.classList.contains('is-open');
+                    const parentList = item.parentElement;
+                    if (parentList) {
+                        Array.from(parentList.children).forEach(function(sibling) {
+                            if (sibling !== item && sibling.classList && sibling.classList.contains('menu-disclosure')) {
+                                closeDisclosure(sibling);
+                            }
+                        });
+                    }
+                    if (isOpen) {
+                        closeDisclosure(item);
+                    } else {
+                        openDisclosure(item);
+                    }
+                });
+
+                button.addEventListener('keydown', function(event) {
+                    handleMenuKeydown(event, item, button, function() {
+                        if (!item.classList.contains('is-open')) {
+                            openDisclosure(item);
+                        }
+                    }, function() {
+                        if (item.classList.contains('is-open')) {
+                            closeDisclosure(item);
+                        }
+                    });
+                });
+
+                link.addEventListener('keydown', function(event) {
+                    handleMenuKeydown(event, item, button, function() {
+                        if (!item.classList.contains('is-open')) {
+                            openDisclosure(item);
+                        }
+                    }, function() {
+                        if (item.classList.contains('is-open')) {
+                            closeDisclosure(item);
+                        }
+                    });
+                });
+            }
+
+            topItems.forEach(function(item) {
+                const submenu = item.nextElementSibling;
+                const button = item.querySelector('.menu-toggle');
+                if (!submenu || !submenu.classList.contains('subnav') || !button) {
+                    return;
+                }
+                button.setAttribute('tabindex', '-1');
+                button.addEventListener('focus', function() {
+                    const link = item.querySelector('a');
+                    if (link && document.activeElement !== link) {
+                        link.focus({ preventScroll: true });
+                    }
+                });
+
+                if (!submenu.id) {
+                    submenu.id = 'forecast-submenu-' + submenuIndex++;
+                }
+                button.setAttribute('aria-haspopup', 'true');
+                button.setAttribute('aria-controls', submenu.id);
+                button.dataset.label = item.querySelector('a') ? item.querySelector('a').textContent.trim() : '';
+                updateDisclosureButton(button, false, button.dataset.label);
+                submenu.hidden = true;
+                button.addEventListener('click', function() {
+                    const isOpen = item.classList.contains('is-open');
+                    closeAllModelSections();
+                    if (!isOpen) {
+                        item.classList.add('is-open');
+                        updateDisclosureButton(button, true, button.dataset.label);
+                        submenu.hidden = false;
+                    }
+                });
+
+                button.addEventListener('keydown', function(event) {
+                    handleMenuKeydown(event, item, button, function() {
+                        if (!item.classList.contains('is-open')) {
+                            item.classList.add('is-open');
+                            updateDisclosureButton(button, true, button.dataset.label);
+                            submenu.hidden = false;
+                        }
+                    }, function() {
+                        closeAllModelSections();
+                    });
+                });
+
+                const link = item.querySelector('a');
+                if (link) {
+                    link.addEventListener('keydown', function(event) {
+                        handleMenuKeydown(event, item, button, function() {
+                            if (!item.classList.contains('is-open')) {
+                                item.classList.add('is-open');
+                                updateDisclosureButton(button, true, button.dataset.label);
+                                submenu.hidden = false;
+                            }
+                        }, function() {
+                            closeAllModelSections();
+                        });
+                    });
+                }
+            });
+
+            submenuItems.forEach(function(item) {
+                if (!item.classList.contains('menu-accordion')) {
+                    setupDisclosureItem(item, item.nextElementSibling && item.nextElementSibling.classList.contains('subnav'));
+                }
+            });
+
+            const activeItem = topItems.find(function(item) {
+                return item.dataset.forecastType === currentForecastType;
+            });
+
+            if (activeItem) {
+                activeItem.classList.add('is-open');
+                const activeButton = activeItem.querySelector('.menu-toggle');
+                if (activeButton) {
+                    updateDisclosureButton(activeButton, true, activeButton.dataset.label);
+                }
+                const activeSubmenu = activeItem.nextElementSibling;
+                if (activeSubmenu && activeSubmenu.classList.contains('subnav')) {
+                    activeSubmenu.hidden = false;
+                }
+            } else {
+                const firstModel = topItems[0];
+                if (firstModel) {
+                    firstModel.classList.add('is-open');
+                    const firstButton = firstModel.querySelector('.menu-toggle');
+                    const firstSubmenu = firstModel.nextElementSibling;
+                    if (firstButton) {
+                        updateDisclosureButton(firstButton, true, firstButton.dataset.label);
+                    }
+                    if (firstSubmenu && firstSubmenu.classList.contains('subnav')) {
+                        firstSubmenu.hidden = false;
+                    }
+                }
+            }
+
+            markCurrentMenuLinks();
+
+            const activeMenuLinks = sidenav ? Array.from(sidenav.querySelectorAll('a[aria-current="page"]')) : [];
+            const activeMenuLink = activeMenuLinks.reduce(function(selected, link) {
+                if (!selected) {
+                    return link;
+                }
+                return getMenuDepth(link) > getMenuDepth(selected) ? link : selected;
+            }, null);
+            if (activeMenuLink) {
+                activeMenuLink.focus({ preventScroll: true });
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchBtn = document.querySelector('.search-btn');
+            const searchBox = document.querySelector('.uu-search.campus-search');
+            const searchForm = searchBox ? searchBox.querySelector('form') : null;
+            
+            if (searchBtn && searchBox) {
+                // 1. Toggle visibility on button click
+                searchBtn.addEventListener('click', function(e) {
+                    e.stopPropagation(); // Stop click from immediately triggering the close listener
+                    const currentDisplay = window.getComputedStyle(searchBox).display;
+                    
+                    if (currentDisplay === 'none') {
+                        searchBox.style.setProperty('display', 'block', 'important');
+                        searchBox.style.setProperty('z-index', '2147483647', 'important');
+                    } else {
+                        searchBox.style.setProperty('display', 'none', 'important');
+                    }
+                });
+
+                // 2. Hide box immediately upon form submission
+                if (searchForm) {
+                    searchForm.addEventListener('submit', function() {
+                        searchBox.style.setProperty('display', 'none', 'important');
+                    });
+                }
+
+                // 3. Hide box if user clicks outside of it
+                document.addEventListener('click', function(e) {
+                    const currentDisplay = window.getComputedStyle(searchBox).display;
+                    if (currentDisplay !== 'none') {
+                        // If the click is not inside the search box, shut it down
+                        if (!searchBox.contains(e.target)) {
+                            searchBox.style.setProperty('display', 'none', 'important');
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+
+    <!-- JAVASCRIPT DEPENDENCIES -->
+    <!-- 1. Modern jQuery and Theme Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="assets/vendor/aos.js"></script>
+    <script src="assets/js/navigation.js"></script>
+    <script>
+        var wp_urls = { siteurl: '/' };
+    </script>
+    <script src="assets/js/app.js"></script>
+
+    <!-- 2. Legacy jQuery and SciAnimator -->
+    <script src="scripts/scianimator/std/assets/js/jquery-1.4.4.min.js"></script>
+    <script src="scripts/scianimator/std/assets/js/jquery.scianimator.min.js"></script>
+
+    <!-- 3. Isolate Legacy jQuery and Initialize -->
+    <script type="text/javascript">
+        // Sandbox the old 1.4.4 jQuery so it doesn't override the modern 3.6.0 version
+        var jqLegacy = jQuery.noConflict(true);
+
+        (function($) {
+            Index = {
+                images_vis: [
+                "20261030/images/models/ensgefsds/ENSGEFSDSPL_CLN2026103012F240.png",
+                ],
+
+                init: function()
+                {
+                    if (!Index.images_vis.length) {
+                        $('#scianimator1').html('<div class="product-unavailable">PRODUCT NOT AVAILABLE. THIS COULD BE A PROCESSING ERROR ON OUR END, BUT CHECK YOUR REQUEST OR UPDATE YOUR BOOKMARK AS SOME PRODUCTS HAVE CHANGED DUE TO SERVER UPDATES.</div>');
+                        return;
+                    }
+                    $('#scianimator1').scianimator({
+                        'images': Index.images_vis,
+                        'utf8': false,
+                        'controlPosition': 0
+                    }).scianimator('play');
+                }
+            };
+            
+            $(document).ready(Index.init);
+        })(jqLegacy); // Inject the sandboxed legacy jQuery here
+    </script>
+
+</body>
+</html>

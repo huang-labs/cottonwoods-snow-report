@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cottonwoods-snow-report",
+  // Custom entrypoint: re-exports the OpenNext fetch handler and adds scheduled().
+  "main": "./worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "cottonwoods-snow-report"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "SNOW_KV",
+      // Replace with the id printed by `wrangler kv namespace create SNOW_KV` before deploying.
+      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
+    }
+  ],
+  // One global collection cron for every source category.
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
+  "observability": {
+    "enabled": true
+  }
+}
