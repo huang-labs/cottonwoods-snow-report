@@ -157,3 +157,54 @@ describe("GET /api/report", () => {
     vi.doUnmock("@opennextjs/cloudflare");
   });
 });
+
+describe("per-source collection intervals", () => {
+  const at = (min: number) => new Date(FIXTURE_NOW.getTime() + min * MIN);
+  const run = async (kv: MemoryKV, min: number) =>
+    runCollection({ SNOW_KV: kv }, { now: at(min), fetchImpl: createFixtureFetch().fetchImpl });
+
+  it("collects slow sources on their own cadence and everything else every run", async () => {
+    const kv = new MemoryKV();
+    const collected: Record<number, string[]> = {};
+    for (const min of [0, 5, 10, 15, 20, 25, 30]) {
+      collected[min] = (await run(kv, min)).results.map((r) => r.id);
+    }
+    const has = (min: number, id: string) => collected[min].includes(id);
+    expect([0, 5, 10, 15, 20, 25, 30].filter((m) => has(m, "alta"))).toEqual([0, 5, 10, 15, 20, 25, 30]);
+    expect([0, 5, 10, 15, 20, 25, 30].filter((m) => has(m, "nws"))).toEqual([0, 15, 30]);
+    expect([0, 5, 10, 15, 20, 25, 30].filter((m) => has(m, "traveltimes"))).toEqual([0, 15, 30]);
+    expect([0, 5, 10, 15, 20, 25, 30].filter((m) => has(m, "plumes"))).toEqual([0, 30]);
+    // Skipped sources keep their record (and payload) in the snapshot.
+    const snap = (await readSnapshot(kv))!;
+    expect(snap.sources.plumes?.status).toBe("ok");
+  });
+
+  it("retries a failed slow source on the very next run", async () => {
+    const kv = new MemoryKV();
+    const failing = createFixtureFetch([[/weather\.utah\.edu/, () => new Response("down", { status: 503 })]]).fetchImpl;
+    await runCollection({ SNOW_KV: kv }, { now: at(0), fetchImpl: failing, only: ["plumes"] });
+    const summary = await run(kv, 5);
+    expect(summary.results.map((r) => r.id)).toContain("plumes");
+    expect(summary.skipped).not.toContain("plumes");
+  });
+
+  it("does not call a slow source stale between its scheduled runs", () => {
+    const plumes = SOURCES.find((s) => s.id === "plumes")!;
+    const now = at(0);
+    const rec = (ago: number): SourceRecord => ({
+      id: "plumes",
+      lastAttemptAt: null,
+      lastSuccessfulFetchAt: new Date(now.getTime() - ago * MIN).toISOString(),
+      sourceUpdatedAt: now.toISOString(),
+      status: "ok",
+      lastError: null,
+      lastErrorAt: null,
+      consecutiveFailures: 0,
+      diagnostics: null,
+      payload: {},
+    });
+    expect(classify(plumes, rec(29), now).freshness).toBe("current");
+    expect(classify(plumes, rec(46), now).freshness).toBe("current"); // 30-min interval + 22-min margin − 5
+    expect(classify(plumes, rec(48), now).freshness).toBe("stale");
+  });
+});

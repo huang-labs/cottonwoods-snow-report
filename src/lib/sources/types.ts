@@ -20,6 +20,12 @@ export interface SourceDefinition<P = unknown> {
    * an old report rather than current. null = the source has no publication time.
    */
   reportMaxAgeMs: number | null;
+  /**
+   * Collect at most this often. Unset = every cron run (5 min). Slow-changing
+   * sources use longer intervals to spare upstream servers; a failed attempt
+   * is always retried on the next run.
+   */
+  intervalMs?: number;
   collect(ctx: FetchContext): Promise<CollectResult<P>>;
 }
 
@@ -35,3 +41,6 @@ export function assertValid(cond: unknown, message: string): asserts cond {
 }
 
 export const HOUR = 3_600_000;
+export const MINUTE = 60_000;
+/** Cadence of the single collection cron in wrangler.jsonc (every 5 minutes). */
+export const CRON_INTERVAL_MS = 5 * MINUTE;

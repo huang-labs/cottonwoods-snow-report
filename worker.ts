@@ -23,6 +23,7 @@ export default {
             cron: controller.cron,
             durationMs: summary.durationMs,
             ok: summary.results.length - failed.length,
+            skipped: summary.skipped,
             failed: failed.map((f) => ({ id: f.id, error: f.error })),
           }),
         );

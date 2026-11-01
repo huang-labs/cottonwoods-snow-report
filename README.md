@@ -9,7 +9,8 @@ The product requirements live in [docs/IMPLEMENTATION_BRIEF.md](docs/IMPLEMENTAT
 One Next.js 16 app deployed as **one Cloudflare Worker** through `@opennextjs/cloudflare`:
 
 - `worker.ts` is the custom Worker entry ([OpenNext custom worker](https://opennext.js.org/cloudflare/howtos/custom-worker)). It re-exports the generated `fetch` handler and adds `scheduled()`.
-- **Cron `*/5 * * * *`** runs `runCollection()` (`src/lib/collect.ts`). It fetches every source concurrently and isolates each source's failure, then writes one snapshot to KV (`SNOW_KV`, key `snapshot:v1`). On failure, a source keeps its last successful payload.
+- **Cron `*/5 * * * *`** runs `runCollection()` (`src/lib/collect.ts`). It fetches every *due* source concurrently and isolates each source's failure, then writes one snapshot to KV (`SNOW_KV`, key `snapshot:v1`). On failure, a source keeps its last successful payload.
+- **Per-source cadence** (`intervalMs` on each source): resorts, roads, UDOT webcams and resort webcams every 5 min; NWS and travel times every 15 min; plumes every 30 min (new model runs appear about twice a day). A failed attempt is retried on the next 5-minute run, and manual `only` runs ignore intervals. The cron log line lists the `skipped` sources.
 - `GET /api/report` (`src/app/api/report/route.ts`) reads that snapshot and adds the freshness classification. It never contacts upstream sources.
 - **Plume panels:** when a new model run appears, the collector downloads each station's chart once, crops the Accumulated Snow and Snow-to-Liquid Ratio panels (`src/lib/plumeCrop.ts`, located from the chart's axes frames), and stores the PNGs in KV (`plume-panel:v1:<station>:<run>:<panel>`, 4-day TTL). `GET /api/plume/<station>/<run>/<panel>` serves them with long-lived caching. Later runs of the cron only HEAD-check the chart. If cropping fails, the slide shows the full original chart.
 - The page (`src/components/Dashboard.tsx`) is a client-side slideshow. It polls `/api/report` on load and every 60 s. The slide timer is independent of polling.
@@ -76,7 +77,7 @@ To deploy by hand, set `CLOUDFLARE_API_TOKEN` (or run `npx wrangler login`), the
 | Current | Collected on schedule, and the upstream report time is within the source's window (resorts 26 h, NWS 12 h, plumes 30 h, travel times 30 min) |
 | Old report | Fetched recently, but the upstream report itself is old (for example, yesterday's report or an off-season report) |
 | Report time unknown | The source publishes no time (roads aggregate, webcams) |
-| Stale — source failing | No successful fetch for more than 22 min (four missed runs plus KV propagation); shows the last good payload |
+| Stale — source failing | No successful fetch for more than 22 min (four missed runs plus KV propagation), extended by a slower source's interval (NWS/travel times 32 min, plumes 47 min); shows the last good payload |
 | Unavailable | Never collected successfully |
 
 Every slide shows the source report time (America/Denver) and the last successful check. Values distinguish **0″** (reported zero), **not reported** (the source left the field empty), and **n/a** (the source doesn't provide that measurement). Measurement windows keep each source's own label.

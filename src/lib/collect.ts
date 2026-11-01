@@ -1,6 +1,6 @@
 import { createFetchContext, type CollectorSecrets } from "./http";
 import { SOURCES } from "./sources";
-import type { SourceDefinition } from "./sources/types";
+import { MINUTE, type SourceDefinition } from "./sources/types";
 import { readSnapshot, writeSnapshot, type KVLike } from "./store";
 import type { Snapshot, SourceId, SourceRecord } from "./types";
 
@@ -20,6 +20,18 @@ export interface CollectSummary {
   startedAt: string;
   durationMs: number;
   results: Array<{ id: SourceId; ok: boolean; error?: string; ms: number }>;
+  /** Sources not due this run (collected recently; see SourceDefinition.intervalMs). */
+  skipped: SourceId[];
+}
+
+/**
+ * Whether a source should be collected this run. Cron runs land on exact
+ * 5-minute marks, so a minute of slack keeps e.g. a 15-minute source on
+ * :00/:15/:30/:45 instead of slipping a run.
+ */
+export function isDue(def: SourceDefinition, prev: SourceRecord | undefined, now: Date): boolean {
+  if (!def.intervalMs || !prev?.lastAttemptAt || prev.status !== "ok") return true;
+  return now.getTime() - Date.parse(prev.lastAttemptAt) >= def.intervalMs - MINUTE;
 }
 
 function emptyRecord(id: SourceId): SourceRecord {
@@ -87,8 +99,11 @@ export async function collectSource(
 export async function runCollection(env: CollectorEnv, opts: CollectOptions = {}): Promise<CollectSummary> {
   const now = opts.now ?? new Date();
   const started = Date.now();
-  const defs = (opts.sources ?? SOURCES).filter((s) => !opts.only || opts.only.includes(s.id));
   const previous = await readSnapshot(env.SNOW_KV);
+  const selected = (opts.sources ?? SOURCES).filter((s) => !opts.only || opts.only.includes(s.id));
+  // Manual runs (`only`) collect what was asked regardless of intervals.
+  const defs = opts.only ? selected : selected.filter((s) => isDue(s, previous?.sources[s.id], now));
+  const skipped = selected.filter((s) => !defs.includes(s)).map((s) => s.id);
   const records = await Promise.all(
     defs.map(async (def) => {
       const t = Date.now();
@@ -118,5 +133,6 @@ export async function runCollection(env: CollectorEnv, opts: CollectOptions = {}
       ...(rec.status === "error" ? { error: rec.lastError ?? "unknown" } : {}),
       ms,
     })),
+    skipped,
   };
 }

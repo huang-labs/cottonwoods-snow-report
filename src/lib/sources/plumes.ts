@@ -2,7 +2,7 @@ import type { FetchContext } from "../http";
 import { cropSnowPanels } from "../plumeCrop";
 import { PLUME_PANEL_TTL_S, plumePanelKey } from "../store";
 import type { PlumeChart, PlumePanel, PlumePayload } from "../types";
-import { assertValid, HOUR, type SourceDefinition } from "./types";
+import { assertValid, HOUR, MINUTE, type SourceDefinition } from "./types";
 
 export const PLUME_BASE = "https://weather.utah.edu/";
 export const plumePageUrl = (station: string) => `${PLUME_BASE}index.php?t=ensgefsds&d=PL&r=${station}`;
@@ -77,6 +77,8 @@ async function cropAndStore(ctx: FetchContext, station: string, runCode: string,
 
 export const plumesSource: SourceDefinition<PlumePayload> = {
   id: "plumes",
+  // New runs appear about twice a day; checking every 30 min is plenty.
+  intervalMs: 30 * MINUTE,
   label: "Utah ensemble plumes",
   category: "plume",
   required: true,

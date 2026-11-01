@@ -1,6 +1,6 @@
 import { denverParts, denverToUtc } from "../time";
 import type { ForecastBlock, NextStorm, NwsPayload, PointForecast, SixHourSnow } from "../types";
-import { assertValid, HOUR, type SourceDefinition } from "./types";
+import { assertValid, HOUR, MINUTE, type SourceDefinition } from "./types";
 
 /** Gridpoints resolved from api.weather.gov/points for each resort area (2026-10-30). */
 export const NWS_POINTS = [
@@ -205,6 +205,8 @@ export function findNextStorm(snow: Map<number, number>, snowLevel: Map<number, 
 
 export const nwsSource: SourceDefinition<NwsPayload> = {
   id: "nws",
+  // Gridpoint forecasts update about hourly.
+  intervalMs: 15 * MINUTE,
   label: "NWS mountain forecast",
   category: "weather",
   required: false,

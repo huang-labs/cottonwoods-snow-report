@@ -11,6 +11,7 @@ These supersede the brief where they differ; the brief itself is unchanged.
 - **Plume time axis in Mountain Time.** Verified: the charts' x-axis is UTC. Tick labels read "00z 01-Nov", and the title reads "Initialized 0000 UTC 01 Nov 2026". The axis spans exactly init → init + 240 h (`F240` in the file name; first and last ticks sit on the frame edges). The UTC labels are cropped off, and the slide draws a Mountain Time axis: day names centered on each local day, dashed local-midnight lines, and a "now" line. Reason: 00Z is 5 PM MST (6 PM MDT) the *previous* day, so "00z 02-Nov" is the evening of Nov 1 locally, an easy misread. The plot's own gridlines stay at 00Z/12Z (5 AM/5 PM MST); the dashed lines are the local day boundaries.
 - **Slide order:** regional, weather, plumes, canyon roads, then the four resorts.
 - **Resort webcams** on each resort slide (below).
+- **Per-source collection intervals** (2026-11-01): slow sources skip cron runs. NWS and travel times are collected every 15 min and plumes every 30 min; everything else every 5 min. Cost is unchanged (usage is a few percent of Workers Paid included limits); this saves about 80 upstream requests an hour, roughly 22% of the collector's requests, mostly to weather.utah.edu and api.weather.gov.
 
 ## Platform versions (verified 2026-10-30)
 
