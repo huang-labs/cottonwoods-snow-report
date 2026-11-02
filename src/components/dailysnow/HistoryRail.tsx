@@ -1,4 +1,3 @@
-"use client";
 
 import type { ApiDailySnow, DailySnowPhase } from "@/lib/types";
 import { PHASE_LABEL, postDate } from "./labels";

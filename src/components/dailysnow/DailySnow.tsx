@@ -100,8 +100,10 @@ export function DailySnowPage({ report, now }: { report: ReportResponse; now: Da
   const [date, setDate] = useState<string | null>(null);
   useEffect(() => setDate(readDateParam()), []);
   const current = report.dailySnow ?? null;
-  const archived = useArchivedPost(date && date !== current?.date ? date : null);
-  const post = date && date !== current?.date ? archived.post : current;
+  /** The archived post being viewed, or null while the live post is on screen. */
+  const viewed = date && date !== current?.date ? date : null;
+  const archived = useArchivedPost(viewed);
+  const post = viewed ? archived.post : current;
 
   const pick = (d: string | null) => {
     setDate(d);
@@ -118,7 +120,7 @@ export function DailySnowPage({ report, now }: { report: ReportResponse; now: Da
         <div className="dailysnow">
           <header className="dailysnow__header">
             <span className="eyebrow">Daily Snow<span className="badge badge--ai">AI</span></span>
-            <h1 className="dailysnow__title">{date && date !== current?.date ? (archived.error ? "Post not available" : "Loading…") : "Waiting for the first post"}</h1>
+            <h1 className="dailysnow__title">{viewed ? (archived.error ? "Post not available" : "Loading…") : "Waiting for the first post"}</h1>
           </header>
           <p className="muted">{archived.error ?? "An AI-written snow forecast is posted every morning at 6 AM."}</p>
           {date && <button type="button" className="dailysnow__back" onClick={() => pick(null)}>Back to the latest post</button>}
@@ -129,10 +131,10 @@ export function DailySnowPage({ report, now }: { report: ReportResponse; now: Da
   return (
     <section className="page page--dailysnow">
       <div className="dailysnow-layout">
-        <HistoryRail live={current} viewed={date && date !== current?.date ? date : null} onPick={pick} />
+        <HistoryRail live={current} viewed={viewed} onPick={pick} />
         <article className="dailysnow" aria-label="Daily Snow">
           <header className="dailysnow__header">
-            <Eyebrow post={post} now={now} archived={!!date && date !== current?.date} />
+            <Eyebrow post={post} now={now} archived={!!viewed} />
             <h1 className="dailysnow__title">{post.title}</h1>
             <p className="dailysnow__summary">{post.summary}</p>
           </header>
