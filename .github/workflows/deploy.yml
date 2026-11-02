@@ -97,6 +97,10 @@ jobs:
             exit 1
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Verify deployed share previews
+        run: npx tsx scripts/check-share-preview.ts "$PREVIEW_URL"
+        env:
+          PREVIEW_URL: ${{ steps.upload.outputs.url }}
       - name: Comment preview link on PR
         env:
           GH_TOKEN: ${{ github.token }}
