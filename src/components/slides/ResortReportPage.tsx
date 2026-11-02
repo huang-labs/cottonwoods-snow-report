@@ -1,10 +1,4 @@
-import type {
-  ApiSource,
-  LiftStatus,
-  Metric,
-  ResortReport,
-  SnowfallSet,
-} from "@/lib/types";
+import type { ApiSource, Metric, ResortReport } from "@/lib/types";
 import { formatDenver } from "@/lib/time";
 import {
   FreshnessBadge,
@@ -14,30 +8,8 @@ import {
   Unavailable,
 } from "../ui";
 import { ResortCams } from "./ResortCams";
+import { byStatus, SNOW_ORDER } from "./resort-display";
 import "./resort-report.css";
-
-const SNOW_ORDER: Array<keyof SnowfallSet> = [
-  "overnight",
-  "h12",
-  "h24",
-  "h48",
-  "h72",
-  "d7",
-  "storm",
-  "season",
-];
-const STATUS_ORDER: Record<LiftStatus, number> = {
-  open: 0,
-  hold: 1,
-  scheduled: 2,
-  unknown: 3,
-  closed: 4,
-};
-function byStatus<T extends { status: LiftStatus }>(items: T[]) {
-  return [...items].sort(
-    (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status],
-  );
-}
 
 function SnowMetric({
   metric,
@@ -60,12 +32,12 @@ export function ResortReportPage({
   source,
   now,
   cams,
-  loadedAt,
+  loadedAt = null,
 }: {
   source: ApiSource;
   now: Date;
   cams?: ApiSource;
-  loadedAt: number | null;
+  loadedAt?: number | null;
 }) {
   const r = source.payload as ResortReport | null;
   if (!r)

@@ -1,17 +1,9 @@
-import type { ApiSource, Lift, NamedTerrain, ResortReport, SnowfallSet } from "@/lib/types";
+import type { ApiSource, NamedTerrain, ResortReport } from "@/lib/types";
 import { formatDenver } from "@/lib/time";
 import { MetricValue, SourceLine, StatusDot, Unavailable } from "../ui";
 
 import { ResortCams } from "./ResortCams";
-import { ResortReportPage } from "./ResortReportPage";
-
-const SNOW_ORDER: Array<keyof SnowfallSet> = ["overnight", "h12", "h24", "h48", "h72", "d7", "storm", "season"];
-
-const STATUS_ORDER = { open: 0, hold: 1, scheduled: 2, unknown: 3, closed: 4 } as const;
-
-function byStatus<T extends { status: Lift["status"] }>(items: T[]) {
-  return [...items].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
-}
+import { byStatus, SNOW_ORDER } from "./resort-display";
 
 function TerrainList({ terrain }: { terrain: NamedTerrain[] }) {
   const open = terrain.filter((t) => t.status === "open" || t.status === "hold" || t.status === "scheduled");
@@ -41,15 +33,12 @@ export function ResortSlide({
   now,
   cams,
   loadedAt = null,
-  presentation = "slideshow",
 }: {
   source: ApiSource;
   now: Date;
   cams?: ApiSource;
   loadedAt?: number | null;
-  presentation?: "browse" | "slideshow";
 }) {
-  if (presentation === "browse") return <ResortReportPage source={source} now={now} cams={cams} loadedAt={loadedAt} />;
   const r = source.payload as ResortReport | null;
   if (!r) {
     return (

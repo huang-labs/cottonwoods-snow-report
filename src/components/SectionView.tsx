@@ -5,6 +5,7 @@ import { useDashboard } from "./dashboard-context";
 import { DailySnowSlide } from "./dailysnow/DailySnow";
 import { PlumeSlide } from "./slides/PlumeSlide";
 import { RegionalSlide } from "./slides/RegionalSlide";
+import { ResortReportPage } from "./slides/ResortReportPage";
 import { ResortSlide } from "./slides/ResortSlide";
 import { TrafficSlide } from "./slides/TrafficSlide";
 import { WeatherSlide } from "./slides/WeatherSlide";
@@ -21,8 +22,10 @@ export function renderSection(id: string, report: ReportResponse, now: Date, loa
       return <PlumeSlide source={report.sources.plumes} now={now} />;
     case "traffic":
       return <TrafficSlide report={report} now={now} loadedAt={loadedAt} />;
-    default:
-      return <ResortSlide presentation={presentation} source={report.sources[id as SourceId]} now={now} cams={report.sources.resortcams} loadedAt={loadedAt} />;
+    default: {
+      const ResortView = presentation === "browse" ? ResortReportPage : ResortSlide;
+      return <ResortView source={report.sources[id as SourceId]} now={now} cams={report.sources.resortcams} loadedAt={loadedAt} />;
+    }
   }
 }
 

@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, expect, it } from "vitest";
 import { renderSection } from "@/components/SectionView";
-import { ResortSlide } from "@/components/slides/ResortSlide";
+import { ResortReportPage } from "@/components/slides/ResortReportPage";
 import { runCollection } from "@/lib/collect";
 import { buildReport } from "@/lib/report";
 import { MemoryKV, readSnapshot } from "@/lib/store";
@@ -73,7 +73,7 @@ it("keeps critical notices above snow and retains the full narrative, lift hours
     },
   };
   const { container } = render(
-    <ResortSlide source={source} now={FIXTURE_NOW} presentation="browse" />,
+    <ResortReportPage source={source} now={FIXTURE_NOW} />,
   );
   expect(
     screen
@@ -123,7 +123,7 @@ it("preserves Alta's own snow windows and distinguishes zero, empty and unsuppor
     },
   };
   const { container } = render(
-    <ResortSlide source={source} now={FIXTURE_NOW} presentation="browse" />,
+    <ResortReportPage source={source} now={FIXTURE_NOW} />,
   );
   expect(
     container.querySelector(".resort-snow__headline")?.textContent,
@@ -149,10 +149,9 @@ it("explains Brighton's missing observations and handles a completely unavailabl
     screen.getByText(/observations aren’t provided in Brighton/),
   ).toBeTruthy();
   rerender(
-    <ResortSlide
+    <ResortReportPage
       source={{ ...report.sources.brighton, payload: null }}
       now={FIXTURE_NOW}
-      presentation="browse"
     />,
   );
   expect(
