@@ -99,8 +99,8 @@ it.each([null, { ...recommendation, pick: null }])("hides the recommendation whe
 
 it("keeps a previous resort pick visible with its update warnings", () => {
   render(<RegionalSlide report={{ ...report(post), recommendation: { ...recommendation, outdated: true, failing: true } }} now={now} />);
-  expect(screen.getByRole("complementary", { name: "Recommendation" })).toBeTruthy();
-  expect(screen.getByRole("heading", { name: "Alta today" })).toBeTruthy();
+  expect(screen.getByRole("generic", { name: "AI recommendation reasoning" })).toBeTruthy();
+  expect(screen.getByText("Alta today")).toBeTruthy();
   expect(screen.getByText(/Outdated · Updates failing/)).toBeTruthy();
   expect(screen.queryByText("AI pick")).toBeNull();
 });

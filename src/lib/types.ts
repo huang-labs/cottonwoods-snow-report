@@ -1,6 +1,6 @@
 /**
  * Normalized report contract shared by the collector (scheduled Worker), the
- * API route, and the client slideshow.
+ * API route, and the client app shell.
  *
  * Every value carries its own provenance. Three states are kept distinct:
  *  - "reported":      the source supplied a value (which may legitimately be 0)

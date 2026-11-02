@@ -1,9 +1,9 @@
+import { Fragment } from "react";
 import type { ApiSource, Metric, ReportResponse, ResortReport, SnowfallSet, SourceId } from "@/lib/types";
-import { formatAge, formatDenver } from "@/lib/time";
 import { sectionHref } from "@/lib/sections";
-import { FreshnessBadge, MetricValue } from "../ui";
-import { RecommendationCard } from "../RecommendationCard";
+import { formatAge, formatDenver } from "@/lib/time";
 import { DailySnowTeaser } from "../dailysnow/DailySnow";
+import { FreshnessBadge, MetricValue } from "../ui";
 
 const PRIMARY: SourceId[] = ["alta", "snowbird", "solitude", "brighton"];
 
@@ -53,14 +53,15 @@ function Row({ source, now, recommended }: { source: ApiSource; now: Date; recom
 }
 
 export function RegionalSlide({ report, now }: { report: ReportResponse; now: Date }) {
+  const pick = report.recommendation;
+  const summaries = <DailySnowTeaser post={report.dailySnow} now={now} />;
   return (
     <section className="slide slide--regional">
       <header className="slide__header">
         <h1>Regional snowfall</h1>
         <p className="slide__sub">Resort-reported totals. Measurement windows and sites are source-defined and not strictly comparable — each cell shows the resort’s own label.</p>
       </header>
-      <DailySnowTeaser post={report.dailySnow} now={now} />
-      <RecommendationCard recommendation={report.recommendation} now={now} />
+      <div className="regional-briefing">{summaries}</div>
       <table className="snow-table">
         <thead>
           <tr>
@@ -73,7 +74,24 @@ export function RegionalSlide({ report, now }: { report: ReportResponse; now: Da
         </thead>
         <tbody>
           {PRIMARY.map((id) => (
-            <Row key={id} source={report.sources[id]} now={now} recommended={report.recommendation?.pick === id && !report.recommendation.outdated && !report.recommendation.failing} />
+            <Fragment key={id}>
+              <Row source={report.sources[id]} now={now} recommended={pick?.pick === id && !pick.outdated && !pick.failing} />
+              {pick?.pick === id && (
+                <tr className="recommendation-row">
+                  <td colSpan={COLUMNS.length + 2}>
+                    <div className="recommendation-row__body" aria-label="AI recommendation reasoning">
+                      <strong>{pick.headline}</strong>
+                      <p>{pick.summary || pick.plan}</p>
+                      {pick.summary && <p className="muted">{pick.plan}</p>}
+                      {!!pick.caveats.length && <p className="recommendation-row__caveats">{pick.caveats.join(" · ")}</p>}
+                      <div className="recommendation-row__meta">
+                        AI · {pick.model ?? "Model not recorded"} · For {pick.targetDate} · Updated {formatDenver(pick.generatedAt, now)}{pick.outdated ? " · Outdated" : ""}{pick.failing ? " · Updates failing" : ""}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </Fragment>
           ))}
         </tbody>
       </table>

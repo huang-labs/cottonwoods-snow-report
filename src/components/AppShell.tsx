@@ -1,89 +1,132 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { SECTIONS, sectionHref, sectionIndexFromPath } from "@/lib/sections";
-import { DashboardContext, DataBanners, exitFullscreen, requestFullscreen, type DashboardData } from "./dashboard-context";
-import { loadPrefs, savePrefs, useNow, useReport, type Prefs } from "./hooks";
-import { NavBar } from "./NavBar";
-import { Slideshow } from "./Slideshow";
+import { SECTIONS, sectionHref } from "@/lib/sections";
+import { DashboardContext, DataBanners, type DashboardData } from "./dashboard-context";
+import { useNow, useReport } from "./hooks";
 
-interface SlideshowStart {
-  index: number;
-  playing: boolean;
+/** Appearance override, stored in localStorage; absent means "follow the system". */
+const APPEARANCE_KEY = "cottonwoods-snow-report.appearance";
+type Appearance = "light" | "dark";
+
+function readAppearance(storage: Pick<Storage, "getItem"> | undefined): Appearance | null {
+  try {
+    const saved = storage?.getItem(APPEARANCE_KEY);
+    return saved === "light" || saved === "dark" ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Sets the theme attribute on <html>; the layout's inline script does this before first paint. */
+function applyAppearance(value: Appearance | null) {
+  if (value) document.documentElement.dataset.theme = value;
+  else delete document.documentElement.dataset.theme;
 }
 
 /**
- * App frame: browse mode (navbar + the routed section page) by default, or a
- * full-screen slideshow for TVs. URL options: `?kiosk=1` opens straight into
- * the slideshow at the current page (`&paused=1` starts paused). The legacy
- * `?slide=<id>` redirects to that section's page.
+ * App frame: an editorial masthead (brand, appearance control, section nav)
+ * over one routed section page. Data comes from a single shared poller.
+ * Legacy `?slide=<id>` links redirect to that section's page.
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const { report, loadedAt, error } = useReport(60_000);
   const now = useNow(30_000);
   const pathname = usePathname();
   const router = useRouter();
-  const [prefs, setPrefs] = useState<Prefs | null>(null);
-  const [slideshow, setSlideshow] = useState<SlideshowStart | null>(null);
+  const [appearance, setAppearance] = useState<Appearance | null>(null);
+  const [systemDark, setSystemDark] = useState(false);
+  const resortMenu = useRef<HTMLDetailsElement>(null);
 
-  // Preferences and URL options are browser-only, so read them after mount.
+  // The pre-paint script already applied the stored choice; read it back after mount.
   useEffect(() => {
-    setPrefs(loadPrefs(window.localStorage));
+    setAppearance(readAppearance(window.localStorage));
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const update = () => setSystemDark(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  // Redirect legacy ?slide=<id> links to the section's page (old bookmarks).
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const legacy = SECTIONS.findIndex((s) => s.id === params.get("slide"));
-    const index = legacy >= 0 ? legacy : Math.max(0, sectionIndexFromPath(window.location.pathname));
-    if (params.get("kiosk") === "1") {
-      setSlideshow({ index, playing: params.get("paused") !== "1" });
-    } else if (legacy >= 0) {
-      router.replace(sectionHref(SECTIONS[legacy].id));
-    }
-    // Mount-only: later navigation never re-enters kiosk mode.
+    if (legacy >= 0) router.replace(sectionHref(SECTIONS[legacy].id));
+  }, [router]);
+
+  // Close the resorts menu on outside clicks and Escape.
+  useEffect(() => {
+    const outside = (event: PointerEvent) => {
+      if (resortMenu.current && !resortMenu.current.contains(event.target as Node)) resortMenu.current.open = false;
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && resortMenu.current?.open) {
+        resortMenu.current.open = false;
+        resortMenu.current.querySelector("summary")?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
   }, []);
 
-  const updatePrefs = useCallback((patch: Partial<Prefs>) => {
-    setPrefs((p) => {
-      const next = { ...(p ?? loadPrefs(undefined)), ...patch };
-      savePrefs(window.localStorage, next);
-      return next;
-    });
-  }, []);
-
-  // Called from a click, so the fullscreen request counts as a user gesture.
-  const startSlideshow = useCallback(() => {
-    requestFullscreen();
-    setSlideshow({ index: Math.max(0, sectionIndexFromPath(pathname)), playing: true });
-  }, [pathname]);
-
-  // Leave the slideshow on the page of the slide that was showing.
-  const exitSlideshow = useCallback(
-    (index: number) => {
-      exitFullscreen();
-      setSlideshow(null);
-      router.replace(sectionHref(SECTIONS[index].id));
-    },
-    [router],
-  );
+  function changeAppearance(mode: Appearance) {
+    const next = appearance === mode ? null : mode;
+    setAppearance(next);
+    applyAppearance(next);
+    try {
+      if (next) window.localStorage.setItem(APPEARANCE_KEY, next);
+      else window.localStorage.removeItem(APPEARANCE_KEY);
+    } catch { /* Keep the session choice when storage is unavailable. */ }
+  }
 
   const data: DashboardData = { report, loadedAt, error, now };
+  const resort = SECTIONS.find((s) => s.group && sectionHref(s.id) === pathname);
+  const dark = appearance ? appearance === "dark" : systemDark;
 
   return (
     <DashboardContext.Provider value={data}>
-      {slideshow ? (
-        <Slideshow
-          initialIndex={slideshow.index}
-          initialPlaying={slideshow.playing}
-          durationSec={prefs?.durationSec ?? 20}
-          onDurationChange={(durationSec) => updatePrefs({ durationSec })}
-          onExit={exitSlideshow}
-        />
-      ) : (
-        <div className="app app--browse">
-          <NavBar activeIndex={sectionIndexFromPath(pathname)} generatedAt={report?.generatedAt ?? null} now={now} onStartSlideshow={startSlideshow} />
-          <DataBanners data={data} overlay={false} />
-          <main className="page">{children}</main>
-        </div>
-      )}
+      <div className="app">
+        <header className="editorial-nav">
+          <div className="editorial-nav__masthead">
+            <Link href="/" className="editorial-nav__brand">Cottonwoods <span>Snow Report</span></Link>
+            <div className="appearance-control" role="group" aria-label="Appearance">
+              {(["light", "dark"] as const).map((mode) => (
+                <button key={mode} type="button" aria-label={`${mode === "light" ? "Light" : "Dark"} appearance`}
+                  aria-pressed={mode === "dark" ? dark : !dark}
+                  title={appearance === mode ? "Use system appearance" : `${mode === "light" ? "Light" : "Dark"} appearance`}
+                  onClick={() => changeAppearance(mode)}>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    {mode === "light" ? <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4L19 5" /></> : <path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z" />}
+                  </svg>
+                </button>
+              ))}
+            </div>
+          </div>
+          <nav aria-label="Sections">
+            {SECTIONS.filter((s) => !s.group).map((s) => (
+              <Link key={s.id} href={sectionHref(s.id)} aria-current={sectionHref(s.id) === pathname ? "page" : undefined}>{s.label}</Link>
+            ))}
+            <details ref={resortMenu} key={pathname} className="editorial-nav__resorts">
+              <summary>{resort?.label ?? "Resorts"} <span className="editorial-nav__chevron" aria-hidden="true" /></summary>
+              <div>{SECTIONS.filter((s) => s.group).map((s) => (
+                <Link key={s.id} href={sectionHref(s.id)} aria-current={sectionHref(s.id) === pathname ? "page" : undefined}>{s.label}</Link>
+              ))}</div>
+            </details>
+          </nav>
+        </header>
+        <DataBanners data={data} />
+        <main className="editorial-page">{children}</main>
+        <footer className="editorial-footer">
+          Cottonwoods Snow Report · Resort-reported measurements, NWS forecasts, University of Utah ensemble plumes and UDOT roads · All times Mountain
+        </footer>
+      </div>
     </DashboardContext.Provider>
   );
 }

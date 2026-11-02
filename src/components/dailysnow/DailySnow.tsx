@@ -97,7 +97,7 @@ function useArchivedPost(date: string | null): { post: ApiDailySnow | null; erro
   return date && state?.date === date ? state : { post: null, error: null };
 }
 
-/** Daily Snow page: the full post with figures and archive links (not part of the slideshow). */
+/** Daily Snow page: the full post with figures and archive links. */
 export function DailySnowSlide({ report, now }: { report: ReportResponse; now: Date }) {
   const [date, setDate] = useState<string | null>(null);
   useEffect(() => setDate(readDateParam()), []);

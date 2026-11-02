@@ -6,11 +6,10 @@ import { DailySnowSlide } from "./dailysnow/DailySnow";
 import { PlumeSlide } from "./slides/PlumeSlide";
 import { RegionalSlide } from "./slides/RegionalSlide";
 import { ResortReportPage } from "./slides/ResortReportPage";
-import { ResortSlide } from "./slides/ResortSlide";
 import { TrafficSlide } from "./slides/TrafficSlide";
 import { WeatherSlide } from "./slides/WeatherSlide";
 
-export function renderSection(id: string, report: ReportResponse, now: Date, loadedAt: number | null, presentation: "browse" | "slideshow" = "slideshow") {
+export function renderSection(id: string, report: ReportResponse, now: Date, loadedAt: number | null) {
   switch (id) {
     case "regional":
       return <RegionalSlide report={report} now={now} />;
@@ -22,20 +21,18 @@ export function renderSection(id: string, report: ReportResponse, now: Date, loa
       return <PlumeSlide source={report.sources.plumes} now={now} />;
     case "traffic":
       return <TrafficSlide report={report} now={now} loadedAt={loadedAt} />;
-    default: {
-      const ResortView = presentation === "browse" ? ResortReportPage : ResortSlide;
-      return <ResortView source={report.sources[id as SourceId]} now={now} cams={report.sources.resortcams} loadedAt={loadedAt} />;
-    }
+    default:
+      return <ResortReportPage source={report.sources[id as SourceId]} now={now} cams={report.sources.resortcams} loadedAt={loadedAt} />;
   }
 }
 
-/** One section as a page (browse mode). Data comes from the shell's shared poller. */
+/** One section as a page. Data comes from the shell's shared poller. */
 export function SectionView({ id }: { id: string }) {
   const { report, loadedAt, error, now } = useDashboard();
   if (!report) return <div className="loading">{error ? `Could not load report: ${error}` : "Loading report…"}</div>;
   return (
-    <div key={id} className="slide-wrap">
-      {renderSection(id, report, now, loadedAt, "browse")}
+    <div key={id}>
+      {renderSection(id, report, now, loadedAt)}
     </div>
   );
 }

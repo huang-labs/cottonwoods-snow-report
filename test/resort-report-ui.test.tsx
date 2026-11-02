@@ -21,19 +21,16 @@ beforeAll(async () => {
 afterEach(cleanup);
 
 it.each(["alta", "snowbird", "solitude", "brighton"])(
-  "renders %s as a browse report and keeps TV in its compact presentation",
+  "renders %s as a long-form report page",
   (id) => {
-    const { container, rerender } = render(
-      renderSection(id, report, FIXTURE_NOW, null, "browse"),
+    const { container } = render(
+      renderSection(id, report, FIXTURE_NOW, null),
     );
     expect(container.querySelector(".resort-report")).toBeTruthy();
     expect(
       screen.getByRole("heading", { name: "Lifts & terrain" }),
     ).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Getting there" })).toBeNull();
-    rerender(renderSection(id, report, FIXTURE_NOW, null));
-    expect(container.querySelector(".resort-report")).toBeNull();
-    expect(container.querySelector(".resort-grid")).toBeTruthy();
   },
 );
 
@@ -143,7 +140,7 @@ it("preserves Alta's own snow windows and distinguishes zero, empty and unsuppor
 
 it("explains Brighton's missing observations and handles a completely unavailable resort", () => {
   const { rerender } = render(
-    renderSection("brighton", report, FIXTURE_NOW, null, "browse"),
+    renderSection("brighton", report, FIXTURE_NOW, null),
   );
   expect(
     screen.getByText(/observations aren’t provided in Brighton/),
@@ -161,7 +158,7 @@ it("explains Brighton's missing observations and handles a completely unavailabl
 
 it("removes routine road status and shows Alta's Base, Mid and Top temperatures without the unsited Wind block", () => {
   const { container } = render(
-    renderSection("alta", report, FIXTURE_NOW, null, "browse"),
+    renderSection("alta", report, FIXTURE_NOW, null),
   );
   expect(screen.queryByText("Road Status")).toBeNull();
   expect(

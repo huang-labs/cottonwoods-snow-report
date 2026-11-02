@@ -10,26 +10,36 @@ const recommendation: ApiRecommendation = {
   targetDate: "2026-12-01", pick: "alta", mode: "storm", plan: "Wait for the estimated 9:30 AM road opening.", headline: "Alta for deep powder", summary: "Alta got 18″ overnight. LCC has a posted opening estimate.", caveats: ["Opening time may slip"], runnerUp: "solitude", generatedAt: now.toISOString(), model: "test-model", trigger: "critical-change", outdated: false, failing: false,
 };
 afterEach(cleanup);
-it("shows today's card, conditional plan, backup and recommended row", () => {
+
+it("integrates the pick into the resort's table row with reasoning beneath it", () => {
   render(<RegionalSlide now={now} report={{ ...buildReport(null, now), recommendation }} />);
-  expect(screen.getByText(/Recommendation · Today's resort pick/)).toBeTruthy();
-  expect(screen.getByText(recommendation.plan)).toBeTruthy();
-  expect(screen.getByText(recommendation.summary!)).toBeTruthy();
-  expect(document.querySelector(".recommendation li")).toBeNull();
-  expect(screen.getByText(/Backup: Solitude/)).toBeTruthy();
-  expect(screen.getByText("AI pick").closest("tr")?.textContent).toContain("Alta");
+  const row = screen.getByText("AI pick").closest("tr");
+  expect(row?.textContent).toContain("Alta");
+  const reasoning = screen.getByRole("generic", { name: "AI recommendation reasoning" });
+  expect(reasoning.textContent).toContain(recommendation.headline);
+  expect(reasoning.textContent).toContain(recommendation.summary!);
+  expect(reasoning.textContent).toContain(recommendation.plan);
+  expect(reasoning.textContent).toContain(recommendation.caveats[0]);
+  expect(reasoning.textContent).toContain("test-model");
+  expect(reasoning.textContent).toContain("For 2026-12-01");
+  // The reasoning row follows the picked resort's data row.
+  expect(document.querySelector(".recommendation-row")?.previousElementSibling).toBe(row);
 });
-it("labels tomorrow's resort pick", () => {
-  render(<RegionalSlide now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, targetDate: "2026-12-02" } }} />);
-  expect(screen.getByText(/Recommendation · Tomorrow's resort pick/)).toBeTruthy();
-  expect(screen.getByRole("heading", { name: recommendation.headline })).toBeTruthy();
+
+it("falls back to the plan text when no summary was written", () => {
+  render(<RegionalSlide now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, summary: undefined } }} />);
+  const reasoning = screen.getByRole("generic", { name: "AI recommendation reasoning" });
+  expect(reasoning.textContent).toContain(recommendation.plan);
+  expect(reasoning.textContent).not.toContain("Model not recorded");
 });
-it("hides the card when no resort is picked", () => {
-  render(<RegionalSlide now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, targetDate: "2026-12-02", pick: null, headline: "No pick: all resorts closed" } }} />);
-  expect(screen.queryByRole("complementary", { name: "Recommendation" })).toBeNull();
-  expect(screen.queryByRole("heading", { name: "No pick: all resorts closed" })).toBeNull();
+
+it("shows nothing when no resort is picked", () => {
+  render(<RegionalSlide now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, pick: null, headline: "No pick: all resorts closed" } }} />);
+  expect(screen.queryByRole("generic", { name: "AI recommendation reasoning" })).toBeNull();
   expect(screen.queryByText("AI pick")).toBeNull();
+  expect(screen.queryByText("No pick: all resorts closed")).toBeNull();
 });
+
 it("retains stale output with a warning and removes the row endorsement", () => {
   render(<RegionalSlide now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, outdated: true, failing: true } }} />);
   expect(screen.getByText(/Outdated.*Updates failing/)).toBeTruthy();

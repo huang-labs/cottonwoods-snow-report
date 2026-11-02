@@ -1,102 +1,105 @@
-/* Cottonwoods Snow Report — dark theme for phone/desktop browsing, with a
-   full-screen slideshow mode for TVs. Sizes scale with viewport width so a
-   laptop and a 1920×1080 TV look alike; below 900px the layout stacks and
-   scrolls for phones. */
+/* Cottonwoods Snow Report — light-first design for phones and desktop browsers.
+   The dark appearance is a full theme: the saved choice lives on <html data-theme>,
+   set before first paint by the layout's inline script; with no saved choice the
+   system preference decides. Layout is mobile-first; 901px and up widen to the
+   desktop grids. Long-form content (resort reports, Daily Snow) is page content:
+   no card borders, one aligned reading width. */
 
 :root {
-  --bg: #0b0f14;
-  --panel: #121922;
-  --panel-2: #18212c;
-  --line: #243142;
-  --text: #e8eef5;
-  --muted: #8a9bb0;
-  --accent: #7cc4ff; /* snow */
-  --ok: #4cc38a;
-  --warn: #f0b429;
-  --bad: #ff6b6b;
-  --hold: #c792ea;
-  --fs: clamp(13px, 0.95vw, 30px);
+  --bg: #f8fafc; --panel: #edf3f9; --panel-2: #e1ebf5; --line: #dbe3ec;
+  --text: #172b42; --muted: #586b7d; --accent: #1266a3; /* snow */
+  --ok: #287040; --warn: #87570a; --bad: #b23831; --hold: #755396;
+  --font: "Inter", "Segoe UI", "Helvetica Neue", Roboto, Arial, sans-serif;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #101c2a; --panel: #192b3f; --panel-2: #22394f; --line: #304257;
+  --text: #edf4fb; --muted: #a7b9cc; --accent: #82c5f5;
+  --ok: #92c9a4; --warn: #e5c17d; --bad: #f29b90; --hold: #c7abd9;
   color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101c2a; --panel: #192b3f; --panel-2: #22394f; --line: #304257;
+    --text: #edf4fb; --muted: #a7b9cc; --accent: #82c5f5;
+    --ok: #92c9a4; --warn: #e5c17d; --bad: #f29b90; --hold: #c7abd9;
+    color-scheme: dark;
+  }
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); }
+html { background: var(--bg); }
+html, body { margin: 0; min-height: 100%; }
 body {
-  font-family: "Inter", "Segoe UI", "Helvetica Neue", Roboto, Arial, sans-serif;
-  font-size: var(--fs);
-  line-height: 1.35;
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.55;
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
+  background: var(--bg);
+  color: var(--text);
 }
 h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 button, select { font: inherit; color: inherit; }
+a { color: var(--accent); }
+:is(button, select, summary, a):focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .muted { color: var(--muted); }
 .small { font-size: 0.82em; }
 
-/* Browse mode: sticky navbar over one section page. On desktop the page fills
-   the rest of the viewport (the slide layouts need a fixed-height frame). */
-.app--browse { min-height: 100dvh; display: flex; flex-direction: column; }
-.page { flex: 1; min-height: 0; position: relative; }
-/* Slideshow mode: the whole viewport. */
-.app--slideshow { position: fixed; inset: 0; display: flex; flex-direction: column; }
-.app--idle { cursor: none; }
-.stage { flex: 1; min-height: 0; position: relative; }
+/* ---- app frame ---- */
+.app { min-height: 100dvh; display: flex; flex-direction: column; }
+.loading { display: grid; place-items: center; min-height: 50vh; font-size: 22px; color: var(--muted); }
 
-/* ---- navbar ---- */
-.nav { position: sticky; top: 0; z-index: 20; background: rgba(11, 15, 20, 0.94); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
-.nav__bar { display: flex; align-items: center; gap: 0.5em 1.2em; padding: 0.55em 1.4em; }
-.nav__brand { font-weight: 800; font-size: 1.1em; color: var(--text); text-decoration: none; white-space: nowrap; letter-spacing: -0.01em; }
-.nav__tabs-wrap { flex: 1; min-width: 0; }
-.nav__tabs { list-style: none; margin: 0; padding: 0; display: flex; gap: 0.2em; overflow-x: auto; scrollbar-width: none; }
-.nav__tabs::-webkit-scrollbar { display: none; }
-.nav__tab { display: block; padding: 0.4em 0.8em; border-radius: 0.45em; color: var(--muted); text-decoration: none; white-space: nowrap; }
-.nav__tab:hover { color: var(--text); background: var(--panel-2); }
-.nav__tab[aria-current="page"], .nav__tab.is-active { color: var(--accent); background: rgba(124, 196, 255, 0.14); font-weight: 600; }
-button.nav__tab { font: inherit; border: 0; background: transparent; cursor: pointer; }
-.nav__group-sep { opacity: 0.6; }
-.nav__caret { display: inline-block; margin-left: 0.35em; font-size: 0.75em; transition: transform 150ms ease; }
-.nav__group-trigger[aria-expanded="true"] { color: var(--text); background: var(--panel-2); }
-.nav__group-trigger[aria-expanded="true"] .nav__caret { transform: rotate(180deg); }
-.nav__menu {
-  position: fixed; z-index: 30; list-style: none; margin: 0; padding: 0.35em; min-width: 10em;
-  display: flex; flex-direction: column; gap: 0.15em;
-  background: rgba(14, 20, 28, 0.98); border: 1px solid var(--line); border-radius: 0.6em;
-  box-shadow: 0 0.8em 2em rgba(0, 0, 0, 0.5);
-}
-.nav__menu-item { display: block; padding: 0.45em 0.8em; border-radius: 0.4em; color: var(--text); text-decoration: none; white-space: nowrap; }
-.nav__menu-item:hover { background: var(--panel-2); }
-.nav__menu-item[aria-current="page"] { color: var(--accent); background: rgba(124, 196, 255, 0.14); font-weight: 600; }
-.nav__end { display: flex; align-items: center; gap: 1em; margin-left: auto; }
-.nav__status { color: var(--muted); font-size: 0.85em; white-space: nowrap; }
-.nav__slideshow { background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: 0.45em; padding: 0.35em 0.9em; font-weight: 600; cursor: pointer; white-space: nowrap; }
-.nav__slideshow:hover { background: rgba(124, 196, 255, 0.12); }
-.nav__brand:focus-visible, .nav__tab:focus-visible, .nav__menu-item:focus-visible, .nav__slideshow:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-.slide-wrap { position: absolute; inset: 0; animation: fade-in 400ms ease-out; }
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-.loading { display: grid; place-items: center; height: 100%; font-size: 2em; color: var(--muted); }
+/* ---- editorial masthead ---- */
+.editorial-nav { max-width: 1180px; margin: auto; padding: 24px 32px 0; width: 100%; }
+.editorial-nav__masthead { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 20px; }
+.editorial-nav__brand { font: 800 26px/1.15 var(--font); letter-spacing: -1px; color: var(--text); text-decoration: none; padding: 8px 10px; margin-left: -10px; border-radius: 8px; }
+.editorial-nav__brand span { font-weight: 450; color: var(--accent); }
+.editorial-nav__brand:hover { background: transparent; color: var(--text); }
+.editorial-nav__brand:focus-visible { background: transparent; outline: 2px solid var(--text); outline-offset: 2px; }
+.appearance-control { display: flex; gap: 2px; flex-shrink: 0; }
+.appearance-control button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; color: var(--muted); background: transparent; cursor: pointer; }
+.appearance-control button[aria-pressed="true"] { background: var(--panel-2); color: var(--accent); }
+.appearance-control button:hover { background: var(--panel); }
+.editorial-nav nav { display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.editorial-nav nav > a, .editorial-nav summary { display: flex; align-items: center; min-height: 44px; padding: 8px 14px; border-radius: 7px; text-decoration: none; font-size: 16px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.editorial-nav nav > a[aria-current], .editorial-nav summary:hover, .editorial-nav a:hover { color: var(--accent); background: var(--panel); }
+.editorial-nav nav > a[aria-current] { font-weight: 700; }
+.editorial-nav__resorts { position: relative; }
+.editorial-nav summary { list-style: none; gap: 8px; }
+.editorial-nav summary::-webkit-details-marker { display: none; }
+.editorial-nav__chevron { width: 6px; height: 6px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; transform: rotate(45deg); margin-left: 2px; }
+.editorial-nav__resorts > div { position: absolute; right: 0; top: 100%; width: 180px; z-index: 30; padding: 6px; border-radius: 10px; margin-top: 6px; background: var(--bg); border: 1px solid var(--line); box-shadow: 0 8px 18px #00000012; }
+.editorial-nav__resorts a { display: block; min-height: 44px; padding: 10px 12px; border-radius: 6px; text-decoration: none; }
+.editorial-nav__resorts a[aria-current="page"] { background: var(--panel); color: var(--accent); font-weight: 600; }
 
-.slide { height: 100%; display: flex; flex-direction: column; gap: 1.1em; padding: 2.2em 2.6em 1.4em; }
-.slide__header h1 { font-size: 3.1em; line-height: 1.05; }
+/* ---- page container ---- */
+.editorial-page { max-width: 1180px; width: 100%; margin: auto; padding: 36px 32px 64px; }
+.editorial-footer { max-width: 1116px; margin: 0 auto; padding: 20px 32px 28px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+
+/* ---- section pages ---- */
+.slide { width: 100%; height: auto; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 28px; overflow: visible; }
+.slide__header h1, .resort-report__header h1, .dailysnow__title { font-family: var(--font); font-weight: 750; font-size: clamp(30px, 3.5vw, 42px); line-height: 1.12; letter-spacing: -1.3px; }
 .slide__header--row { display: flex; align-items: baseline; justify-content: space-between; gap: 2em; flex-wrap: wrap; }
-.slide__sub { margin: 0.4em 0 0; color: var(--muted); font-size: 1.05em; max-width: 70em; }
-.slide__meta { display: flex; gap: 1.6em; align-items: center; color: var(--muted); font-size: 1.15em; flex-wrap: wrap; }
+.slide__sub { font-size: 15px; line-height: 1.55; max-width: 76ch; margin: 12px 0 0; color: var(--muted); }
+.slide__meta { display: flex; gap: 1.6em; align-items: center; color: var(--muted); font-size: 18px; flex-wrap: wrap; }
 .slide__meta strong { color: var(--text); }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 0.8em; padding: 1.1em 1.3em; min-height: 0; overflow: hidden; }
-.panel h2 { font-size: 1.35em; margin: 0.2em 0 0.6em; }
+.panel { background: none; border: 0; border-radius: 0; padding: 0; min-height: 0; overflow: visible; }
+.panel h2 { font: 700 22px/1.2 var(--font); letter-spacing: -0.5px; color: var(--text); margin: 0.2em 0 0.6em; }
 .panel h2:not(:first-child) { margin-top: 1em; }
-.pill { background: var(--panel-2); border: 1px solid var(--line); border-radius: 99em; padding: 0.15em 0.8em; color: var(--text); }
+.pill { background: none; border: 0; border-radius: 0; padding: 0; color: var(--text); }
 
 /* ---- badges & metrics ---- */
-.badge { display: inline-block; border-radius: 0.4em; padding: 0.1em 0.55em; font-size: 0.78em; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; }
-.badge--current { background: rgba(76, 195, 138, 0.16); color: var(--ok); }
-.badge--old-report { background: rgba(240, 180, 41, 0.16); color: var(--warn); }
-.badge--time-unknown { background: rgba(138, 155, 176, 0.18); color: var(--muted); }
-.badge--stale { background: rgba(255, 107, 107, 0.18); color: var(--bad); }
-.badge--unavailable { background: rgba(255, 107, 107, 0.28); color: #ffd0d0; }
+/* Freshness and AI chips carry color: green fresh, amber aging, red stale, blue AI. */
+.badge { display: inline-block; border-radius: 999px; padding: 2px 8px; font-size: 10.5px; font-weight: 650; letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; background: color-mix(in srgb, var(--muted) 12%, transparent); color: var(--muted); }
+.badge--current { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.badge--old-report, .badge--time-unknown { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+.badge--stale, .badge--unavailable { background: color-mix(in srgb, var(--bad) 15%, transparent); color: var(--bad); }
+.badge--ai { background: color-mix(in srgb, var(--accent) 13%, transparent); color: var(--accent); margin-left: 0.5em; }
 
 .metric { display: inline-flex; flex-direction: column; line-height: 1; }
-.metric__value { font-weight: 800; color: var(--accent); }
-.metric__value--zero { color: var(--text); opacity: 0.75; }
+.metric__value { font-weight: 750; letter-spacing: -1px; color: var(--accent); }
+.metric__value--zero { color: var(--muted); opacity: 1; }
 .metric__unit { font-weight: 600; font-size: 0.6em; margin-left: 0.05em; opacity: 0.8; }
 /* At 60% size, raise the inch mark by the missing 40% of the number's cap height. */
 .metric__unit--in { vertical-align: calc(2cap / 3); }
@@ -109,26 +112,27 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
 .metric--md { font-size: 1.35em; }
 .metric--sm { font-size: 1em; }
 
-.source-line { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4em 1.4em; color: var(--muted); font-size: 0.88em; border-top: 1px solid var(--line); padding-top: 0.7em; }
+.source-line { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--muted); font-size: 12px; line-height: 1.5; border-top: 1px solid var(--line); padding-top: 0.7em; }
 .source-line strong { color: var(--text); font-weight: 600; }
 .source-line__error { color: var(--bad); }
 .source-line__attr { margin-left: auto; }
 
 .dot { display: inline-block; width: 0.7em; height: 0.7em; border-radius: 50%; flex: none; background: var(--muted); }
 .dot--open { background: var(--ok); }
-.dot--closed { background: #4a5668; }
+.dot--closed { background: var(--muted); }
 .dot--hold { background: var(--hold); }
 .dot--scheduled { background: var(--warn); }
 
-.unavailable { background: rgba(255, 107, 107, 0.08); border: 1px dashed var(--bad); border-radius: 0.8em; padding: 2em; }
-.unavailable h2 { color: var(--bad); font-size: 2em; margin-bottom: 0.4em; }
+.unavailable { background: color-mix(in srgb, var(--bad) 6%, transparent); border: 1px dashed var(--bad); border-radius: 8px; padding: 2em; }
+.unavailable h2 { color: var(--bad); font-size: 22px; margin-bottom: 0.4em; }
 
-/* ---- regional ---- */
-.snow-table { width: 100%; border-collapse: collapse; }
-.snow-table th, .snow-table td { text-align: left; padding: 0.45em 0.8em; border-bottom: 1px solid var(--line); vertical-align: middle; }
-.snow-table thead th { color: var(--muted); font-weight: 600; font-size: 1em; text-transform: uppercase; letter-spacing: 0.04em; }
-.row--primary th[scope="row"] .resort-name { font-size: 2.3em; font-weight: 800; }
+/* ---- regional snowfall ---- */
+.snow-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.snow-table th, .snow-table td { text-align: left; padding: 18px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.snow-table th:first-child, .snow-table td:first-child { padding-left: 0; }
+.snow-table thead th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
 .snow-table .row--primary { position: relative; isolation: isolate; transition: background-color 150ms ease; }
+.snow-table .row--primary th[scope="row"] .resort-name { font: 700 20px/1.25 var(--font); letter-spacing: -0.4px; margin-bottom: 6px; }
 .resort-name__link { color: inherit; text-decoration: none; }
 /* Stretch the native link across its table row, keeping one keyboard stop per resort. */
 .resort-name__link::after { content: ""; position: absolute; inset: 0; z-index: 1; }
@@ -139,67 +143,88 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
   .snow-table .row--primary:hover { background: rgba(124, 196, 255, 0.1); }
   .snow-table .row--primary:hover .resort-name__link { color: var(--accent); }
 }
-.cell-label { color: var(--muted); font-size: 0.78em; margin-top: 0.25em; }
-.report-time { font-size: 1.05em; }
-.legend { color: var(--muted); font-size: 0.9em; margin: 0; }
+.cell-label { color: var(--muted); max-width: 17ch; line-height: 1.4; font-size: 11px; margin-top: 0.25em; }
+.report-time { font-size: 12px; }
+.legend { color: var(--muted); font-size: 12px; margin: 0; }
 .legend .metric__missing, .legend .metric__na { font-size: 1em; }
-.badge--ai { color: var(--accent); background: rgba(124, 196, 255, 0.15); margin-left: 0.5em; }
-.row--recommended { background: rgba(124, 196, 255, 0.05); }
-.recommendation { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 0.6em; padding: 0.85em 1.2em; }
-.recommendation__heading { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5em 1.5em; flex-wrap: wrap; }
-.recommendation__eyebrow { color: var(--accent); font-weight: 600; }
-.recommendation h2 { font-size: 1.6em; margin: 0.25em 0; }
-.recommendation__plan { margin: 0.2em 0; font-weight: 600; }
-.recommendation__summary { margin: 0.4em 0; }
-.recommendation__caveats { color: var(--warn); margin: 0.4em 0; }
-.recommendation--outdated { border-left-color: var(--warn); }
-.slide--regional { overflow-y: auto; }
+.snow-table .metric--xl { font-size: 32px; }
 
-/* ---- resort ---- */
-.resort-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.15fr 1fr 0.85fr; gap: 1.2em; }
-.panel--cams { display: flex; flex-direction: column; gap: 0.6em; }
-.panel--cams h2 { margin-bottom: 0.1em; }
+/* Daily Snow teaser: a highlighted panel that reaches into the gutters while its
+   text keeps the page's aligned edge; on phones it becomes a full-width band. */
+.regional-briefing { display: grid; }
+.dailysnow-teaser { margin-inline: -16px; padding: 24px 16px; border-radius: 8px; background: var(--panel); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 28px; color: var(--text); text-decoration: none; }
+.dailysnow-teaser__title { font: 700 clamp(23px, 2.6vw, 30px)/1.2 var(--font); letter-spacing: -0.7px; grid-column: 1 / -1; max-width: 33ch; }
+.dailysnow-teaser__summary { grid-column: 1; max-width: 75ch; font-size: 16px; line-height: 1.6; }
+.dailysnow-teaser__time { grid-column: 2; grid-row: 1; text-align: right; font-size: 12px; }
+.dailysnow-teaser__more { grid-column: 2; grid-row: 3; text-align: right; align-self: end; color: var(--accent); font-weight: 600; font-size: 14px; }
+.recommendation__eyebrow { grid-column: 1; color: var(--accent); font-weight: 700; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+.recommendation__plan { font-weight: 600; }
+
+/* Recommendation belongs to the resort's row, immediately after its measured data. */
+.snow-table .recommendation-row > td { padding: 16px 0 20px; }
+.recommendation-row__body { width: min(100%, calc(100vw - 40px)); font-size: 14px; line-height: 1.5; }
+.recommendation-row__body > strong { font-size: 16px; }
+.recommendation-row__body p { margin: 6px 0; }
+.recommendation-row__caveats { color: var(--warn); }
+.recommendation-row__meta { color: var(--muted); font-size: 11px; margin-top: 10px; overflow-wrap: anywhere; }
+
+/* The AI pick is marked by an accent line in the left gutter, spanning its data row and reasoning.
+   The pseudo lives on the cells: on the <tr> itself Chromium wraps it in an anonymous table cell and shifts the row. */
+.snow-table .row--recommended { background: none; }
+.snow-table .row--recommended > th:first-child,
+.snow-table .recommendation-row > td { position: relative; }
+.snow-table .row--recommended > th:first-child::before,
+.snow-table .recommendation-row > td::before {
+  content: ""; position: absolute; left: -12px; top: 0; bottom: 0; width: 3px; border-radius: 2px; background: var(--accent);
+}
+.snow-table .row--recommended > th:first-child::before { bottom: -1px; border-radius: 2px 2px 0 0; }
+.snow-table .recommendation-row > td::before { border-radius: 0 0 2px 2px; }
+/* Hover/focus highlights extend 16px past the content, so names sit inside the painted box rather than on its edge. */
+.snow-table .row--primary > th:first-child::after { content: ""; position: absolute; left: -16px; top: 0; bottom: 0; width: 16px; background: transparent; transition: background-color 150ms ease; }
+.snow-table .row--primary > td:last-child::before { content: ""; position: absolute; right: -16px; top: 0; bottom: 0; width: 16px; background: transparent; transition: background-color 150ms ease; }
+@media (hover: hover) {
+  .snow-table .row--primary:hover > th:first-child::after,
+  .snow-table .row--primary:hover > td:last-child::before { background: rgba(124, 196, 255, 0.1); }
+}
+.snow-table .row--primary:has(.resort-name__link:focus-visible) > th:first-child::after,
+.snow-table .row--primary:has(.resort-name__link:focus-visible) > td:last-child::before { background: rgba(124, 196, 255, 0.1); }
+
+/* ---- resort pages ---- */
 .rcam { margin: 0; min-height: 0; flex: 1; display: flex; flex-direction: column; gap: 0.3em; }
 .rcam__frame { flex: 1; min-height: 0; position: relative; background: #0b0f14; border-radius: 0.5em; overflow: hidden; }
 .rcam__frame img, .rcam__frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; border: 0; }
 .rcam figcaption { font-size: 0.85em; }
-.snow-cells { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8em 1.2em; }
-.snow-cell { background: var(--panel-2); border-radius: 0.6em; padding: 0.8em 0.9em; }
-.snow-cell--hero { grid-column: span 2; }
-.snow-cell__label { color: var(--muted); margin-top: 0.4em; }
-.snow-cell__note { color: var(--muted); font-size: 0.72em; margin-top: 0.2em; }
 .obs-table, .travel-table, .wx-table { width: 100%; border-collapse: collapse; }
 .obs-table { font-size: 0.92em; }
 .obs-table th, .obs-table td { text-align: left; padding: 0.35em 0.4em; border-bottom: 1px solid var(--line); }
 .obs-table thead th { color: var(--muted); font-weight: 600; font-size: 0.85em; }
-.lift-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.25em 1.2em; }
-.lift { display: flex; flex-wrap: wrap; align-items: center; gap: 0 0.5em; padding: 0.2em 0; min-width: 0; }
-.lift__name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lift__status { color: var(--muted); font-size: 0.85em; }
-.lift--open .lift__status { color: var(--ok); }
-.lift__note { color: var(--warn); font-size: 0.8em; flex-basis: 100%; padding-left: 1.3em; }
-.chips { list-style: none; padding: 0; margin: 0 0 0.4em; display: flex; flex-wrap: wrap; gap: 0.4em; }
-.chip { display: inline-flex; align-items: center; gap: 0.4em; background: var(--panel-2); border-radius: 99em; padding: 0.2em 0.8em; }
-.chip__raw { color: var(--muted); font-size: 0.8em; }
-.closed-list { font-size: 0.85em; margin: 0.3em 0; color: #a7b4c4; }
+.closed-list { font-size: 0.85em; margin: 0.3em 0; color: var(--muted); }
 .notices { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.35em; }
 .notice { border-left: 0.25em solid var(--line); padding: 0.2em 0.6em; }
 .notice--warning { border-color: var(--warn); }
-.notice--critical { border-color: var(--bad); background: rgba(255, 107, 107, 0.08); }
+.notice--critical { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 6%, transparent); }
 .notice__src { color: var(--muted); font-size: 0.8em; }
-.narrative { color: #b9c6d6; font-size: 0.9em; margin-top: 0.8em; white-space: pre-line; }
+.narrative { color: var(--muted); font-size: 0.9em; margin-top: 0.8em; white-space: pre-line; }
 
 /* ---- weather ---- */
-.weather-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 1.4em; }
-.weather-point { display: flex; flex-direction: column; gap: 0.6em; }
+.weather-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; min-width: 0; }
+.weather-point { display: flex; flex-direction: column; gap: 0.6em; min-width: 0; }
+.weather-point h2 .small { display: block; font: 400 14px/1.5 var(--font); margin-top: 6px; }
 .next-storm { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3em 1em; background: var(--panel-2); border-radius: 0.6em; padding: 0.6em 0.9em; }
 .next-storm__label { color: var(--muted); width: 100%; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em; }
 .next-storm__value { font-size: 2.6em; font-weight: 800; color: var(--accent); line-height: 1; }
+/* Grid items must shrink so forecast tables scroll locally, not the whole page. */
+.weather-point .wx-table { display: block; max-width: 100%; overflow-x: auto; }
 .wx-table th, .wx-table td { padding: 0.3em 0.4em; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
 .wx-table thead th { color: var(--muted); font-weight: 600; font-size: 0.85em; }
 .wx-table tbody th { text-align: left; color: var(--muted); font-weight: 500; font-size: 0.85em; }
 .wx-table__snow td { color: var(--accent); font-weight: 800; font-size: 1.35em; }
-.snow-bars { width: 100%; height: auto; display: block; }
+@media (min-width: 901px) {
+  /* Forecast tables otherwise miss the 542px desktop column by ~15px and grow a scrollbar. */
+  .weather-point .wx-table { font-size: 0.92em; }
+}
+.snow-bars-wrap { min-width: 0; max-width: 100%; overflow-x: auto; }
+.snow-bars { width: 100%; min-width: 720px; height: auto; display: block; }
 .snow-bars__bar { fill: var(--accent); }
 .snow-bars__grid { stroke: var(--line); stroke-width: 1; }
 .snow-bars__axis { stroke: var(--muted); stroke-width: 1; }
@@ -207,7 +232,7 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
 .snow-bars__val { fill: var(--text); font-size: 16px; font-weight: 700; }
 .periods { margin: 0; display: grid; gap: 0.4em; font-size: 0.85em; }
 .periods dt { font-weight: 700; display: inline; }
-.periods dd { margin: 0; display: inline; color: #b9c6d6; }
+.periods dd { margin: 0; display: inline; color: var(--muted); }
 .periods dt::after { content: " — "; }
 
 /* ---- plumes ---- */
@@ -216,7 +241,7 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
 .plume { margin: 0; min-height: 0; display: flex; flex-direction: column; gap: 0.3em; }
 .plume__title { font-size: 1.05em; font-weight: 700; text-align: center; }
 .plume__note { color: var(--muted); font-size: 0.85em; margin: 0.4em 0 0; }
-.plume__svg { flex: 1; min-height: 0; width: 100%; border-radius: 0.4em; }
+.plume__svg { flex: 1; min-height: 0; width: 100%; height: auto; border-radius: 0.4em; }
 .plume--full img { flex: 1; min-height: 0; width: 100%; object-fit: contain; background: #fff; border-radius: 0.4em; }
 .plume__midnight { stroke: #3b4a5c; stroke-width: 1.5; stroke-dasharray: 6 5; opacity: 0.55; }
 .plume__tick { stroke: #000; stroke-width: 2; }
@@ -226,15 +251,15 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
 .plume__nowlabel { font: 700 20px system-ui, sans-serif; fill: #e8590c; text-anchor: middle; }
 
 /* ---- traffic ---- */
-.traffic-grid { flex: 1; min-height: 0; display: grid; grid-template-rows: 1fr 1fr; gap: 1em; }
+.traffic-grid { flex: 1; min-height: 0; display: grid; grid-template-rows: auto; gap: 36px; }
 .canyon { display: grid; grid-template-columns: 1.25fr 1fr; gap: 1.2em; }
-.canyon__info { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 0.5em; }
+.canyon__info { min-height: 0; overflow: visible; display: flex; flex-direction: column; gap: 0.5em; }
 .canyon__info h2 { margin-bottom: 0.1em; }
 .canyon__cam { min-height: 0; display: flex; }
 .travel-table th, .travel-table td { text-align: left; padding: 0.15em 0.5em; border-bottom: 1px solid var(--line); font-size: 0.92em; }
 .travel-table thead th { color: var(--muted); font-weight: 600; }
 .travel__now { font-weight: 800; color: var(--accent); }
-.travel--stale .travel__now { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(138, 155, 176, 0.5); }
+.travel--stale .travel__now { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 50%, transparent); }
 .travel__warning { color: var(--warn); margin: 0 0 0.3em; font-size: 0.9em; }
 .cam { margin: 0; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.3em; }
 .cam img { flex: 1; min-height: 0; width: 100%; object-fit: contain; background: #000; border-radius: 0.4em; }
@@ -243,57 +268,21 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
 .cam__missing { flex: 1; display: grid; place-items: center; border: 1px dashed var(--line); border-radius: 0.4em; color: var(--muted); }
 .traffic-footer p { margin: 0; }
 
-/* ---- data banners: inline under the navbar; overlays in the slideshow ---- */
-.banner { margin: 0.6em 1.4em 0; border-radius: 0.5em; padding: 0.4em 0.9em; font-size: 0.9em; border: 1px solid; }
-.banner--offline { background: #3b2a06; color: #ffe3a3; border-color: var(--warn); }
-.banner--required-missing { background: #3b0f0f; color: #ffd0d0; border-color: var(--bad); }
-.banner--overlay { position: fixed; margin: 0; z-index: 5; }
-.banner--offline.banner--overlay { top: 0.8em; right: 0.8em; }
-.banner--required-missing.banner--overlay { bottom: 4.5em; right: 0.8em; }
+/* ---- data banners: inline under the navbar ---- */
+.banner { max-width: 1116px; margin: 12px auto 0; border-radius: 8px; padding: 8px 14px; font-size: 14px; border: 1px solid; }
+.banner--offline, .banner--required-missing { background: var(--panel); color: var(--bad); border-color: var(--line); }
 
-.controls {
-  position: fixed; left: 50%; bottom: 1em; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 0.5em; flex-wrap: wrap; justify-content: center;
-  max-width: calc(100vw - 2em); padding: 0.9em 0.9em 0.6em; z-index: 10;
-  background: rgba(14, 20, 28, 0.94); border: 1px solid var(--line); border-radius: 0.8em;
-  transition: opacity 300ms ease;
-}
-/* Hidden visually when idle but still focusable; focusing reveals it. */
-.controls--hidden { opacity: 0; }
-.controls--hidden:focus-within { opacity: 1; }
-.controls button, .controls select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 0.45em; padding: 0.35em 0.8em; cursor: pointer; }
-.controls button:focus-visible, .controls select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-.slide-picker { display: flex; gap: 0.25em; flex-wrap: wrap; }
-.slide-picker button { font-size: 0.85em; }
-.slide-picker .is-current { background: var(--accent); color: #04121f; border-color: var(--accent); font-weight: 700; }
-.duration { display: inline-flex; align-items: center; gap: 0.4em; color: var(--muted); font-size: 0.85em; }
-.controls__status { color: var(--muted); font-size: 0.8em; }
-.controls__exit { border-color: var(--accent) !important; color: var(--accent); }
-.controls__hide { color: var(--muted); }
-.progress { position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--line); border-radius: 0.8em 0.8em 0 0; overflow: hidden; }
-.progress__bar { height: 100%; background: var(--accent); transform-origin: left; animation-name: progress; animation-timing-function: linear; animation-fill-mode: forwards; }
-@keyframes progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-
-@media (prefers-reduced-motion: reduce) {
-  .slide-wrap { animation: none; }
-}
-
-/* ---- Daily Snow (AI post; shares the recommendation card's look) ---- */
-.slide--dailysnow { overflow-y: auto; }
-/* One reading width for the whole post; children fill it so every edge lines up. */
-.dailysnow { max-width: 50em; width: 100%; margin: 0 auto; }
+/* ---- Daily Snow (AI post) ---- */
+.dailysnow { max-width: 740px; width: 100%; margin: 0 auto; font-size: 17px; }
 .dailysnow__warn { color: var(--warn); }
-.dailysnow__title { font-size: 2.6em; line-height: 1.1; margin: 0.25em 0 0.15em; }
 .dailysnow__summary { font-size: 1.15em; }
-.dailysnow__section h2 { font-size: 1.3em; margin: 0.9em 0 0.3em; color: var(--accent); }
-.dailysnow__section p { margin: 0.45em 0; line-height: 1.5; }
-.dailysnow-figure { margin: 0.6em 0 1em; background: var(--bg); border: 1px solid var(--line); border-radius: 0.5em; padding: 0.6em; }
-.dailysnow-figure img { display: block; width: 100%; height: auto; border-radius: 0.3em; }
-/* Plume panels: the shared plumes-page drawing at its natural aspect (no TV/phone viewport sizing). */
+.dailysnow__section h2 { font: 700 22px/1.2 var(--font); letter-spacing: -0.5px; color: var(--text); margin: 32px 0 0.3em; }
+.dailysnow__section p { margin: 14px 0; line-height: 1.75; }
+.dailysnow-figure { margin: 24px 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.dailysnow-figure img { display: block; width: 100%; height: auto; border-radius: 4px; }
 .dailysnow-figure .plume__svg { display: block; height: auto; min-height: 0; }
-/* Posts written before the axis was stored: at least keep the crop off the frame edge. */
 .dailysnow-figure--plume img { background: #fff; padding: 2%; box-sizing: border-box; }
-.dailysnow-figure figcaption { color: var(--muted); font-size: 0.8em; margin-top: 0.4em; display: flex; gap: 1em; flex-wrap: wrap; }
+.dailysnow-figure figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; display: flex; gap: 1em; flex-wrap: wrap; }
 .dailysnow-level__line { fill: none; stroke-width: 4; }
 /* Dashed so it stays readable where the two canyons' snow levels coincide. */
 .dailysnow-level__line--bcc { stroke-dasharray: 10 8; }
@@ -304,60 +293,44 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
 .dailysnow-totals { width: 100%; border-collapse: collapse; }
 .dailysnow-totals th, .dailysnow-totals td { text-align: left; padding: 0.25em 0.5em; }
 .dailysnow-totals__cell { position: relative; display: block; padding-left: 0.3em; }
-.dailysnow-totals__bar { position: absolute; left: 0; top: 0.1em; bottom: 0.1em; background: rgba(124, 196, 255, 0.25); border-radius: 0.2em; }
+.dailysnow-totals__bar { position: absolute; left: 0; top: 0.1em; bottom: 0.1em; background: color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 0.2em; }
 .dailysnow-totals__cell > span:last-child { position: relative; font-weight: 700; }
 .dailysnow__footer { margin-top: 1.2em; }
 .dailysnow__nav { display: flex; justify-content: space-between; gap: 1em; margin-top: 0.8em; flex-wrap: wrap; }
-.dailysnow__nav button, .dailysnow__back { background: transparent; border: 1px solid var(--line); color: var(--accent); border-radius: 0.45em; padding: 0.4em 0.8em; cursor: pointer; text-align: left; }
-.dailysnow__nav button:hover, .dailysnow__back:hover { border-color: var(--accent); }
-.dailysnow-teaser { display: grid; grid-template-columns: 1fr auto; gap: 0.15em 1em; color: inherit; text-decoration: none; }
-.dailysnow-teaser:hover, .dailysnow-teaser:focus-visible { border-color: var(--accent); }
-.dailysnow-teaser .recommendation__eyebrow { grid-column: 1; }
-.dailysnow-teaser__time { grid-column: 2; grid-row: 1; text-align: right; }
-.dailysnow-teaser__title { font-size: 1.3em; grid-column: 1 / -1; }
-.dailysnow-teaser__summary { grid-column: 1; }
-.dailysnow-teaser__more { grid-column: 2; align-self: end; color: var(--accent); font-weight: 600; }
+.dailysnow__nav button, .dailysnow__back { background: transparent; border: 0; padding: 12px 0; border-radius: 0; color: var(--accent); cursor: pointer; text-align: left; font-weight: 600; }
+.dailysnow__nav button:hover, .dailysnow__back:hover { text-decoration: underline; }
 
-/* ---- small screens: stack and scroll ---- */
+@media (prefers-reduced-motion: reduce) {
+  .snow-table .row--primary { transition: none; }
+}
+
+/* ---- narrow screens (phones and small tablets) ---- */
 @media (max-width: 900px) {
-  :root { --fs: 14px; }
-  .app--slideshow { position: static; min-height: 100vh; }
-  .slide-wrap { position: static; }
-  .slide { height: auto; padding: 1em; }
-  .slide__header h1 { font-size: 2em; }
-  .resort-grid, .weather-grid, .plume-grid, .canyon { grid-template-columns: 1fr; }
+  .editorial-nav { padding: 16px 20px 0; }
+  .editorial-nav__masthead { padding-bottom: 14px; }
+  .editorial-nav__brand { font-size: 23px; }
+  .editorial-nav__brand span { display: block; font-size: 15px; margin-top: 3px; letter-spacing: -0.4px; }
+  .editorial-nav nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 8px; }
+  .editorial-nav nav > a, .editorial-nav summary { min-height: 44px; font-size: 15px; padding: 8px; }
+  .editorial-page { padding: 28px 20px 40px; }
+  .editorial-footer { margin-inline: 20px; padding-inline: 0; }
+  .slide { gap: 24px; }
+  .plume-grid, .canyon { grid-template-columns: 1fr; }
   .plume-grid { grid-template-rows: none; grid-auto-flow: row; }
   .plume--full { grid-row: auto; }
-  .rcam__frame { min-height: 30vh; }
+  .weather-grid { grid-template-columns: minmax(0, 1fr); }
   .traffic-grid { grid-template-rows: none; }
   body { overflow-x: hidden; }
-  .slide__meta { font-size: 0.9em; gap: 0.4em 1em; }
-  .snow-cells { grid-template-columns: repeat(2, 1fr); }
-  .snow-cell--hero { grid-column: span 1; }
+  .slide__meta { font-size: 16px; gap: 0.4em 1em; }
   .obs-table, .travel-table { display: block; overflow-x: auto; }
-  .lift-list { grid-template-columns: 1fr; }
-  .snow-table { font-size: 0.8em; display: block; overflow-x: auto; }
-  .metric--xl { font-size: 2.2em; }
-  .wx-table { display: block; overflow-x: auto; }
+  /* The table scrolls inside a reserved gutter so the pick's accent line renders beside the row. */
+  .snow-table { display: block; overflow-x: auto; width: calc(100% + 32px); margin-inline: -16px; padding-inline: 16px; }
+  .snow-table th, .snow-table td { min-width: 95px; padding: 14px 10px; }
+  .snow-table th:first-child, .snow-table td:first-child { min-width: 125px; }
+  .snow-table .metric--xl { font-size: 28px; }
+  .snow-table .row--primary th[scope="row"] .resort-name { font-size: 19px; }
   .plume__svg, .plume--full img { min-height: 40vh; }
-  .controls { position: sticky; bottom: 0; transform: none; left: auto; max-width: none; border-radius: 0; }
-  .controls--hidden { opacity: 1; }
-  .controls__hide { display: none; }
-  .nav__bar { flex-wrap: wrap; padding: 0.5em 0.75em 0.35em; }
-  .nav__tabs-wrap { order: 3; flex-basis: 100%; margin: 0 -0.75em; }
-  .nav__tabs { padding: 0 0.75em 0.15em; }
-  .nav__tab { padding: 0.5em 0.85em; }
-  .banner { margin: 0.6em 0.75em 0; }
-}
-@media (max-width: 600px) {
-  .nav__status { display: none; }
-}
-@media (min-width: 901px) {
-  .app--browse { height: 100dvh; }
-}
-
-@media (max-width: 900px) {
-  .dailysnow__title { font-size: 1.9em; }
-  .dailysnow-teaser { grid-template-columns: 1fr; }
-  .dailysnow-teaser__time, .dailysnow-teaser__more { grid-column: 1; grid-row: auto; text-align: left; }
+  /* Full-width teaser band: no gutters, no radius; the text keeps the page's aligned edge. */
+  .dailysnow-teaser { margin-inline: -20px; padding: 24px 20px; border-radius: 0; grid-template-columns: minmax(0, 1fr); }
+  .dailysnow-teaser__time, .dailysnow-teaser__summary, .dailysnow-teaser__more { grid-column: 1; grid-row: auto; text-align: left; }
 }

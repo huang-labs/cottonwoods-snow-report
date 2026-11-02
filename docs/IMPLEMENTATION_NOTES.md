@@ -258,3 +258,137 @@ Existing files touched: `src/lib/dailysnow/llm.ts` (clip call sites, budget, pro
 Validation: 195 tests across 16 files pass, including new clip unit tests and a validator integration test (long paragraph clipped at the sentence boundary with its figure preserved; share-card rendering with long copy unchanged). `npm run typecheck` passes. A live production regeneration after the deploy produced a five-paragraph post whose longest paragraph (533 characters) ends at a complete sentence with the ensemble-confidence caveat intact — no mid-word truncation. The first force attempt died with a client-side TLS read timeout before the worker started a run (the stored post was unchanged); a retry succeeded. `force` bypasses the in-flight window by design (it only respects the daily call cap), so the retry was safe.
 
 Final validation: 195 tests across 16 files pass, along with `npm run typecheck` and `git diff --check`. `npm run build` was not run: no routing, styling or build behavior changes.
+
+## 2026-11-02 — Local editorial design preview (not the final refactor)
+
+Direction agreed for exploration: remove TV in the eventual refactor; preserve existing information and capabilities; retain Daily Snow teaser then resort pick before measured comparison; use light-first, text-led pages with a dark option, serif headings, readable navigation, fewer containers, and normal document scrolling.
+
+The temporary `design-preview/` shell and scoped CSS exercise that direction across existing routes. `NEXT_PUBLIC_DESIGN_PREVIEW=1` selects the shell at build time; ordinary builds retain the original shell. The preview's theme is in memory (resets on reload). Its worker proxies public GET endpoints for real data and archived figures, without forwarding credentials or writing KV. The tunnel gateway blocks write methods and local Wrangler management endpoints.
+
+Known limits: this is a visual review, not complete TV removal. The mobile comparison remains horizontally scrollable; chart label density, mobile comparison layout, final dropdown behavior, theme persistence, and final component extraction remain future work. No selected resort pick existed in the live response during this preview; the existing component correctly hides it. No replacement recommendation was invented or generated.
+
+Validation: preview static build and TypeScript passed; 34 existing tests passed across playback/navigation, resort report UI, and Daily Snow UI. Headless Chromium checked `/`, `/alta`, and `/daily-snow` at 390px and 1366px widths: no page-level horizontal overflow; dark toggle and client navigation preserved the selected theme; no page JavaScript errors. Browser used locally extracted libraries/fonts because privileged dependency installation is blocked. Tunnel homepage returned the preview; management and write endpoints returned 404. Cloudflare QUIC timed out; explicit HTTP/2 connected successfully. Full visual coverage of the remaining pages and chart redesign remain pending.
+
+## 2026-11-02 — Preview round 2: sans-serif weather dashboard
+
+The owner rejected the serif editorial visual identity after reviewing it. The replacement explores a cooler slate/blue palette, system sans-serif typography, stronger data numerals, active navigation surfaces, and restrained shaded summaries/key metrics. Longer resort and Daily Snow sections remain unboxed. This supersedes the previous light-first and serif direction; it is still a preview, not the full TV removal.
+
+Appearance now defaults to `prefers-color-scheme`, reacts to OS changes without reload, and has a small System/Light/Dark selector. An explicit choice is stored under `cottonwoods-design-preview.appearance`; selecting System restores OS behavior. Storage failure leaves a working session choice. This preview restores overrides after hydration; eliminating a possible initial system-theme flash is a final implementation concern.
+
+Files touched this round: `DesignPreviewShell.tsx` (appearance state, control, preview label), `design-preview.css` (palette, typography, hierarchy and surfaces), `README.md` (current preview behavior), and these notes. No collector, data semantics, routes, or production configuration changed.
+
+Validation: static preview build, typecheck, 34 existing UI/navigation tests, and diff whitespace check passed. Headless Chromium verified system light/dark changes, both manual overrides, override persistence after reload, return to System, and appearance retention during client navigation. Home, Alta, and Daily Snow fit 390px and 1366px viewports without page-level horizontal overflow; no page JavaScript errors. The snow comparison itself still scrolls horizontally on phones. Remaining pages and final dropdown behavior need review in the eventual refactor.
+
+## 2026-11-02 — Preview round 3: controls, source metadata, homepage order
+
+Replaced the appearance select with sun/moon SVG buttons, 44px hit targets and a highlighted active badge. The highlighted button tracks effective OS appearance when in System mode. Selecting a button saves an override; clicking that explicit override again restores System (also stated by its tooltip). Fixed resort menu highlights by moving horizontal padding into each link, with a separate 6px menu inset. Added current-page styling and Escape/outside-click dismissal.
+
+The plume source footer wrapped because the shared inherited font size plus the long attribution exceeded the available desktop width. Preview source metadata now uses a consistent 12px size and tighter gaps. Full attribution and timestamps remain visible; normal mobile wrapping remains. Browser checks verify one line at 1280px and 1366px, and no page overflow at 390px.
+
+The owner revised the homepage order: Daily Snow now follows the snowfall table and its measurement legend. The resort recommendation's position is unchanged. `RegionalSlide.tsx` gates this temporary order behind the existing preview build flag, preserving DOM/keyboard order rather than rearranging it only with CSS.
+
+Files touched: preview shell (appearance/menu interactions), preview CSS (badge/menu/source-line spacing), `RegionalSlide.tsx` (teaser order), README (current controls/order), and these notes. Existing UI/navigation tests: 34 passed; preview build/typecheck passed. Browser checks cover OS changes, persisted overrides/reset, menu hover padding and dismissal, plume footer dimensions, and phone/desktop layouts. The whole-app final consistency pass remains part of implementation, rather than the owner's responsibility to enumerate.
+
+## 2026-11-02 — Preview round 4: restore teaser and soften masthead hover
+
+Restored Daily Snow above the resort pick and snowfall table, removing the temporary order condition from `RegionalSlide.tsx`. The site-title link now has an opaque filled hover background with padding and rounded corners; hover has no outline. Keyboard focus retains a neutral text-colored outline for accessibility. Updated preview CSS, README and these notes; no data changes.
+
+Validation: preview build, typecheck, 34 existing UI/navigation tests and diff check passed. Browser checks at 390px and 1366px confirm teaser above table, opaque masthead hover without outline, and no page-level horizontal overflow.
+
+## 2026-11-02 — Preview round 5: no masthead hover treatment
+
+Clarified the owner's preference: the site title must not change background or outline on hover. Preview CSS now keeps it transparent on hover; keyboard-only focus remains distinct. No homepage rearrangement in this round: an unboxed, aligned briefing above the snowfall heading is proposed for discussion.
+
+Validation: preview build, typecheck, diff check, and browser hover/layout checks at 390px and 1366px passed. No application logic changed; application tests were not repeated for this CSS-only adjustment.
+
+## 2026-11-02 — Preview round 6: aligned briefing before measured snowfall
+
+Implemented the proposed layout after owner authorization: Daily Snow then resort recommendation precede the Regional snowfall heading in DOM and visual order. Their filled containers, inset padding and rounded borders are removed; content aligns to the table's left edge. Prose is limited to 72ch on desktop. A divider separates the briefing from measured data, and a missing briefing creates no empty wrapper. The standard build's existing order is preserved behind the preview flag.
+
+Touched `RegionalSlide.tsx` (preview grouping/order), preview CSS (unboxed layout), README and these notes. Data collection and recommendation behavior remain unchanged.
+
+Validation: preview build, typecheck, 34 existing UI/navigation tests and diff check passed. Browser checks at 390px and 1366px verify the teaser precedes the snowfall heading, aligns exactly with the table, has zero inset padding/transparent background, and causes no page overflow or JavaScript errors. Live data still has no selected AI resort pick, so that component remains hidden as designed.
+
+## 2026-11-02 — Preview round 7: briefing beneath the heading, sample recommendation
+
+Moved the same unboxed briefing beneath the Regional snowfall heading/subtext and above the table. Added `ExampleRecommendation.tsx`, a clearly labeled fictional design example rendered only in the preview when live data has no pick. It reuses the real recommendation renderer, names no model, and explicitly says no AI was run. It never enters report data or changes recommendation highlighting in the measured table. Standard builds remain unchanged.
+
+Touched `RegionalSlide.tsx` for ordering/sample selection, preview CSS for sample label/separation, README and these notes; added the isolated sample component.
+
+Validation: preview build, typecheck, 34 UI/navigation tests and diff check passed. Browser checks at 390px and 1366px confirm heading → unboxed Daily Snow → sample recommendation → table, aligned left edges, no nested teaser padding/background, no page overflow or JavaScript errors.
+
+## 2026-11-02 — Preview round 8: recommendation integrated into resort table
+
+Removed the standalone resort recommendation from the briefing. The selected resort keeps its measured values in the normal row, gains an AI badge and subtle tint, then gets a full-width reasoning row underneath with a divider. Reasoning includes headline, explanation/plan, caveats and model/time metadata; stale/failing recommendations retain their warnings and do not receive current-pick highlighting. Daily Snow remains the sole teaser above the table.
+
+The local fictional fixture now marks Alta with “Example AI pick” and labels the explanation as fictional. This intentionally supersedes the earlier choice not to highlight sample entries. No measured values or stored report are changed. Explanation width stays within the phone viewport while the comparison table retains horizontal scrolling.
+
+Touched `RegionalSlide.tsx` (grouped data/reasoning rows), `ExampleRecommendation.tsx` (fixture data rather than standalone rendering), preview CSS (row treatment), README and these notes. Build, typecheck, 34 UI/navigation tests passed.
+
+Browser validation at 390px and 1366px: one Daily Snow teaser above the table, example badge on Alta, seven-column reasoning row immediately following Alta, readable explanation within the phone viewport, and no page-level overflow. Tunnel remains available.
+
+## 2026-11-02 — Preview round 9: aligned filled teaser and full-width desktop prose
+
+Added the teaser's pale blue background by extending its edges 12px into the gutters and matching that with 12px inner padding, keeping text aligned to the page. Desktop timestamp/read link return to the right-hand column; removed the 72ch text limit. Phones stack the teaser. Removed the recommended resort's special left padding so its name aligns with all other resorts. The reasoning uses available desktop width and is limited only by the phone viewport on narrow screens.
+
+Changed preview CSS and these notes; no data or rendering logic changes.
+
+Validation: build, typecheck and diff check passed. Browser checks at 390px and 1366px confirm all resort names, teaser text and page heading share the same left edge. At 1366px, teaser summary uses 960px and recommendation reasoning 1116px; timestamp and read link sit on the right. No page overflow at either width. README updated. Application tests were not repeated for this CSS-only refinement.
+
+## 2026-11-02 — Preview round 10: recommendation background bleed and Weather overflow
+
+Extended the recommendation row's fill 12px beyond its left/right content edges using cell shadows. The mobile table scroll region reserves 12px gutters so the bleed remains visible without shifting the resort names.
+
+Reproduced Weather overflow at a 390px viewport: forecast panel/table measured 557px, page scroll width 577px. The grid item's automatic minimum width retained the table's intrinsic width. Preview CSS now uses zero-minimum grid tracks and shrinkable panels, with local table scrolling. Forecast charts get a readable minimum width and their own horizontal scroll area instead of shrinking labels; grid metadata has a separate compact line. Changes are scoped to preview CSS; no forecast data or source semantics changed.
+
+Desktop refinement: with 542px columns the nowrap forecast tables measure 557px and grew a permanent 15px scrollbar inside each panel (previously they silently overlapped the grid gap). Forecast tables now use the app's existing compact data-table size (`0.92em`, matching `obs-table`) at 900px and above, which fits the columns; narrow screens keep full-size text and the local scroll. Mobile keeps a single weather column; the two-column grid remains desktop-only.
+
+## 2026-11-02 — Preview round 11: accent lines replace the background bleed
+
+Owner feedback: the gutter-bleeding backgrounds with aligned text "look like shit". Dropped the teaser's pale background and the recommended row/reasoning fills along with all box-shadow gutter paint. Both the Daily Snow teaser and the AI pick (its data row plus the reasoning row beneath) are now marked by a 3px rounded vertical accent line in the left gutter (var(--accent), theme-aware), while all text stays left-aligned at the common page edge. The mobile table keeps a 12px reserved gutter inside its scroll region so the pick's line renders beside the row without shifting resort names; nothing paints into it except the line.
+
+Implementation note: the line is a positioned ::before on the recommended row's first <th> and on the reasoning row's <td>. Hanging it on the <tr> is wrong in Chromium: a pseudo-element on a table row gets wrapped in an anonymous table cell that participates in column layout and shifted the resort's cell 125px right. Follow-up from review: the teaser and pick also inherit base-app backgrounds the preview must clear explicitly — the teaser shares the `recommendation` card class (background var(--panel)) and `.row--recommended` carries a rgba tint from globals.css; the preview now sets `background: none` on both. Verified by full-band pixel scans: zero panel-colored pixels remain in the teaser or pick bands at 390px and 1366px, with the line and alignment intact.
+
+Also during this round: diagnosed why the mobile bleed never painted on first load — cell box-shadows inside the display:block, overflow-x:auto, border-collapsed table were missing from the initial paint and only appeared after an unrelated style change forced a repaint (verified by toggling styles and pixel-sampling; a minimal repro painted fine). The line treatment avoids that path entirely. Desktop weather panels previously grew a permanent 15px scrollbar because nowrap forecast tables measure 557px against 542px columns; forecast tables now use the app's existing compact data-table size (0.92em, matching obs-table) at 900px and up, which fits. Narrow screens keep full-size text with local scrolling.
+
+Validation: build, typecheck and diff check passed. Fresh-load pixel checks at 390px and 1366px confirm the accent line renders beside the teaser and the pick rows on first paint, resort names and teaser text remain aligned at one edge, the pick line is continuous across the data/reasoning boundary, and neither page overflows. Weather at 390px keeps page scroll width at the viewport with local table/chart scrolling; at 1366px the forecast tables no longer scroll. Application tests were not repeated; this round is preview CSS plus README/notes text only.
+
+## 2026-11-02 — Preview round 12: teaser returns to a padded panel
+
+Owner decision: the pick's accent-line treatment stays, but the teaser goes back to being highlighted by its light blue background with padding, accepting the text inset. The teaser is again a contained pale panel (20px padding, 8px radius, var(--panel)), no gutter bleed and no accent line; the AI pick in the table keeps the left-gutter accent line and no background.
+
+Validation: build, typecheck and diff check passed. Pixel checks at 390px and 1366px: the teaser band paints a panel rectangle with its text inset by the padding, the pick's data/reasoning bands remain background-free with the accent line intact, resort names stay aligned, and neither page overflows.
+
+## 2026-11-02 — Preview round 13: teaser panel bleeds into the gutters with aligned text
+
+Owner decision after seeing the padded panel: keep the teaser text aligned to the page and let the highlighted box extend past its parent. Restored the earlier bleed treatment for the teaser only — 12px negative side margins with matching 12px inner side padding (20px vertical), 8px radius, var(--panel) background — so the panel paints into the gutters while the title/summary start at the common text edge. The AI pick keeps the accent-line treatment, which the owner approved.
+
+Validation: build, typecheck and diff check passed. Checks at 390px and 1366px: the panel's painted edge starts 12px left of the text edge in both gutters, the title and resort names share one left edge (20px / 125px), the pick's rows remain background-free with the line intact, and neither page overflows.
+
+## 2026-11-02 — Preview round 14: roomier teaser panel and highlight padding on table rows
+
+The teaser panel got more breathing room: 24px vertical padding, 16px side padding, and the panel now bleeds 16px past its column into the gutters (matching inner padding keeps text aligned). Row highlighting (hover and keyboard focus) previously painted the row background flush with the resort name because the preview zeroes first-cell padding for alignment; the highlight now extends 16px past the content on both sides so names sit inside the painted box. The strips are transparent pseudo-elements on the first th / last td that fade in with the row's existing 150ms background transition — th::after/td::before were chosen because th::before already carries the AI pick's accent line. The mobile table's reserved gutter widened from 12px to 16px so the strips are not clipped by the scroll region.
+
+Validation: build, typecheck and diff check passed. Browser checks at 390px and 1366px: hovering a resort row tints the gutter 16px beside its name on both sides while unhovered rows stay clean, the teaser panel spans 16px past the text edge with its title aligned at the common edge, the pick's accent line still paints on first load, and neither page overflows.
+
+## 2026-11-02 — Preview round 15: full-width teaser band on phones
+
+Owner feedback: on mobile the teaser's 16px bleed left 4px white slivers in each gutter, which read as stray margins. At 750px and below the teaser is now a full-width edge-to-edge band: 20px negative margins to cancel the page padding entirely, 20px inner padding so the text still sits on the page's aligned edge, and no corner radius. Desktop keeps the inset 16px-bleed panel with rounded corners, which the owner approved.
+
+Validation: build, typecheck and diff check passed. Pixel checks: at 390px the panel paints from x=0 to x=389 with the title still at the aligned text edge and radius 0; at 1366px the panel still bleeds 16px into each gutter with 8px radius. No overflow at either width.
+
+## 2026-11-02 — Preview round 16: color and character back into the redesign
+
+Owner feedback: the redesign read as clean but characterless — "a flip house with grays everywhere." The preview had flattened every badge to gray text with no fill (`.design-preview .badge { background: none; padding: 0; border-radius: 0 }`), discarding the base app's green/amber/red freshness colors. Badges are chips again, with theme-aware tinted fills via color-mix over the existing --ok/--warn/--bad/--accent variables: green for current, amber for old/unknown reports, red for stale/unavailable, accent blue for the AI pick. The masthead brand's "Snow Report" span is accent blue as a signature. Measured snowfall values were already accent blue in the preview (the base .metric__value color survived), so the snow data keeps its blue identity; zero values stay muted gray.
+
+Validation: build, typecheck and diff check passed. Browser checks in light and dark appearance: Current chips render green-tinted, AI chips blue-tinted, the brand span is accent, and text contrast holds in both themes (dark uses the preview's light-on-dark semantic palette). No layout or overflow regressions at 390px and 1366px.
+
+## 2026-11-02 — Implementation: redesign shipped, TV slideshow removed
+
+The approved design-preview direction is now the real application, and the TV/slideshow surface is gone. `AppShell` is the editorial shell from the preview (masthead with brand and appearance control, section nav with a Resorts dropdown, footer), with the appearance choice moved from a wrapper attribute to `<html data-theme>` and applied by an inline script before first paint so the theme never flashes; the storage key is `cottonwoods-snow-report.appearance`. Deleted: `Slideshow.tsx`, `NavBar.tsx`, `ResortSlide.tsx` (the TV resort view), `RecommendationCard.tsx` (superseded by the table-integrated recommendation row), the `design-preview/` shell and fixture, both preview scripts and the `design:preview` npm script, `useSlideTimer` and the duration preferences, the kiosk URL option, and the `slideshow` flag in sections. Legacy `?slide=<id>` links still redirect to their section page.
+
+Styles: `globals.css` is rewritten as the production stylesheet — light-first variables with a full dark theme (the preview's palettes), the preview's rules merged in and un-scoped, and all TV styling (slideshow controls, progress, sticky navbar, fixed-height slide frames) removed. The narrow-screen rules are consolidated at one 900px breakpoint (the preview had split treatments at 750/900, leaving an unreviewed intermediate state). `resort-report.css` keeps the long-form resort page with the preview's refinements folded in (unboxed sections, hero metric tiles, rule-separated lifts) and its hardcoded dark colors replaced with theme variables. The recommendation markup in `RegionalSlide` is unconditional now; the fictional example fixture is gone.
+
+One latent bug surfaced: the working tree's RegionalSlide imported `./resort-columns`, a module that was never created — earlier builds and typechecks passed on stale caches. The inline PRIMARY/COLUMNS definitions (as in main) are restored.
+
+Validation: 185 tests pass (app-shell test replaces the playback test; recommendation and resort-report tests updated to the integrated row and 4-arg `renderSection`), typecheck and build pass. Browser smoke test on the real dev server with seeded local KV below.
