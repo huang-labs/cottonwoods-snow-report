@@ -137,7 +137,16 @@ function figureCandidates(snapshot: Snapshot, nws: NwsPayload | null, numbers: D
       const id = `plume-${panel.id}-${c.stationCode.toLowerCase()}`;
       const what = panel.id === "snow" ? "accumulated snowfall" : "snow-to-liquid ratio";
       out.push({
-        figure: { id, kind: "image", url: "", originUrl: panel.url, width: panel.width, height: panel.height, caption: `University of Utah ensemble plume · ${panel.title} · ${c.stationName} · ${c.runCode.slice(8)}Z run` },
+        figure: {
+          id,
+          kind: "image",
+          url: "",
+          originUrl: panel.url,
+          width: panel.width,
+          height: panel.height,
+          axis: { plot: panel.plot, initTime: c.initTime, forecastHours: c.forecastHours },
+          caption: `University of Utah ensemble plume · ${panel.title} · ${c.stationName} · ${c.runCode.slice(8)}Z run`,
+        },
         describe: `Ensemble plume chart of ${what} at ${c.stationName} (many model members as lines; spread = uncertainty). You cannot see its values.`,
         source: { kind: "kv", key: `plume-panel:v1:${c.stationCode}:${c.runCode}:${panel.id}` },
       });

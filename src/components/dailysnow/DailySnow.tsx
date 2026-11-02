@@ -40,7 +40,7 @@ function Article({ post }: { post: ApiDailySnow }) {
           {s.paragraphs.map((p, i) => (
             <div key={i}>
               <p>{p.text}</p>
-              {p.figure && post.figures[p.figure] && <Figure figure={post.figures[p.figure]} />}
+              {p.figure && post.figures[p.figure] && <Figure figure={post.figures[p.figure]} postedAt={post.generatedAt} />}
             </div>
           ))}
         </section>

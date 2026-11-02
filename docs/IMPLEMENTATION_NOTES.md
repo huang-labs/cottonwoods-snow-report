@@ -206,3 +206,25 @@ Validation: 33 playback, resort-report UI and Daily Snow UI tests pass; typechec
 The regional snowfall links now cover each entire resort row, including measurements, badges, padding and the report-time cell. The native anchor is stretched within its isolated row so zeros and translucent unit text cannot intercept clicks. Each resort remains one keyboard stop, with native Enter/new-tab behavior and preserved table semantics. Names return to clean, un-underlined text; hovering highlights the row and name, while keyboard focus adds a row outline. Hover styling is limited to hover-capable pointers.
 
 This follow-up changes only `src/app/globals.css` and this note. Browser validation with real data confirms all four rows' hit targets at five positions each at laptop/TV widths (1366×768 and 1920×1080), plus phone targets at 390×844 before and after horizontal table scrolling. Clicking Alta's report-time cell navigates to `/alta`; Tab focuses the single Alta link with a visible row outline, and Enter navigates correctly. Hover screenshot reviewed. No page overflow; phone table scrolling remains available. 25 playback/resort UI tests, typecheck, final build and git diff --check pass. The inch-mark fix is preserved. No production writes.
+
+## Daily Snow plume axes (2026-11-02)
+
+Daily Snow previously displayed the raw cropped plume PNG. That crop deliberately omits the upstream UTC labels because `/plumes` draws its own Mountain Time axis and white margin. Displaying it directly left Daily Snow without a time axis or space around the plot.
+
+Both pages now use `src/components/PlumePanelSvg.tsx`, extracted from the existing plumes renderer without changing its geometry. Daily Snow freezes the plot bounds, model initialization and forecast horizon with the image metadata. Its marker says “posted” at the post's generation time; `/plumes` retains its moving “now” marker. Daily Snow uses the natural aspect ratio rather than the plumes page's viewport sizing. No source adapter, crop algorithm, AI prompt, schedule or inference behavior changes.
+
+Compatibility: `axis` is optional. Existing posts without it show the original still with white padding but cannot draw the missing axis. Deploying this fix does not backfill production posts; doing that requires a separately authorized write using verified metadata for the original run. The figure API remains a raw PNG, with the axis composed by the frontend. Tomorrow's generated posts automatically include the metadata, including in their archive entry.
+
+Existing files touched:
+- `src/components/slides/PlumeSlide.tsx`: delegates panel drawing to the shared component while retaining its wrapper, captions and current-time marker.
+- `src/components/dailysnow/figures.tsx`: uses the shared drawing when frozen axis metadata exists, with a legacy image fallback.
+- `src/components/dailysnow/DailySnow.tsx`: supplies the post's generation time to its figures.
+- `src/lib/dailysnow/digest.ts`: captures the original plume run's axis metadata with each figure candidate.
+- `src/lib/types.ts`: adds the optional image-axis metadata.
+- `src/app/globals.css`: scopes natural sizing and legacy crop padding to Daily Snow figures.
+- `test/dailysnow-ui.test.tsx`: covers padding geometry, Mountain Time day labels, the posting marker and legacy images; existing tests cover missing posts and ordinary stake images.
+- `test/dailysnow.test.ts`: verifies axis metadata survives the actual posting/copy path.
+- `README.md`: documents the additional stored metadata and raw-image/API distinction.
+- This file: records the decision, validation and limitations.
+
+Validation: all 183 tests across 15 files, `npm run typecheck`, `npm run build` and `git diff --check` pass. Local workerd remains at http://localhost:8791 on `fix/dailysnow-plume-figure-axis`, seeded with the real “Winding Down, Then a Break” GLM post and its original CLN 2026110200 image. Added axis metadata was matched to that exact source run. The local current and archived post APIs return that metadata; the frozen PNG returns 200 image/png; `/daily-snow` and `/plumes` return 200. No production writes or new model calls were made for this fix. Phone/laptop/TV visual checks were not run: T3 preview failed because its required system libraries are absent, and sudo installation is blocked by the container's no-new-privileges setting. Shared plumes drawing is mechanically preserved, but responsive visual review remains outstanding.
