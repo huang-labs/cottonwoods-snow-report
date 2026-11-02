@@ -133,8 +133,14 @@ it("draws plume figures like the plumes page: padded, Mountain Time axis, postin
 
   // Posts written before the axis was stored keep the bare still, padded.
   const { axis: _axis, ...legacy } = plume;
-  render(<DailySnowSlide report={report({ ...withPlume, figures: { "plume-snow-cln": legacy } })} now={now} />);
+  const { unmount: unmountLegacy } = render(<DailySnowSlide report={report({ ...withPlume, figures: { "plume-snow-cln": legacy } })} now={now} />);
   const img = screen.getByRole("img", { name: plume.caption });
   expect(img.tagName).toBe("IMG");
   expect(img.closest("figure")?.className).toContain("dailysnow-figure--plume");
+  unmountLegacy();
+
+  // Code-added required figures render after the prose, without invented introductions.
+  render(<DailySnowSlide report={report({ ...withPlume, sections: [{ id: "update", paragraphs: [{ text: "A quiet day.", figure: null }] }] })} now={now} />);
+  expect(screen.getAllByRole("img", { name: /Accumulated Snow.*times in Mountain Time/ })).toHaveLength(1);
+  expect(screen.getByText("A quiet day.")).toBeTruthy();
 });

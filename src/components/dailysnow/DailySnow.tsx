@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatDenver } from "@/lib/time";
+import { isSnowPlume } from "@/lib/dailysnow/plume";
 import type { ApiDailySnow, DailySnowPhase, DailySnowSectionId, ReportResponse } from "@/lib/types";
 import { Figure } from "./figures";
 
@@ -32,6 +33,8 @@ function Eyebrow({ post, now, archived }: { post: ApiDailySnow; now: Date; archi
 }
 
 function Article({ post }: { post: ApiDailySnow }) {
+  const referenced = new Set(post.sections.flatMap((s) => s.paragraphs.map((p) => p.figure)));
+  const supplemental = Object.values(post.figures).filter((f) => isSnowPlume(f.id) && !referenced.has(f.id));
   return (
     <div className="dailysnow__article">
       {post.sections.map((s) => (
@@ -45,6 +48,7 @@ function Article({ post }: { post: ApiDailySnow }) {
           ))}
         </section>
       ))}
+      {supplemental.map((f) => <Figure key={f.id} figure={f} postedAt={post.generatedAt} />)}
     </div>
   );
 }
