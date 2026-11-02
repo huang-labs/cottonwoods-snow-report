@@ -76,7 +76,9 @@ export function ResortCams({
     <div className="resort-cams">
       <h2>Webcams</h2>
       {mine.length ? (
-        mine.map((c) => <Cam key={c.title} cam={c} now={now} bust={bust} />)
+        mine.map((c) => (
+          <Cam key={c.kind === "youtube" ? c.videoId : c.imageUrl} cam={c} now={now} bust={bust} />
+        ))
       ) : (
         <p className="muted">
           No {resortId === "alta" ? "Alta" : "resort"} webcam available right
