@@ -246,3 +246,15 @@ Validation: exact saved gateway-response replay preserves five paragraphs and al
 Local review: http://localhost:8791/daily-snow on `fix/dailysnow-required-plume`, using the original real gateway response replayed through the actual posting path and seeded into local snapshot/archive KV with its frozen plume. All five paragraphs and four figures are present. This change makes no production KV writes and does not force another production post. Browser/responsive visual checks were not run; the prior preview attempt was blocked by absent system libraries. Final test/typecheck/build totals are recorded below.
 
 Final validation: 189 tests across 15 files pass, along with `npm run typecheck`, `npm run build` and `git diff --check`. The local archived-post API returns the recovered five paragraphs/four figures and the frozen plume endpoint returns 200 image/png.
+
+## Sentence-boundary paragraph clipping (2026-11-02)
+
+The 17:45 UTC force repost produced a paragraph ending "En…": the model wrote more than the 600-character paragraph budget and `validateDailySnow` clipped at an arbitrary character index, cutting "Ensemble" mid-word. The truncation was in stored post data, not the page.
+
+Paragraph clipping now ends at the last complete sentence that keeps at least 60% of the budget (falling back to the last word boundary with an ellipsis when no sentence fits), so a paragraph that overruns loses its final partial sentence instead of being mangled. The shared helper is `src/lib/clip.ts` (`clipText`); the Daily Snow validator uses it for title, summary and paragraphs, and the Daily Snow share card uses it for title and summary. The paragraph budget also rises from 600 to 800 characters, and the prompt now states the budget and asks the model to keep each idea in a sentence that can stand on its own. `src/lib/recommend/llm.ts` keeps its own simple clip; the resort pick was not part of this change.
+
+Existing files touched: `src/lib/dailysnow/llm.ts` (clip call sites, budget, prompt line), `src/lib/og/daily-snow-image.tsx` (share-card truncation), plus the new `src/lib/clip.ts` and tests in `test/clip.test.ts` and `test/dailysnow.test.ts`. No adapters, schedules, storage keys, routes or rendering change.
+
+Validation: 195 tests across 16 files pass, including new clip unit tests and a validator integration test (long paragraph clipped at the sentence boundary with its figure preserved; share-card rendering with long copy unchanged). `npm run typecheck` passes. A live regeneration after deployment was run to confirm real model output survives the new clip; totals below.
+
+Final validation: 195 tests across 16 files pass, along with `npm run typecheck` and `git diff --check`. `npm run build` was not run: no routing, styling or build behavior changes.

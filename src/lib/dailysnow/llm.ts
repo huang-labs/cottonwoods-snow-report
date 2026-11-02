@@ -1,3 +1,4 @@
+import { clipText } from "../clip";
 import { FALLBACK_MODEL, PRIMARY_MODEL, responseJson, type AiLike } from "../recommend/llm";
 import type { DailySnowParagraph, DailySnowSectionId } from "../types";
 import type { DailyDigest } from "./digest";
@@ -31,7 +32,7 @@ What to write for each phase (given as "phase"):
 Structure:
 - title: 2–5 words, a hook for the day ("Storm Underway", "Pretty Much Done", "More Snow Chances Late Next Week"). At most 40 characters.
 - summary: 2–3 sentences (at most 320 characters) covering the whole story.
-- sections: first "update" (when the post is mostly about current/recent weather) or "short-term" (when it is mostly about the next 1–3 days), then optionally "extended" for days 3–7 and beyond. Leave out "extended" when there is nothing useful to say beyond the short term. Each section has 1–6 paragraphs of 1–3 sentences.
+- sections: first "update" (when the post is mostly about current/recent weather) or "short-term" (when it is mostly about the next 1–3 days), then optionally "extended" for days 3–7 and beyond. Leave out "extended" when there is nothing useful to say beyond the short term. Each section has 1–6 paragraphs of 1–3 sentences, at most about 800 characters per paragraph; a paragraph that runs longer is cut back to its last complete sentence, so keep each idea in a sentence that can stand on its own.
 - figures: a paragraph may show one figure after it (figure id from the list given, or "none"). When it does, the paragraph usually ends by introducing it with a colon, e.g. "Snow levels fall steadily through tonight:". Use 2–${MAX_FIGURES} figures in the whole post, each at most once, where they support the text. You cannot see images; never describe what a photo or plume chart shows.
 - Include an accumulated-snow plume when a plume-snow-* figure is available, preferably plume-snow-cln. Introduce it neutrally as University of Utah ensemble guidance; do not imply it plots the numerical six-hour rows or read values from the image.
 - Use only ONE opening section: choose update OR short-term. Keep any next-1–3-day outlook in that same section, rather than adding the other opening section. Only extended may follow it.
@@ -120,11 +121,7 @@ export interface LlmDailySnow {
   sections: Array<{ id: DailySnowSectionId; paragraphs: DailySnowParagraph[] }>;
 }
 
-const clean = (s: unknown) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim() : "");
-const clip = (s: unknown, n: number) => {
-  const t = clean(s);
-  return t.length > n ? `${t.slice(0, n - 1)}…` : t;
-};
+const clip = clipText;
 
 /** Every number that appears anywhere in the model's input. */
 export function groundNumbers(digest: DailyDigest): number[] {
@@ -173,7 +170,7 @@ export function validateDailySnow(raw: unknown, digest: DailyDigest): LlmDailySn
     if (sections.some((s) => s.id === "extended") && id !== "extended") continue;
     const paragraphs: DailySnowParagraph[] = [];
     for (const p of (((s as { paragraphs?: unknown }).paragraphs as unknown[] | undefined) ?? []).slice(0, 6)) {
-      const text = clip((p as { text?: unknown })?.text, 600);
+      const text = clip((p as { text?: unknown })?.text, 800);
       if (!text) continue;
       const f = (p as { figure?: unknown }).figure;
       const figure = typeof f === "string" && known.has(f) && !used.has(f) && used.size < MAX_FIGURES ? f : null;

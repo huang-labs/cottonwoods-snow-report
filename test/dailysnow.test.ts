@@ -191,6 +191,18 @@ describe("validation", () => {
     expect(() => validateDailySnow(answer([], { title: "" }), d)).toThrow(/no title or summary/);
     expect(() => validateDailySnow(answer([], { sections: [] }), d)).toThrow(/sections/);
   });
+  it("clips over-long paragraphs at a sentence boundary and keeps the figure", () => {
+    const d = withData();
+    const text = `${"b".repeat(500)}. Middle sentence one. Middle sentence two. ${"c".repeat(500)}`;
+    const raw = answer([], { sections: [{ id: "update", paragraphs: [{ text, figure: "plume-snow-cln" }] }] });
+    const r = validateDailySnow(raw, d);
+    expect(r.sections[0].paragraphs[0]).toEqual({
+      // 1044 characters in; the clip ends after the last sentence that keeps
+      // most of the 800-character budget, without an ellipsis.
+      text: `${"b".repeat(500)}. Middle sentence one. Middle sentence two.`,
+      figure: "plume-snow-cln",
+    });
+  });
   it.each([['update', 'short-term'], ['short-term', 'update']])("preserves the outlook and plume when %s is followed by %s", (first, second) => {
     const d = withData();
     const raw = answer([], { sections: [
