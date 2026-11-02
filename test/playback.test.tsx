@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppShell } from "@/components/AppShell";
@@ -269,9 +269,25 @@ describe("slideshow mode", () => {
     vi.useFakeTimers();
     fireEvent.click(screen.getByRole("button", { name: /Slideshow/ }));
     act(() => void vi.advanceTimersByTime(10_000));
-    expect(screen.getByRole("heading", { level: 1, name: "Waiting for the first post" })).toBeTruthy();
+    // Daily Snow is a page only; the slideshow goes from Snowfall straight to Weather.
+    expect(screen.getByRole("heading", { level: 1, name: "Cottonwoods mountain weather" })).toBeTruthy();
     fireEvent.change(screen.getByRole("combobox", { name: "Seconds per slide" }), { target: { value: "45" } });
     expect(JSON.parse(window.localStorage.getItem(PREFS_KEY)!).durationSec).toBe(45);
+  });
+
+  it("leaves Daily Snow out of the slideshow", async () => {
+    mockApi(REPORT);
+    renderAt("/daily-snow");
+    await screen.findByRole("heading", { level: 1, name: "Waiting for the first post" });
+    fireEvent.click(screen.getByRole("button", { name: /Slideshow/ }));
+    // Started from the Daily Snow page: begins at the next slide.
+    expect(screen.getByRole("heading", { level: 1, name: "Cottonwoods mountain weather" })).toBeTruthy();
+    const picker = screen.getByRole("group", { name: "Choose slide" });
+    expect(within(picker).queryByRole("button", { name: "Daily Snow" })).toBeNull();
+    expect(within(picker).getAllByRole("button")).toHaveLength(SECTIONS.length - 1);
+    fireEvent.click(screen.getByRole("button", { name: "Previous slide" }));
+    fireEvent.click(screen.getByRole("button", { name: "Previous slide" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Brighton" })).toBeTruthy();
   });
 
   it("Escape leaves the slideshow", async () => {

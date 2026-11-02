@@ -105,7 +105,6 @@ export function planDailySnow(
         phase: build.digest.phase,
         title: r.title,
         summary: r.summary,
-        highlights: r.highlights,
         sections: r.sections.map((s) => ({ ...s, paragraphs: s.paragraphs.map((p) => ({ ...p, figure: p.figure && figures[p.figure] ? p.figure : null })) })),
         figures,
         numbers: build.numbers,

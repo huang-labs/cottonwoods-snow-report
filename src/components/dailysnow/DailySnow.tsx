@@ -93,11 +93,7 @@ function useArchivedPost(date: string | null): { post: ApiDailySnow | null; erro
   return date && state?.date === date ? state : { post: null, error: null };
 }
 
-/**
- * Daily Snow section. Browse mode shows the full post with figures, numbers
- * and archive links; the slideshow (CSS, `.app--slideshow`) shows the title,
- * summary, highlights and the first figure instead.
- */
+/** Daily Snow page: the full post with figures and archive links (not part of the slideshow). */
 export function DailySnowSlide({ report, now }: { report: ReportResponse; now: Date }) {
   const [date, setDate] = useState<string | null>(null);
   useEffect(() => setDate(readDateParam()), []);
@@ -126,17 +122,12 @@ export function DailySnowSlide({ report, now }: { report: ReportResponse; now: D
       </section>
     );
   }
-  const hero = post.sections.flatMap((s) => s.paragraphs).map((p) => p.figure && post.figures[p.figure]).find(Boolean);
   return (
     <section className="slide slide--dailysnow">
       <article className="dailysnow" aria-label="Daily Snow">
         <Eyebrow post={post} now={now} archived={!!date && date !== current?.date} />
         <h1 className="dailysnow__title">{post.title}</h1>
         <p className="recommendation__plan dailysnow__summary">{post.summary}</p>
-        <div className="dailysnow__tv">
-          <ul className="dailysnow__highlights">{post.highlights.map((h, i) => <li key={i}>{h}</li>)}</ul>
-          {hero && <Figure figure={hero} />}
-        </div>
         <Article post={post} />
         <Footer post={post} />
         <ArchiveNav post={post} onPick={pick} />

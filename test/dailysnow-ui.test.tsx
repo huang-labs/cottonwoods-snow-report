@@ -12,7 +12,6 @@ const post: ApiDailySnow = {
   phase: "storm",
   title: "Storm Underway",
   summary: "The main surge is here today with snow above 8,000 feet.",
-  highlights: ["Heavy snow up high today", "Snow levels fall tonight", "Clearing Monday"],
   sections: [
     { id: "update", paragraphs: [{ text: "Snow levels fall through tonight:", figure: "nws-snow-level" }, { text: "Stakes are filling in:", figure: "stake-alta" }] },
     { id: "extended", paragraphs: [{ text: "A weak system arrives Wednesday.", figure: null }] },
@@ -50,10 +49,6 @@ it("shows the post as page content with the AI badge, sections and figures", () 
   const article = within(document.querySelector<HTMLElement>(".dailysnow__article")!);
   expect(article.getByRole("img", { name: "NWS forecast snow level" })).toBeTruthy();
   expect(article.getByRole("img", { name: "Alta snow stake · 5:55 AM today" }).getAttribute("src")).toBe("/api/daily-snow/figure/2026-11-01/stake-alta");
-  // The TV view (shown only in the slideshow) repeats the highlights and the first figure.
-  const tv = within(document.querySelector<HTMLElement>(".dailysnow__tv")!);
-  expect(tv.getAllByRole("listitem")).toHaveLength(3);
-  expect(tv.getByRole("img", { name: "NWS forecast snow level" })).toBeTruthy();
   expect(screen.getByText(/AI-generated from NWS forecasts.*GLM 5\.3 Flash/)).toBeTruthy();
 });
 

@@ -28,7 +28,6 @@ function answer(digestFigures: string[], extra: Record<string, unknown> = {}) {
   return {
     title: "Storm Underway",
     summary: "The main surge is here today with snow above 8,000 feet. Snow levels fall tonight and we clear out Monday.",
-    highlights: ["Heavy snow up high today", "Snow levels fall tonight", "Clearing Monday into Tuesday"],
     sections: [
       {
         id: "update",
@@ -171,7 +170,7 @@ describe("validation", () => {
   it("rejects invented amounts and thin posts", () => {
     const d = withData();
     expect(() => validateDailySnow(answer([], { summary: "A whopping 45″ fell overnight." }), d)).toThrow(/not in the data: 45/);
-    expect(() => validateDailySnow(answer([], { highlights: ["Only one"] }), d)).toThrow(/highlights/);
+    expect(() => validateDailySnow(answer([], { title: "" }), d)).toThrow(/no title or summary/);
     expect(() => validateDailySnow(answer([], { sections: [] }), d)).toThrow(/sections/);
   });
   it("constrains figures to the available ids in the schema", () => {

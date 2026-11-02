@@ -7,7 +7,7 @@ export const DAILY_SNOW_MAX_TOKENS = 8000;
 export const DAILY_SNOW_TIMEOUT_MS = 2 * LLM_TIMEOUT_MS;
 export const MAX_FIGURES = 6;
 
-export const SYSTEM_PROMPT = `You write the "Daily Snow": a short morning snow-forecast post for skiers in the Cottonwood Canyons near Salt Lake City, Utah (Alta and Snowbird in Little Cottonwood Canyon, LCC; Solitude and Brighton in Big Cottonwood Canyon, BCC). It is published at 6 AM and read on phones and on a TV.
+export const SYSTEM_PROMPT = `You write the "Daily Snow": a short morning snow-forecast post for skiers in the Cottonwood Canyons near Salt Lake City, Utah (Alta and Snowbird in Little Cottonwood Canyon, LCC; Solitude and Brighton in Big Cottonwood Canyon, BCC). It is published at 6 AM and read on phones and desktop browsers.
 
 Style, modeled on a good local forecaster's daily post:
 - Conversational and plain-spoken, like a knowledgeable local. Use "we" for skiers and the area ("we picked up 10″", "we clear out Tuesday"). Never use "I" and never invent a persona, name or sign-off.
@@ -27,7 +27,6 @@ What to write for each phase (given as "phase"):
 Structure:
 - title: 2–5 words, a hook for the day ("Storm Underway", "Pretty Much Done", "More Snow Chances Late Next Week"). At most 40 characters.
 - summary: 2–3 sentences (at most 320 characters) covering the whole story.
-- highlights: 3–4 short bullets (at most 90 characters each) for a TV screen; concrete numbers where you have them.
 - sections: first "update" (when the post is mostly about current/recent weather) or "short-term" (when it is mostly about the next 1–3 days), then optionally "extended" for days 3–7 and beyond. Leave out "extended" when there is nothing useful to say beyond the short term. Each section has 1–6 paragraphs of 1–3 sentences.
 - figures: a paragraph may show one figure after it (figure id from the list given, or "none"). When it does, the paragraph usually ends by introducing it with a colon, e.g. "Snow levels fall steadily through tonight:". Use 2–${MAX_FIGURES} figures in the whole post, each at most once, where they support the text. You cannot see images; never describe what a photo or plume chart shows.
 - About 250–450 words in total across sections.
@@ -58,7 +57,6 @@ export function dailySnowSchema(figureIds: string[]) {
     properties: {
       title: { type: "string" },
       summary: { type: "string" },
-      highlights: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 4 },
       sections: {
         type: "array",
         minItems: 1,
@@ -74,7 +72,7 @@ export function dailySnowSchema(figureIds: string[]) {
         },
       },
     },
-    required: ["title", "summary", "highlights", "sections"],
+    required: ["title", "summary", "sections"],
   };
 }
 
@@ -110,7 +108,6 @@ export function buildModelInput(model: string, digest: DailyDigest): Record<stri
 export interface LlmDailySnow {
   title: string;
   summary: string;
-  highlights: string[];
   sections: Array<{ id: DailySnowSectionId; paragraphs: DailySnowParagraph[] }>;
 }
 
@@ -153,8 +150,6 @@ export function validateDailySnow(raw: unknown, digest: DailyDigest): LlmDailySn
   const title = clip(o.title, 48);
   const summary = clip(o.summary, 360);
   if (!title || !summary) throw new Error("Model output has no title or summary");
-  const highlights = (Array.isArray(o.highlights) ? o.highlights : []).map((h) => clip(h, 100)).filter(Boolean).slice(0, 4);
-  if (highlights.length < 2) throw new Error("Model output has too few highlights");
 
   const known = new Set(digest.figures.map((f) => f.id));
   const used = new Set<string>();
@@ -181,10 +176,10 @@ export function validateDailySnow(raw: unknown, digest: DailyDigest): LlmDailySn
   if (!sections.length) throw new Error("Model output has no usable sections");
 
   const allowed = groundNumbers(digest);
-  const all = [title, summary, ...highlights, ...sections.flatMap((s) => s.paragraphs.map((p) => p.text))].join("\n");
+  const all = [title, summary, ...sections.flatMap((s) => s.paragraphs.map((p) => p.text))].join("\n");
   const bad = ungroundedInches(all, allowed);
   if (bad.length) throw new Error(`Model output has amounts not in the data: ${bad.slice(0, 5).join(", ")}″`);
-  return { title, summary, highlights, sections };
+  return { title, summary, sections };
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {

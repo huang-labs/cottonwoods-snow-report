@@ -269,7 +269,6 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
 .slide--dailysnow { overflow-y: auto; }
 /* One reading width for the whole post; children fill it so every edge lines up. */
 .dailysnow { max-width: 50em; width: 100%; margin: 0 auto; }
-.app--slideshow .dailysnow { max-width: none; }
 .dailysnow__warn { color: var(--warn); }
 .dailysnow__title { font-size: 2.6em; line-height: 1.1; margin: 0.25em 0 0.15em; }
 .dailysnow__summary { font-size: 1.15em; }
@@ -294,13 +293,6 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
 .dailysnow__nav { display: flex; justify-content: space-between; gap: 1em; margin-top: 0.8em; flex-wrap: wrap; }
 .dailysnow__nav button, .dailysnow__back { background: transparent; border: 1px solid var(--line); color: var(--accent); border-radius: 0.45em; padding: 0.4em 0.8em; cursor: pointer; text-align: left; }
 .dailysnow__nav button:hover, .dailysnow__back:hover { border-color: var(--accent); }
-/* TV view: title, summary, highlights and one figure; the article is for browse mode. */
-.dailysnow__tv { display: none; }
-.app--slideshow .dailysnow__tv { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.5em; align-items: start; margin-top: 0.8em; }
-.app--slideshow .dailysnow__article, .app--slideshow .dailysnow__nav { display: none; }
-.app--slideshow .dailysnow__title { font-size: 3.1em; }
-.dailysnow__highlights { margin: 0; padding-left: 1.1em; font-size: 1.35em; display: grid; gap: 0.5em; }
-.app--slideshow .dailysnow__tv .dailysnow-figure { margin: 0; }
 .dailysnow-teaser { display: grid; grid-template-columns: 1fr auto; gap: 0.15em 1em; color: inherit; text-decoration: none; }
 .dailysnow-teaser:hover, .dailysnow-teaser:focus-visible { border-color: var(--accent); }
 .dailysnow-teaser .recommendation__eyebrow { grid-column: 1; }
@@ -349,7 +341,6 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
 }
 
 @media (max-width: 900px) {
-  .app--slideshow .dailysnow__tv { grid-template-columns: 1fr; }
   .dailysnow__title { font-size: 1.9em; }
   .dailysnow-teaser { grid-template-columns: 1fr; }
   .dailysnow-teaser__time, .dailysnow-teaser__more { grid-column: 1; grid-row: auto; text-align: left; }

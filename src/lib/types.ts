@@ -482,8 +482,6 @@ export interface DailySnowPost {
   phase: DailySnowPhase;
   title: string;
   summary: string;
-  /** 3–4 short bullets for the TV slide. */
-  highlights: string[];
   sections: Array<{ id: DailySnowSectionId; paragraphs: DailySnowParagraph[] }>;
   figures: Record<string, DailySnowFigure>;
   numbers: DailySnowNumbers;
