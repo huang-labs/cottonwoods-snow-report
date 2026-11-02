@@ -54,6 +54,7 @@ The resort pick (`src/lib/recommend/`) and Daily Snow (`src/lib/dailysnow/`) set
 
 ## PRs and docs
 
+- Follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) for commit messages and PR titles (so squash commits follow the convention too). Use `<type>[optional scope][optional !]: <description>`, for example `feat(dailysnow): add storm outlook` or `docs: clarify agent workflow`. Use `feat` for new features, `fix` for bug fixes, and an appropriate type such as `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf` or `style` for other changes. Mark breaking changes with `!` immediately before the colon or a `BREAKING CHANGE: <explanation>` footer; describe the breaking change in the message. Separate optional bodies and footers from the preceding section with a blank line.
 - Keep unrelated features in separate PRs based on `main`. Follow-ups go to the task's existing PR. When rebasing your own PR branch, use `--force-with-lease`.
 - Update [README.md](README.md) in the same PR when a feature changes setup, commands, routes, storage or operations, and remove what has gone stale. Record design decisions, live test results and known limitations in a dated section of [docs/IMPLEMENTATION_NOTES.md](docs/IMPLEMENTATION_NOTES.md).
 - PR descriptions describe the final behavior and are updated as follow-ups land:
