@@ -2,6 +2,7 @@ import type { SourceId } from "../types";
 import { altaSource } from "./alta";
 import { brightonSource } from "./brighton";
 import { nwsSource } from "./nws";
+import { nwsAfdSource } from "./nwsafd";
 import { plumesSource } from "./plumes";
 import { resortCamsSource } from "./resortcams";
 import { roadsSource } from "./roads";
@@ -21,6 +22,7 @@ export const SOURCES: SourceDefinition[] = [
   travelTimesSource,
   webcamsSource,
   resortCamsSource,
+  nwsAfdSource,
 ] as SourceDefinition[];
 
 export const SOURCE_BY_ID = Object.fromEntries(SOURCES.map((s) => [s.id, s])) as Record<SourceId, SourceDefinition>;

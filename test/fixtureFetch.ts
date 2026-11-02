@@ -65,6 +65,9 @@ export function fixtureRoutes(): Array<[RegExp, Handler]> {
       const headers = { "content-type": "image/png", "last-modified": "Fri, 30 Oct 2026 23:00:05 GMT" };
       return new Response(init?.method === "HEAD" ? null : fixtureBytes("utah-plume-CLN-2026110100.png"), { headers });
     }],
+    // SLC Area Forecast Discussion (captured 2026-11-01).
+    [/api\.weather\.gov\/products\/types\/AFD\/locations\/SLC/, () => json(fixture("nws-afd-list-SLC.json"))],
+    [/api\.weather\.gov\/products\/[0-9a-f-]+$/, () => json(fixture("nws-afd-SLC.json"))],
     [/api\.weather\.gov\/gridpoints\/SLC\/\d+,\d+\/forecast/, () => json(fixture("nws-forecast-SLC-108-167.json"))],
     [/api\.weather\.gov\/gridpoints\/SLC\/\d+,\d+$/, () => json(fixture("nws-gridpoint-SLC-108-167.json"))],
     [/cottonwoodcanyons\.udot\.utah\.gov\/road-information/, () => html(fixture("udot-road-information.html"))],

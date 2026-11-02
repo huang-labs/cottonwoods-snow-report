@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { SECTIONS } from "@/lib/sections";
+import { SECTIONS, slideshowStep } from "@/lib/sections";
 import { formatDenver } from "@/lib/time";
 import { DataBanners, requestFullscreen, useDashboard } from "./dashboard-context";
 import { DURATION_CHOICES, useSlideTimer } from "./hooks";
@@ -28,7 +28,8 @@ export function Slideshow({
   const data = useDashboard();
   const { report, loadedAt, error, now } = data;
   const [playing, setPlaying] = useState(initialPlaying);
-  const [index, setIndex] = useState(initialIndex);
+  // Started from a page the slideshow skips (Daily Snow): begin at the next slide.
+  const [index, setIndex] = useState(() => (SECTIONS[initialIndex]?.slideshow === false ? slideshowStep(initialIndex, 1) : initialIndex));
   const [controlsVisible, setControlsVisible] = useState(true);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
@@ -38,8 +39,8 @@ export function Slideshow({
   const exit = useCallback(() => onExit(indexRef.current), [onExit]);
 
   const durationMs = durationSec * 1000;
-  const next = useCallback(() => setIndex((i) => (i + 1) % SECTIONS.length), []);
-  const prev = useCallback(() => setIndex((i) => (i - 1 + SECTIONS.length) % SECTIONS.length), []);
+  const next = useCallback(() => setIndex((i) => slideshowStep(i, 1)), []);
+  const prev = useCallback(() => setIndex((i) => slideshowStep(i, -1)), []);
   useSlideTimer(index, playing, durationMs, next);
 
   const poke = useCallback(() => {
@@ -195,7 +196,7 @@ export function Slideshow({
         </button>
         <button type="button" onClick={next} aria-label="Next slide">▶</button>
         <div className="slide-picker" role="group" aria-label="Choose slide">
-          {SECTIONS.map((s, i) => (
+          {SECTIONS.map((s, i) => s.slideshow !== false && (
             <button
               type="button"
               key={s.id}

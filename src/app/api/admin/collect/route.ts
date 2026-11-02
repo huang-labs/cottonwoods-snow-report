@@ -18,6 +18,7 @@ export async function POST(request: Request) {
   const summary = await runCollection(env, {
     only: only.length ? only : undefined,
     forceRecommendation: new URL(request.url).searchParams.get("recommend") === "force",
+    forceDailySnow: new URL(request.url).searchParams.get("dailysnow") === "force",
   });
   return Response.json(summary, { headers: { "Cache-Control": "no-store" } });
 }

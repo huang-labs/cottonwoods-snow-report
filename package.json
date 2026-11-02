@@ -17,7 +17,8 @@
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "collect:once": "tsx scripts/collect-once.ts",
-    "recommend:once": "tsx scripts/recommend-once.ts"
+    "recommend:once": "tsx scripts/recommend-once.ts",
+    "dailysnow:once": "tsx scripts/dailysnow-once.ts"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "1.20.15",

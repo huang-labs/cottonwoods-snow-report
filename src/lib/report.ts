@@ -1,7 +1,7 @@
 import { SOURCES } from "./sources";
 import { CRON_INTERVAL_MS, type SourceDefinition } from "./sources/types";
-import { targetFor } from "./recommend/digest";
-import type { ApiRecommendation, ApiSource, Freshness, RecommendationState, ReportResponse, Snapshot, SourceId, SourceRecord } from "./types";
+import { denverDate, targetFor } from "./recommend/digest";
+import type { ApiDailySnow, ApiRecommendation, ApiSource, DailySnowPost, DailySnowState, Freshness, RecommendationState, ReportResponse, Snapshot, SourceId, SourceRecord } from "./types";
 
 export const COLLECTION_INTERVAL_MIN = 5;
 /**
@@ -77,6 +77,21 @@ export function publicRecommendation(state: RecommendationState | undefined, now
   };
 }
 
+/** Consecutive failed Daily Snow attempts before the post says updates are failing. */
+export const DAILY_SNOW_FAILING_AFTER = 2;
+
+/** A Daily Snow post (current or archived) as the API serves it. */
+export function publicDailySnow(post: DailySnowPost | null | undefined, state: DailySnowState | undefined, now: Date): ApiDailySnow | null {
+  if (!post) return null;
+  const today = denverDate(now);
+  return {
+    ...post,
+    outdated: post.date !== today,
+    failing: post.date !== today && (state?.consecutiveFailures ?? 0) >= DAILY_SNOW_FAILING_AFTER,
+    archive: (state?.history ?? []).map((h) => ({ date: h.date, title: h.title })),
+  };
+}
+
 export function buildReport(snapshot: Snapshot | null, now: Date = new Date(), defs: SourceDefinition[] = SOURCES): ReportResponse {
   const sources = {} as Record<SourceId, ApiSource>;
   const requiredMissing: SourceId[] = [];
@@ -114,5 +129,6 @@ export function buildReport(snapshot: Snapshot | null, now: Date = new Date(), d
     sources,
     requiredMissing,
     recommendation: publicRecommendation(snapshot?.recommendation, now),
+    dailySnow: publicDailySnow(snapshot?.dailySnow?.current, snapshot?.dailySnow, now),
   };
 }
