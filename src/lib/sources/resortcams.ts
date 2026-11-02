@@ -5,8 +5,9 @@ import { extractAltaJson } from "./alta";
 import { assertValid, type SourceDefinition } from "./types";
 
 /**
- * Resort-operated cameras for the individual resort pages: lift lines where a
- * resort has them (crowds), otherwise snow stakes and base areas.
+ * Resort-operated cameras for the individual resort pages: every camera each
+ * resort publishes, with the useful ones first — lift lines where a resort has
+ * them (crowds), otherwise snow stakes and base areas.
  *
  * Cameras are discovered from each resort's own webcam page on every run, so
  * re-pointed streams (YouTube live IDs change when a stream restarts) are
@@ -18,7 +19,11 @@ export const SNOWBIRD_WEBCAMS_URL = "https://www.snowbird.com/the-mountain/webca
 export const SOLITUDE_WEBCAMS_URL = "https://www.solitudemountain.com/mountain-and-village/webcams";
 export const BRIGHTON_CONDITIONS_URL = "https://www.brightonresort.com/conditions";
 
-/** Wanted cameras per resort, in display order, matched against the resort's own camera names. */
+/**
+ * Featured cameras per resort, in display order, matched against the resort's
+ * own camera names. These lead each resort's webcam section; every other
+ * camera the resort publishes follows in page order.
+ */
 export const WANTED: Record<PrimaryResortId, RegExp[]> = {
   // Alta publishes no lift-line camera.
   alta: [/^snow stake$/i, /^albion basin$/i],
@@ -29,8 +34,15 @@ export const WANTED: Record<PrimaryResortId, RegExp[]> = {
   brighton: [/milly express/i, /parking lot/i],
 };
 
-function pick<T extends { title: string }>(found: T[], wanted: RegExp[]): T[] {
-  return wanted.flatMap((re) => found.find((c) => re.test(c.title)) ?? []);
+/** Featured cameras first (first match per pattern), then the rest in page order. */
+function order<T extends { title: string }>(found: T[], featured: RegExp[]): T[] {
+  const taken = new Set<T>();
+  const lead = featured.flatMap((re) => {
+    const match = found.find((c) => !taken.has(c) && re.test(c.title));
+    if (match) taken.add(match);
+    return match ? [match] : [];
+  });
+  return [...lead, ...found.filter((c) => !taken.has(c))];
 }
 
 /** A Last-Modified header as capture time, rejecting future values (some hosts send local time as GMT). */
@@ -76,8 +88,9 @@ interface OEmbed {
 /**
  * Stream titles come from YouTube oEmbed, not from page layout (captions sit
  * on different sides of the player on different sites). Titles of IDs already
- * known from the previous run are reused, so a steady state costs one page
- * fetch per resort.
+ * known from the previous run are reused — including lookups that failed, so a
+ * private stream costs one oEmbed call ever — so a steady state costs one page
+ * fetch per resort. Embeds with no public title keep a numbered fallback name.
  */
 async function youtubeCams(
   ctx: FetchContext,
@@ -87,20 +100,23 @@ async function youtubeCams(
 ): Promise<ResortCam[]> {
   const ids = youtubeIds(await ctx.fetchText(pageUrl, { browserLike: true }));
   assertValid(ids.length > 0, `${resort}: no YouTube camera embeds found`);
-  const wanted = WANTED[resort];
   const found: Array<{ title: string; videoId: string }> = [];
+  let unnamed = 0;
   for (const id of ids) {
-    if (wanted.every((re) => found.some((f) => re.test(f.title)))) break;
     let title: string | undefined = titles[id];
     if (title === undefined) {
       const meta = await ctx
         .fetchJson<OEmbed>(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}`)
         .catch(() => null);
-      if (meta) titles[id] = title = meta.title ?? "";
+      titles[id] = title = meta?.title ?? "";
     }
-    if (title) found.push({ title: title.replace(/\s*-\s*(Brighton Ski Resort|Solitude.*)$/i, ""), videoId: id });
+    if (title) {
+      found.push({ title: title.replace(/\s*-\s*(Brighton Ski Resort|Solitude.*)$/i, ""), videoId: id });
+    } else {
+      found.push({ title: `Camera ${++unnamed}`, videoId: id });
+    }
   }
-  return pick(found, wanted).map((c) => ({ resort, kind: "youtube", pageUrl, ...c }));
+  return order(found, WANTED[resort]).map((c) => ({ resort, kind: "youtube", pageUrl, ...c }));
 }
 
 async function imageCams(
@@ -109,7 +125,7 @@ async function imageCams(
   pageUrl: string,
   parse: (html: string) => Array<{ title: string; imageUrl: string }>,
 ): Promise<ResortCam[]> {
-  const chosen = pick(parse(await ctx.fetchText(pageUrl, { browserLike: true })), WANTED[resort]);
+  const chosen = order(parse(await ctx.fetchText(pageUrl, { browserLike: true })), WANTED[resort]);
   const cams = await Promise.all(
     chosen.map(async (c): Promise<ResortCam | null> => {
       const res = await ctx.probe(c.imageUrl, { browserLike: true }).catch(() => null);

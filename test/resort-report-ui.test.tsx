@@ -6,7 +6,7 @@ import { ResortReportPage } from "@/components/sections/ResortReportPage";
 import { runCollection } from "@/lib/collect";
 import { buildReport } from "@/lib/report";
 import { MemoryKV, readSnapshot } from "@/lib/store";
-import type { ApiSource, ReportResponse, ResortReport } from "@/lib/types";
+import type { ApiSource, ReportResponse, ResortCamsPayload, ResortReport } from "@/lib/types";
 import { createFixtureFetch, FIXTURE_NOW } from "./fixtureFetch";
 
 let report: ReportResponse;
@@ -171,6 +171,27 @@ it("removes routine road status and shows Alta's Base, Mid and Top temperatures 
       (label) => label.textContent,
     ),
   ).toEqual(["Temperature", "Temperature", "Temperature"]);
+});
+
+it("shows every collected webcam on its resort page, featured ones first", () => {
+  const cams = report.sources.resortcams?.payload as ResortCamsPayload | undefined;
+  for (const id of ["alta", "snowbird", "solitude", "brighton"]) {
+    const { container, unmount } = render(renderSection(id, report, FIXTURE_NOW, null));
+    const shown = [...container.querySelectorAll(".resort-cams .rcam figcaption strong")].map((t) => t.textContent);
+    expect(shown).toEqual(cams!.cameras.filter((c) => c.resort === id).map((c) => c.title));
+    unmount();
+  }
+  // The featured cameras lead each section in WANTED order.
+  const first = (id: string) => {
+    const { container, unmount } = render(renderSection(id, report, FIXTURE_NOW, null));
+    const title = container.querySelector(".resort-cams .rcam figcaption strong")!.textContent;
+    unmount();
+    return title;
+  };
+  expect(first("alta")).toBe("Snow Stake");
+  expect(first("snowbird")).toBe("Snowstake");
+  expect(first("solitude")).toBe("Moonbeam Lift Line");
+  expect(first("brighton")).toBe("Milly Express");
 });
 
 it("shows the same snowfall slots in the same order for every resort", () => {

@@ -45,21 +45,45 @@ describe("resort webcam discovery", () => {
 });
 
 describe("resort webcam collection", () => {
-  it("picks lift-line cams by the resort's own camera names (YouTube titles via oEmbed)", async () => {
+  it("collects every camera each resort publishes, featured ones first", async () => {
     const { fetchImpl } = createFixtureFetch();
     const { rec, payload } = await collect(new MemoryKV(), fetchImpl);
     expect(rec.status).toBe("ok");
     expect(payload.failures).toEqual([]);
     const summary = payload.cameras.map((c) => [c.resort, c.title, c.kind === "youtube" ? c.videoId : c.capturedAt]);
     expect(summary).toEqual([
+      // Featured first, then the rest in page order.
       ["alta", "Snow Stake", "2026-10-31T00:55:00.000Z"],
       ["alta", "Albion Basin", null], // future Last-Modified rejected
+      ["alta", "Mount Baldy", null], // prismcam too
+      ["alta", "Mount Superior", "2026-10-31T00:55:00.000Z"],
+      ["alta", "Sugarloaf Peak", "2026-10-31T00:55:00.000Z"],
+      ["alta", "East Greeley", "2026-10-31T00:55:00.000Z"],
+      ["alta", "Salt Lake Valley", "2026-10-31T00:55:00.000Z"],
       ["snowbird", "Snowstake", "2026-10-31T00:52:00.000Z"],
       ["snowbird", "Tram Bullpen", "2026-10-31T00:52:00.000Z"],
+      ["snowbird", "Peruvian Gulch", "2026-10-31T00:52:00.000Z"],
+      ["snowbird", "Mineral Basin", "2026-10-31T00:52:00.000Z"],
+      ["snowbird", "Little Cloud", "2026-10-31T00:52:00.000Z"],
+      ["snowbird", "Hidden Peak", "2026-10-31T00:52:00.000Z"],
+      ["snowbird", "Hidden Peak 360", "2026-10-31T00:52:00.000Z"],
       ["solitude", "Moonbeam Lift Line", "NSiItCGabfo"],
       ["solitude", "Apex Express and Sunrise Lift Lines", "l2X9DlRzX54"],
+      ["solitude", "Honeycomb Canyon", "ta-4QZbfMXc"],
+      ["solitude", "Powderhorn", "xNER0JHrqLg"],
+      ["solitude", "Sunshine Bowl", "Lnznapxh2xM"],
+      ["solitude", "Solitude Snowstake", "lkEM6EC8NVA"],
+      ["solitude", "Camera 1", "gfHReYIuydU"], // no public oEmbed title
+      ["solitude", "Eagle Express Lift Line", "oWaG8txpW1c"],
+      ["solitude", "Camera 2", "rUXoOLxKKX4"],
+      ["solitude", "Powderhorn II Lift Line", "yeoBog_kSzc"],
+      ["solitude", "Camera 3", "j65wBm5rr_0"],
+      ["solitude", "Link Lift Line", "Yx3QmuKfwjY"],
       ["brighton", "Milly Express", "N-d3MuOagLg"],
       ["brighton", "Parking Lot", "4a-3iEM7bHk"],
+      ["brighton", "Molly Greens View", "uZ24vqOWEkQ"],
+      ["brighton", "Top of Crest Lift", "Zv8HYwaXjBg"],
+      ["brighton", "Explorer Lift", "vMwQRjlfqtA"],
     ]);
   });
 
@@ -71,8 +95,9 @@ describe("resort webcam collection", () => {
     await collect(kv, fetchImpl);
     const after = calls.filter((u) => u.includes("oembed")).length - before;
     expect(before).toBeGreaterThan(0);
-    // Only embeds without a public oEmbed (private/unlisted) are looked up again.
-    expect(after).toBeLessThanOrEqual(1);
+    // Every title — including failed lookups for private streams — is cached,
+    // so the steady state costs no oEmbed calls at all.
+    expect(after).toBe(0);
   });
 
   it("isolates a failing resort page and keeps that resort's previous cameras", async () => {
@@ -82,14 +107,29 @@ describe("resort webcam collection", () => {
     const { rec, payload } = await collect(kv, fetchImpl);
     expect(rec.status).toBe("ok");
     expect(payload.failures).toEqual([expect.stringMatching(/^snowbird: .*503/)]);
-    expect(payload.cameras.filter((c) => c.resort === "snowbird").map((c) => c.title)).toEqual(["Snowstake", "Tram Bullpen"]);
-    expect(payload.cameras.filter((c) => c.resort === "alta")).toHaveLength(2);
+    expect(payload.cameras.filter((c) => c.resort === "snowbird").map((c) => c.title)).toEqual([
+      "Snowstake",
+      "Tram Bullpen",
+      "Peruvian Gulch",
+      "Mineral Basin",
+      "Little Cloud",
+      "Hidden Peak",
+      "Hidden Peak 360",
+    ]);
+    expect(payload.cameras.filter((c) => c.resort === "alta")).toHaveLength(7);
   });
 
   it("drops a camera whose image is not reachable", async () => {
     const { fetchImpl } = createFixtureFetch([[/manage\.hdrelay\.com\/snapshot\/61b2/, () => new Response("err", { status: 500 })]]);
     const { payload } = await collect(new MemoryKV(), fetchImpl);
-    expect(payload.cameras.filter((c) => c.resort === "snowbird").map((c) => c.title)).toEqual(["Snowstake"]);
+    expect(payload.cameras.filter((c) => c.resort === "snowbird").map((c) => c.title)).toEqual([
+      "Snowstake",
+      "Peruvian Gulch",
+      "Mineral Basin",
+      "Little Cloud",
+      "Hidden Peak",
+      "Hidden Peak 360",
+    ]);
   });
 
   it("is not a required source", () => {
