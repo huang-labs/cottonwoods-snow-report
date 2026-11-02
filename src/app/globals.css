@@ -267,17 +267,20 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
 
 /* ---- Daily Snow (AI post; shares the recommendation card's look) ---- */
 .slide--dailysnow { overflow-y: auto; }
-.dailysnow { max-width: 54em; width: 100%; margin: 0 auto; }
+/* One reading width for the whole post; children fill it so every edge lines up. */
+.dailysnow { max-width: 50em; width: 100%; margin: 0 auto; }
 .app--slideshow .dailysnow { max-width: none; }
 .dailysnow__warn { color: var(--warn); }
 .dailysnow__title { font-size: 2.6em; line-height: 1.1; margin: 0.25em 0 0.15em; }
-.dailysnow__summary { font-size: 1.15em; max-width: 60em; }
+.dailysnow__summary { font-size: 1.15em; }
 .dailysnow__section h2 { font-size: 1.3em; margin: 0.9em 0 0.3em; color: var(--accent); }
-.dailysnow__section p { margin: 0.45em 0; line-height: 1.5; max-width: 50em; }
-.dailysnow-figure { margin: 0.6em 0 1em; background: var(--bg); border: 1px solid var(--line); border-radius: 0.5em; padding: 0.6em; max-width: 50em; }
+.dailysnow__section p { margin: 0.45em 0; line-height: 1.5; }
+.dailysnow-figure { margin: 0.6em 0 1em; background: var(--bg); border: 1px solid var(--line); border-radius: 0.5em; padding: 0.6em; }
 .dailysnow-figure img { display: block; width: 100%; height: auto; border-radius: 0.3em; }
 .dailysnow-figure figcaption { color: var(--muted); font-size: 0.8em; margin-top: 0.4em; display: flex; gap: 1em; flex-wrap: wrap; }
 .dailysnow-level__line { fill: none; stroke-width: 4; }
+/* Dashed so it stays readable where the two canyons' snow levels coincide. */
+.dailysnow-level__line--bcc { stroke-dasharray: 10 8; }
 .dailysnow-level__line--lcc, .dailysnow-level__key--lcc::before { stroke: var(--accent); background: var(--accent); }
 .dailysnow-level__line--bcc, .dailysnow-level__key--bcc::before { stroke: var(--hold); background: var(--hold); }
 .dailysnow-level__legend { display: inline-flex; gap: 0.8em; }
