@@ -14,7 +14,6 @@ const modelName = (id: string) => MODEL_NAME[id.split("/").pop() ?? ""] ?? id;
 const dateFmt = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
 /** "Sun Nov 1" for a YYYY-MM-DD date (no time zone shift). */
 const postDate = (date: string) => dateFmt.format(new Date(`${date}T12:00:00Z`));
-const inches = (v: number | null) => (v === null ? "—" : `${v}″`);
 
 function Eyebrow({ post, now, archived }: { post: ApiDailySnow; now: Date; archived: boolean }) {
   return (
@@ -23,42 +22,12 @@ function Eyebrow({ post, now, archived }: { post: ApiDailySnow; now: Date; archi
         Daily Snow<span className="badge badge--ai">AI</span> · {postDate(post.date)} · {PHASE_LABEL[post.phase]}
       </span>
       <span className="muted small">
-        Posted {formatDenver(post.generatedAt, now)}{archived ? " · Archive" : `${post.outdated ? " · Outdated" : ""}${post.failing ? " · Today's post failed" : ""}`}
+        Posted {formatDenver(post.generatedAt, now)}
+        {archived ? " · Archive" : (post.outdated || post.failing) && (
+          <span className="dailysnow__warn">{post.outdated ? " · Outdated" : ""}{post.failing ? " · Today's post failed" : ""}</span>
+        )}
       </span>
     </div>
-  );
-}
-
-/** Code-computed numbers beside the post. No AI badge: these come straight from the sources. */
-function Numbers({ post, now }: { post: ApiDailySnow; now: Date }) {
-  const { canyons, resorts } = post.numbers;
-  return (
-    <aside className="dailysnow-numbers panel" aria-label="Forecast and reported snowfall">
-      <h2>NWS forecast</h2>
-      <table>
-        <thead><tr><th></th><th scope="col">24 h</th><th scope="col">72 h</th><th scope="col">7 day</th></tr></thead>
-        <tbody>
-          {canyons.map((c) => (
-            <tr key={c.canyon}><th scope="row">{c.canyon}</th><td>{inches(c.next24In)}</td><td>{inches(c.next72In)}</td><td>{inches(c.next7dIn)}</td></tr>
-          ))}
-        </tbody>
-      </table>
-      {canyons.map((c) => c.nextStorm && (
-        <p key={c.canyon} className="small">
-          <strong>{c.canyon} next storm:</strong> {c.nextStorm.totalSnowIn}″ · {formatDenver(c.nextStorm.start, now)} → {formatDenver(c.nextStorm.end, now)}
-        </p>
-      ))}
-      <h2>Resort reports</h2>
-      <table>
-        <thead><tr><th></th><th scope="col">24 h</th><th scope="col">Storm</th></tr></thead>
-        <tbody>
-          {resorts.map((r) => (
-            <tr key={r.id}><th scope="row">{r.name}</th><td>{inches(r.h24)}</td><td>{inches(r.storm)}</td></tr>
-          ))}
-        </tbody>
-      </table>
-      <p className="muted small">From NWS gridpoint forecasts and resort snow reports at posting time; not AI-generated.</p>
-    </aside>
   );
 }
 
@@ -148,7 +117,7 @@ export function DailySnowSlide({ report, now }: { report: ReportResponse; now: D
   if (!post) {
     return (
       <section className="slide slide--dailysnow">
-        <div className="recommendation dailysnow">
+        <div className="dailysnow">
           <span className="recommendation__eyebrow">Daily Snow<span className="badge badge--ai">AI</span></span>
           <h1 className="dailysnow__title">{date && date !== current?.date ? (archived.error ? "Post not available" : "Loading…") : "Waiting for the first post"}</h1>
           <p className="muted">{archived.error ?? "An AI-written snow forecast is posted every morning at 6 AM."}</p>
@@ -160,7 +129,7 @@ export function DailySnowSlide({ report, now }: { report: ReportResponse; now: D
   const hero = post.sections.flatMap((s) => s.paragraphs).map((p) => p.figure && post.figures[p.figure]).find(Boolean);
   return (
     <section className="slide slide--dailysnow">
-      <article className={`recommendation dailysnow${post.outdated && !date ? " recommendation--outdated" : ""}`} aria-label="Daily Snow">
+      <article className="dailysnow" aria-label="Daily Snow">
         <Eyebrow post={post} now={now} archived={!!date && date !== current?.date} />
         <h1 className="dailysnow__title">{post.title}</h1>
         <p className="recommendation__plan dailysnow__summary">{post.summary}</p>
@@ -168,10 +137,7 @@ export function DailySnowSlide({ report, now }: { report: ReportResponse; now: D
           <ul className="dailysnow__highlights">{post.highlights.map((h, i) => <li key={i}>{h}</li>)}</ul>
           {hero && <Figure figure={hero} />}
         </div>
-        <div className="dailysnow__body">
-          <Article post={post} />
-          <Numbers post={post} now={now} />
-        </div>
+        <Article post={post} />
         <Footer post={post} />
         <ArchiveNav post={post} onPick={pick} />
       </article>

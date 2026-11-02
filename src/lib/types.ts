@@ -462,7 +462,7 @@ export interface DailySnowParagraph {
   figure: string | null;
 }
 
-/** Code-computed numbers shown beside the post (never model-written). */
+/** Code-computed totals at posting time (never model-written); kept for forecast verification in later posts. */
 export interface DailySnowNumbers {
   canyons: Array<{
     canyon: CanyonId;

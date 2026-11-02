@@ -39,12 +39,14 @@ afterEach(() => {
   window.history.replaceState(null, "", "/");
 });
 
-it("shows the post with the AI badge, sections, figures and code-computed numbers", () => {
+it("shows the post as page content with the AI badge, sections and figures", () => {
   render(<DailySnowSlide report={report(post)} now={now} />);
   expect(screen.getByRole("heading", { level: 1, name: "Storm Underway" })).toBeTruthy();
   expect(screen.getByText(/Daily Snow/, { selector: ".recommendation__eyebrow" }).querySelector(".badge--ai")?.textContent).toBe("AI");
   expect(screen.getByText(/Storm$/, { selector: ".recommendation__eyebrow" })).toBeTruthy();
-  expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Update", "Extended Forecast", "NWS forecast", "Resort reports"]);
+  expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Update", "Extended Forecast"]);
+  // Page content, not a card like the resort pick.
+  expect(document.querySelector(".slide--dailysnow .recommendation")).toBeNull();
   const article = within(document.querySelector<HTMLElement>(".dailysnow__article")!);
   expect(article.getByRole("img", { name: "NWS forecast snow level" })).toBeTruthy();
   expect(article.getByRole("img", { name: "Alta snow stake · 5:55 AM today" }).getAttribute("src")).toBe("/api/daily-snow/figure/2026-11-01/stake-alta");
@@ -52,15 +54,12 @@ it("shows the post with the AI badge, sections, figures and code-computed number
   const tv = within(document.querySelector<HTMLElement>(".dailysnow__tv")!);
   expect(tv.getAllByRole("listitem")).toHaveLength(3);
   expect(tv.getByRole("img", { name: "NWS forecast snow level" })).toBeTruthy();
-  expect(screen.getByText("12.3″")).toBeTruthy();
-  expect(screen.getByText(/not AI-generated/)).toBeTruthy();
   expect(screen.getByText(/AI-generated from NWS forecasts.*GLM 5\.3 Flash/)).toBeTruthy();
 });
 
 it("marks an old post as outdated", () => {
   render(<DailySnowSlide report={report({ ...post, outdated: true, failing: true })} now={now} />);
-  expect(screen.getByText(/Outdated · Today's post failed/)).toBeTruthy();
-  expect(document.querySelector(".recommendation--outdated")).not.toBeNull();
+  expect(screen.getByText(/Outdated · Today's post failed/, { selector: ".dailysnow__warn" })).toBeTruthy();
 });
 
 it("waits for the first post", () => {
