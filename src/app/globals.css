@@ -300,7 +300,6 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
 .dailysnow-teaser__title { font-size: 1.3em; grid-column: 1 / -1; }
 .dailysnow-teaser__summary { grid-column: 1; }
 .dailysnow-teaser__more { grid-column: 2; align-self: end; color: var(--accent); font-weight: 600; }
-.app--slideshow .dailysnow-teaser { display: none; }
 
 /* ---- small screens: stack and scroll ---- */
 @media (max-width: 900px) {

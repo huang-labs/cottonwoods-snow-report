@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { DailySnowSlide } from "@/components/dailysnow/DailySnow";
 import { RegionalSlide } from "@/components/slides/RegionalSlide";
 import { buildReport } from "@/lib/report";
-import type { ApiDailySnow } from "@/lib/types";
+import type { ApiDailySnow, ApiRecommendation } from "@/lib/types";
 
 const now = new Date("2026-11-01T15:00:00Z");
 const post: ApiDailySnow = {
@@ -82,4 +82,25 @@ it("teases the post on the Snowfall page", () => {
   const link = screen.getByRole("link", { name: "Daily Snow: Storm Underway" });
   expect(link.getAttribute("href")).toBe("/daily-snow");
   expect(link.querySelector(".badge--ai")).not.toBeNull();
+});
+
+const recommendation: ApiRecommendation = {
+  targetDate: "2026-11-01", mode: "storm", pick: "alta", plan: "Check road access before leaving.",
+  headline: "Alta today", caveats: [], runnerUp: null, generatedAt: now.toISOString(),
+  model: "@cf/zai-org/glm-5.3-flash", trigger: "morning", outdated: false, failing: false,
+};
+
+it.each([null, { ...recommendation, pick: null }])("hides the recommendation when there is no resort pick (%j)", (pick) => {
+  render(<RegionalSlide report={{ ...report(post), recommendation: pick }} now={now} />);
+  expect(document.querySelector("aside.recommendation")).toBeNull();
+  expect(screen.getByRole("link", { name: "Daily Snow: Storm Underway" })).toBeTruthy();
+  expect(screen.queryByText("AI pick")).toBeNull();
+});
+
+it("keeps a previous resort pick visible with its update warnings", () => {
+  render(<RegionalSlide report={{ ...report(post), recommendation: { ...recommendation, outdated: true, failing: true } }} now={now} />);
+  expect(screen.getByRole("complementary", { name: "Recommendation" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Alta today" })).toBeTruthy();
+  expect(screen.getByText(/Outdated · Updates failing/)).toBeTruthy();
+  expect(screen.queryByText("AI pick")).toBeNull();
 });
