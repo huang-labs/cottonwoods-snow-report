@@ -206,7 +206,7 @@
 }
 .resort-observation dl {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
   gap: 12px;
   margin: 12px 0 0;
 }
@@ -323,7 +323,7 @@
 .resort-report .rcam figcaption {
   line-height: 1.5;
 }
-.resort-narrative > p {
+.resort-narrative p {
   color: #c3cfdd;
   white-space: pre-line;
   max-width: 80ch;
@@ -376,4 +376,35 @@
   .resort-report .panel--cams {
     grid-template-columns: 1fr;
   }
+}
+
+.resort-narrative__preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.resort-narrative__disclosure {
+  margin-top: 12px;
+}
+.resort-narrative__disclosure summary {
+  width: fit-content;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 14px;
+}
+.resort-narrative__disclosure summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+}
+.resort-narrative__disclosure[open] > p {
+  margin-top: 16px;
+}
+.resort-narrative__less,
+.resort-narrative__disclosure[open] .resort-narrative__more,
+.resort-narrative:has(details[open]) .resort-narrative__preview {
+  display: none;
+}
+.resort-narrative__disclosure[open] .resort-narrative__less {
+  display: inline;
 }

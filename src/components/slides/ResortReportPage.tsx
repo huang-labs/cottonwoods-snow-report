@@ -92,11 +92,23 @@ export function ResortReportPage({
   const unsupported = SNOW_ORDER.filter(
     (key) => r.snowfall[key].state === "unavailable",
   );
-  const notices = [...r.notices].sort(
-    (a, b) =>
-      ({ critical: 0, warning: 1, info: 2 })[a.severity] -
-      { critical: 0, warning: 1, info: 2 }[b.severity],
+  const observations = r.observations.filter(
+    (observation) =>
+      source.id !== "alta" || observation.temperature.state !== "unavailable",
   );
+  const notices = r.notices
+    .filter(
+      (notice) =>
+        !(
+          notice.severity === "info" &&
+          /^road status$/i.test(notice.title.trim())
+        ),
+    )
+    .sort(
+      (a, b) =>
+        ({ critical: 0, warning: 1, info: 2 })[a.severity] -
+        { critical: 0, warning: 1, info: 2 }[b.severity],
+    );
 
   return (
     <article className="resort-report" aria-label={`${r.resort} resort report`}>
@@ -150,9 +162,9 @@ export function ResortReportPage({
       <nav className="resort-report__jump" aria-label="In this resort report">
         <a href="#resort-snow-heading">Snowfall</a>
         <a href="#resort-weather-heading">Weather</a>
+        {r.narrative && <a href="#resort-narrative-heading">Resort report</a>}
         <a href="#resort-lifts-heading">Lifts &amp; terrain</a>
         <a href="#resort-webcams">Webcams</a>
-        {r.narrative && <a href="#resort-narrative-heading">Resort report</a>}
       </nav>
 
       <section className="resort-snow" aria-labelledby="resort-snow-heading">
@@ -191,14 +203,14 @@ export function ResortReportPage({
           <h2 id="resort-weather-heading">On the mountain</h2>
           <a href="/weather">Forecast ↗</a>
         </div>
-        {r.observations.length === 0 ? (
+        {observations.length === 0 ? (
           <p className="muted">
             Temperature and wind observations aren’t provided in {r.resort}’s
             feed. Check the mountain forecast for weather guidance.
           </p>
         ) : (
           <div className="resort-observations">
-            {r.observations.map((observation) => (
+            {observations.map((observation) => (
               <div key={observation.location} className="resort-observation">
                 <div className="resort-observation__heading">
                   <h3>{observation.location}</h3>
@@ -214,24 +226,58 @@ export function ResortReportPage({
                       <MetricValue m={observation.temperature} size="md" />
                     </dd>
                   </div>
-                  <div>
-                    <dt>Wind {observation.direction}</dt>
-                    <dd>
-                      <MetricValue m={observation.wind} size="md" />
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Gust / high</dt>
-                    <dd>
-                      <MetricValue m={observation.gust} size="md" />
-                    </dd>
-                  </div>
+                  {observation.wind.state !== "unavailable" && (
+                    <div>
+                      <dt>Wind {observation.direction}</dt>
+                      <dd>
+                        <MetricValue m={observation.wind} size="md" />
+                      </dd>
+                    </div>
+                  )}
+                  {observation.gust.state !== "unavailable" && (
+                    <div>
+                      <dt>Gust / high</dt>
+                      <dd>
+                        <MetricValue m={observation.gust} size="md" />
+                      </dd>
+                    </div>
+                  )}
                 </dl>
               </div>
             ))}
           </div>
         )}
       </section>
+
+      {r.narrative && (
+        <section
+          className="panel resort-narrative"
+          aria-labelledby="resort-narrative-heading"
+        >
+          <div className="resort-section-heading">
+            <h2 id="resort-narrative-heading">From {r.resort}</h2>
+            <a href={r.sourceUrl} target="_blank" rel="noreferrer">
+              Resort report ↗
+            </a>
+          </div>
+          {r.narrative.length > 240 ? (
+            <>
+              <p className="resort-narrative__preview">
+                {r.narrative.slice(0, 240).trimEnd()}…
+              </p>
+              <details className="resort-narrative__disclosure" key={source.id}>
+                <summary>
+                  <span className="resort-narrative__more">Read more</span>
+                  <span className="resort-narrative__less">Read less</span>
+                </summary>
+                <p>{r.narrative}</p>
+              </details>
+            </>
+          ) : (
+            <p>{r.narrative}</p>
+          )}
+        </section>
+      )}
 
       <section
         className="panel resort-operations"
@@ -311,20 +357,6 @@ export function ResortReportPage({
         />
       </div>
 
-      {r.narrative && (
-        <section
-          className="panel resort-narrative"
-          aria-labelledby="resort-narrative-heading"
-        >
-          <div className="resort-section-heading">
-            <h2 id="resort-narrative-heading">From {r.resort}</h2>
-            <a href={r.sourceUrl} target="_blank" rel="noreferrer">
-              Resort report ↗
-            </a>
-          </div>
-          <p>{r.narrative}</p>
-        </section>
-      )}
       <SourceLine source={source} now={now} reportLabel={r.reportTimeLabel} />
     </article>
   );

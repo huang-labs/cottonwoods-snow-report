@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, expect, it } from "vitest";
 import { renderSection } from "@/components/SectionView";
 import { ResortSlide } from "@/components/slides/ResortSlide";
@@ -82,9 +82,30 @@ it("keeps critical notices above snow and retains the full narrative, lift hours
         screen.getByRole("heading", { name: "Snowfall" }),
       ) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
-  expect(container.querySelector(".resort-narrative > p")?.textContent).toBe(
-    narrative,
-  );
+  expect(
+    container.querySelector(".resort-narrative details > p")?.textContent,
+  ).toBe(narrative);
+  const disclosure = container.querySelector<HTMLDetailsElement>(
+    ".resort-narrative details",
+  )!;
+  expect(disclosure.open).toBe(false);
+  expect(
+    container.querySelector(".resort-narrative__preview")?.textContent?.length,
+  ).toBeLessThanOrEqual(241);
+  fireEvent.click(disclosure.querySelector("summary")!);
+  expect(disclosure.open).toBe(true);
+  fireEvent.click(disclosure.querySelector("summary")!);
+  expect(disclosure.open).toBe(false);
+  expect(
+    container
+      .querySelector(".resort-weather")
+      ?.nextElementSibling?.classList.contains("resort-narrative"),
+  ).toBe(true);
+  expect(
+    container
+      .querySelector(".resort-narrative")
+      ?.nextElementSibling?.classList.contains("resort-operations"),
+  ).toBe(true);
   expect(screen.getByText("9:15 AM–4 PM")).toBeTruthy();
   expect(screen.getByText("Patrol work in progress")).toBeTruthy();
 });
@@ -137,4 +158,21 @@ it("explains Brighton's missing observations and handles a completely unavailabl
   expect(
     screen.getByRole("heading", { name: "Brighton report unavailable" }),
   ).toBeTruthy();
+});
+
+it("removes routine road status and shows Alta's Base, Mid and Top temperatures without the unsited Wind block", () => {
+  const { container } = render(
+    renderSection("alta", report, FIXTURE_NOW, null, "browse"),
+  );
+  expect(screen.queryByText("Road Status")).toBeNull();
+  expect(
+    [...container.querySelectorAll(".resort-observation h3")].map(
+      (heading) => heading.textContent,
+    ),
+  ).toEqual(["Base", "Mid", "Top"]);
+  expect(
+    [...container.querySelectorAll(".resort-observation dt")].map(
+      (label) => label.textContent,
+    ),
+  ).toEqual(["Temperature", "Temperature", "Temperature"]);
 });
