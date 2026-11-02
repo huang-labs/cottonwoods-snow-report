@@ -4,17 +4,15 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatDenver } from "@/lib/time";
 import { isSnowPlume } from "@/lib/dailysnow/plume";
-import type { ApiDailySnow, DailySnowPhase, DailySnowSectionId, ReportResponse } from "@/lib/types";
+import type { ApiDailySnow, DailySnowSectionId, ReportResponse } from "@/lib/types";
 import { Figure } from "./figures";
+import { HistoryRail } from "./HistoryRail";
+import { PHASE_LABEL, postDate } from "./labels";
 
-const PHASE_LABEL: Record<DailySnowPhase, string> = { "pre-storm": "Storm ahead", storm: "Storm", "post-storm": "Storm ending", quiet: "Quiet" };
 const SECTION_TITLE: Record<DailySnowSectionId, string> = { update: "Today", "short-term": "Next Few Days", extended: "Extended Forecast" };
 /** Display names by Workers AI model id suffix (see recommend/llm.ts). */
 const MODEL_NAME: Record<string, string> = { "glm-5.3-flash": "GLM 5.3 Flash", "gpt-oss-120b": "gpt-oss-120b" };
 const modelName = (id: string) => MODEL_NAME[id.split("/").pop() ?? ""] ?? id;
-const dateFmt = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
-/** "Sun Nov 1" for a YYYY-MM-DD date (no time zone shift). */
-const postDate = (date: string) => dateFmt.format(new Date(`${date}T12:00:00Z`));
 
 function Eyebrow({ post, now, archived }: { post: ApiDailySnow; now: Date; archived: boolean }) {
   return (
@@ -130,16 +128,19 @@ export function DailySnowPage({ report, now }: { report: ReportResponse; now: Da
   }
   return (
     <section className="page page--dailysnow">
-      <article className="dailysnow" aria-label="Daily Snow">
-        <header className="dailysnow__header">
-          <Eyebrow post={post} now={now} archived={!!date && date !== current?.date} />
-          <h1 className="dailysnow__title">{post.title}</h1>
-          <p className="dailysnow__summary">{post.summary}</p>
-        </header>
-        <Article post={post} />
-        <Footer post={post} />
-        <ArchiveNav post={post} onPick={pick} />
-      </article>
+      <div className="dailysnow-layout">
+        <HistoryRail live={current} viewed={date && date !== current?.date ? date : null} onPick={pick} />
+        <article className="dailysnow" aria-label="Daily Snow">
+          <header className="dailysnow__header">
+            <Eyebrow post={post} now={now} archived={!!date && date !== current?.date} />
+            <h1 className="dailysnow__title">{post.title}</h1>
+            <p className="dailysnow__summary">{post.summary}</p>
+          </header>
+          <Article post={post} />
+          <Footer post={post} />
+          <ArchiveNav post={post} onPick={pick} />
+        </article>
+      </div>
     </section>
   );
 }

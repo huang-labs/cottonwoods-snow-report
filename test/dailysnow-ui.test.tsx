@@ -67,14 +67,57 @@ it("opens an archived post and returns to the latest", async () => {
   const fetchMock = vi.fn(async () => new Response(JSON.stringify(older), { headers: { "content-type": "application/json" } }));
   vi.stubGlobal("fetch", fetchMock);
   render(<DailySnowPage report={report(post)} now={now} />);
-  fireEvent.click(screen.getByRole("button", { name: /Storm Arrives/ }));
+  const nav = within(document.querySelector<HTMLElement>(".dailysnow__nav")!);
+  fireEvent.click(nav.getByRole("button", { name: /Storm Arrives/ }));
   expect(await screen.findByRole("heading", { level: 1, name: "Storm Arrives" })).toBeTruthy();
   expect(fetchMock).toHaveBeenCalledWith("/api/daily-snow?date=2026-10-31");
   expect(window.location.search).toBe("?date=2026-10-31");
   expect(screen.getByText(/· Archive/)).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: /Storm Underway/ }));
+  // Re-query: the nav re-renders (older link becomes the return link) with the archived post.
+  const navAfter = within(document.querySelector<HTMLElement>(".dailysnow__nav")!);
+  fireEvent.click(navAfter.getByRole("button", { name: /Storm Underway/ }));
   await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "Storm Underway" })).toBeTruthy());
   expect(window.location.search).toBe("");
+});
+
+it("shows the recent posts in a left rail beside the article, today first, at most four", () => {
+  const history = [
+    { date: "2026-11-01", title: "Storm Underway" },
+    { date: "2026-10-31", title: "Storm Arrives" },
+    { date: "2026-10-30", title: "Snow Showers Return" },
+    { date: "2026-10-29", title: "A Quiet Stretch" },
+    { date: "2026-10-28", title: "Storm Exiting" },
+    { date: "2026-10-27", title: "Upslope Snow Continues" },
+  ];
+  render(<DailySnowPage report={report({ ...post, archive: history })} now={now} />);
+  const rail = document.querySelector<HTMLElement>(".dailysnow__history")!;
+  expect(rail.getAttribute("aria-label")).toBe("Recent Daily Snow posts");
+  const entries = [...rail.querySelectorAll(".dailysnow__history-entry")];
+  expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-date")?.textContent)).toEqual(["Today", "Sat, Oct 31", "Fri, Oct 30", "Thu, Oct 29"]);
+  // The live post is today's entry, marked with the accent bar, and not repeated from the archive.
+  expect(entries[0].getAttribute("data-current")).toBe("true");
+  expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-title")?.textContent)).toEqual(["Storm Underway", "Storm Arrives", "Snow Showers Return", "A Quiet Stretch"]);
+  expect(entries[0].querySelector(".dailysnow__history-entry-phase")?.textContent).toBe("Storm");
+});
+
+it("hides the rail while the live post is the only one, but keeps the archive links", () => {
+  render(<DailySnowPage report={report({ ...post, archive: [{ date: "2026-11-01", title: "Storm Underway" }] })} now={now} />);
+  expect(document.querySelector(".dailysnow__history")).toBeNull();
+  expect(document.querySelector(".dailysnow__nav")).not.toBeNull();
+});
+
+it("highlights the viewed post in the rail and keeps the archive links for phones", async () => {
+  const older: ApiDailySnow = { ...post, date: "2026-10-31", title: "Storm Arrives", outdated: true };
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(older), { headers: { "content-type": "application/json" } })));
+  render(<DailySnowPage report={report(post)} now={now} />);
+  const rail = document.querySelector<HTMLElement>(".dailysnow__history")!;
+  fireEvent.click(rail.querySelectorAll<HTMLElement>(".dailysnow__history-entry")[1]!);
+  expect(await screen.findByRole("heading", { level: 1, name: "Storm Arrives" })).toBeTruthy();
+  // Re-query: the rail re-renders with the archived post loaded.
+  const active = document.querySelector(".dailysnow__history-entry[data-active]");
+  expect(active?.querySelector(".dailysnow__history-entry-title")?.textContent).toBe("Storm Arrives");
+  // The bottom archive links stay on every view: phones navigate with them.
+  expect(document.querySelector(".dailysnow__nav")).not.toBeNull();
 });
 
 it("teases the post on the Snowfall page", () => {
