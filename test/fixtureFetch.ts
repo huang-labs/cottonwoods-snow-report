@@ -31,6 +31,12 @@ export const YOUTUBE_TITLES: Record<string, string> = {
   "N-d3MuOagLg": "Milly Express - Brighton Ski Resort",
 };
 
+/** Streams whose oEmbed (as checked 2026-11-02) carries the title only on the embed iframe. */
+export const YOUTUBE_IFRAME_TITLES: Record<string, string> = {
+  gfHReYIuydU: "Moonbeam Parking Lot",
+  rUXoOLxKKX4: "Summit Express Lift Line",
+};
+
 type Handler = (url: URL, init?: RequestInit) => Response | Promise<Response>;
 
 const json = (v: unknown) => new Response(typeof v === "string" ? v : JSON.stringify(v), { headers: { "content-type": "application/json" } });
@@ -82,10 +88,15 @@ export function fixtureRoutes(): Array<[RegExp, Handler]> {
     [/youtube\.com\/oembed/, (u) => {
       const id = new URL(u.searchParams.get("url")!).searchParams.get("v")!;
       const title = YOUTUBE_TITLES[id];
-      return title ? json({ title }) : new Response("Unauthorized", { status: 401 });
+      if (title) return json({ title });
+      const iframe = YOUTUBE_IFRAME_TITLES[id];
+      if (iframe) return json({ type: "video", html: `<iframe src="https://www.youtube.com/embed/${id}?feature=oembed" allowfullscreen title="${iframe}"></iframe>` });
+      return new Response("Unauthorized", { status: 401 });
     }],
     [/manage\.hdrelay\.com\/snapshot\//, () => new Response(null, { headers: { "content-type": "image/jpeg", "last-modified": "Sat, 31 Oct 2026 00:52:00 GMT" } })],
     [/alta-webcams\.sfo3\.cdn\.digitaloceanspaces\.com\//, () => new Response(null, { headers: { "content-type": "image/jpeg", "last-modified": "Sat, 31 Oct 2026 00:55:00 GMT" } })],
+    // Snowbird's Hidden Peak cams redirect to a timestamped Roundshot JPEG (checked 2026-11-02).
+    [/backend\.roundshot\.com\/cams\//, () => new Response(null, { headers: { "content-type": "image/jpeg", "last-modified": "Sat, 31 Oct 2026 00:50:00 GMT" } })],
     // prismcam sends a Last-Modified ahead of real time.
     [/app\.prismcam\.com\//, () => new Response(null, { headers: { "content-type": "image/jpeg", "last-modified": "Sat, 31 Oct 2026 02:00:00 GMT" } })],
   ];

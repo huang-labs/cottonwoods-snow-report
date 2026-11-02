@@ -236,3 +236,27 @@ it("shows main travel routes per canyon and reveals every segment on request", (
   expect(rows()).toBeGreaterThan(main);
   expect(toggle!.getAttribute("aria-expanded")).toBe("true");
 });
+
+it("shows every resort camera; only the two featured streams autoplay", () => {
+  const { container } = render(renderSection("solitude", report, FIXTURE_NOW, null));
+  const frames = [...container.querySelectorAll<HTMLIFrameElement>(".resort-cams iframe")];
+  expect(frames).toHaveLength(11);
+  expect(frames.map((f) => f.src.includes("autoplay=1"))).toEqual([true, true, ...Array(9).fill(false)]);
+  expect(frames[0].title).toBe("Moonbeam Lift Line live camera");
+});
+
+it("gives a panorama webcam the full row at its own shape", () => {
+  const { container } = render(renderSection("snowbird", report, FIXTURE_NOW, null));
+  const imgs = [...container.querySelectorAll<HTMLImageElement>(".resort-cams img")];
+  expect(imgs).toHaveLength(7);
+  const pano = screen.getByAltText("Hidden Peak 360 webcam") as HTMLImageElement;
+  Object.defineProperty(pano, "naturalWidth", { value: 1549 });
+  Object.defineProperty(pano, "naturalHeight", { value: 300 });
+  fireEvent.load(pano);
+  expect(pano.closest("figure")!.classList.contains("rcam--panorama")).toBe(true);
+  const stake = screen.getByAltText("Snowstake webcam") as HTMLImageElement;
+  Object.defineProperty(stake, "naturalWidth", { value: 1280 });
+  Object.defineProperty(stake, "naturalHeight", { value: 720 });
+  fireEvent.load(stake);
+  expect(stake.closest("figure")!.classList.contains("rcam--panorama")).toBe(false);
+});

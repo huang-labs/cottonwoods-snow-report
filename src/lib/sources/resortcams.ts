@@ -5,8 +5,8 @@ import { extractAltaJson } from "./alta";
 import { assertValid, type SourceDefinition } from "./types";
 
 /**
- * Resort-operated cameras for the individual resort pages: lift lines where a
- * resort has them (crowds), otherwise snow stakes and base areas.
+ * Resort-operated cameras for the individual resort pages: every camera each
+ * resort publishes, with the snow stake and lift lines first.
  *
  * Cameras are discovered from each resort's own webcam page on every run, so
  * re-pointed streams (YouTube live IDs change when a stream restarts) are
@@ -18,8 +18,11 @@ export const SNOWBIRD_WEBCAMS_URL = "https://www.snowbird.com/the-mountain/webca
 export const SOLITUDE_WEBCAMS_URL = "https://www.solitudemountain.com/mountain-and-village/webcams";
 export const BRIGHTON_CONDITIONS_URL = "https://www.brightonresort.com/conditions";
 
-/** Wanted cameras per resort, in display order, matched against the resort's own camera names. */
-export const WANTED: Record<PrimaryResortId, RegExp[]> = {
+/**
+ * Cameras shown first per resort, in this order, matched against the resort's
+ * own camera names. Every other camera follows in the resort's page order.
+ */
+export const FEATURED: Record<PrimaryResortId, RegExp[]> = {
   // Alta publishes no lift-line camera.
   alta: [/^snow stake$/i, /^albion basin$/i],
   // Snow stake first, as at Alta. No Gad Zoom camera is published; Tram
@@ -29,8 +32,10 @@ export const WANTED: Record<PrimaryResortId, RegExp[]> = {
   brighton: [/milly express/i, /parking lot/i],
 };
 
-function pick<T extends { title: string }>(found: T[], wanted: RegExp[]): T[] {
-  return wanted.flatMap((re) => found.find((c) => re.test(c.title)) ?? []);
+/** All cameras, featured ones first (in `featured` order), the rest in page order. */
+export function featuredFirst<T extends { title: string }>(found: T[], featured: RegExp[]): T[] {
+  const first = featured.flatMap((re) => found.find((c) => re.test(c.title)) ?? []);
+  return [...new Set([...first, ...found])];
 }
 
 /** A Last-Modified header as capture time, rejecting future values (some hosts send local time as GMT). */
@@ -71,6 +76,12 @@ export function youtubeIds(html: string): string[] {
 
 interface OEmbed {
   title?: string;
+  html?: string;
+}
+
+/** Some streams' oEmbed omits `title` and carries it only on the embed iframe. */
+export function oembedTitle(meta: OEmbed): string {
+  return (meta.title || decodeEntities(/\btitle="([^"]*)"/.exec(meta.html ?? "")?.[1] ?? "")).trim();
 }
 
 /**
@@ -87,20 +98,19 @@ async function youtubeCams(
 ): Promise<ResortCam[]> {
   const ids = youtubeIds(await ctx.fetchText(pageUrl, { browserLike: true }));
   assertValid(ids.length > 0, `${resort}: no YouTube camera embeds found`);
-  const wanted = WANTED[resort];
   const found: Array<{ title: string; videoId: string }> = [];
   for (const id of ids) {
-    if (wanted.every((re) => found.some((f) => re.test(f.title)))) break;
     let title: string | undefined = titles[id];
     if (title === undefined) {
       const meta = await ctx
         .fetchJson<OEmbed>(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}`)
         .catch(() => null);
-      if (meta) titles[id] = title = meta.title ?? "";
+      if (meta) titles[id] = title = oembedTitle(meta);
     }
     if (title) found.push({ title: title.replace(/\s*-\s*(Brighton Ski Resort|Solitude.*)$/i, ""), videoId: id });
   }
-  return pick(found, wanted).map((c) => ({ resort, kind: "youtube", pageUrl, ...c }));
+  // A stream with no public title (private or unlisted) can't be labelled, so it is skipped.
+  return featuredFirst(found, FEATURED[resort]).map((c) => ({ resort, kind: "youtube", pageUrl, ...c }));
 }
 
 async function imageCams(
@@ -109,7 +119,7 @@ async function imageCams(
   pageUrl: string,
   parse: (html: string) => Array<{ title: string; imageUrl: string }>,
 ): Promise<ResortCam[]> {
-  const chosen = pick(parse(await ctx.fetchText(pageUrl, { browserLike: true })), WANTED[resort]);
+  const chosen = featuredFirst(parse(await ctx.fetchText(pageUrl, { browserLike: true })), FEATURED[resort]);
   const cams = await Promise.all(
     chosen.map(async (c): Promise<ResortCam | null> => {
       const res = await ctx.probe(c.imageUrl, { browserLike: true }).catch(() => null);
@@ -132,7 +142,7 @@ export const resortCamsSource: SourceDefinition<ResortCamsPayload> = {
   async collect(ctx) {
     const previous = ((ctx.previous as ResortCamsPayload | null)?.cameras ?? []) as ResortCam[];
     const prev = (r: PrimaryResortId) => previous.filter((c) => c.resort === r);
-    // Titles resolved earlier (including streams that aren't wanted) are reused.
+    // Stream titles resolved on earlier runs are reused.
     const streamTitles: Record<string, string> = { ...(ctx.previous as ResortCamsPayload | null)?.streamTitles };
     const jobs: Array<[PrimaryResortId, Promise<ResortCam[]>]> = [
       ["alta", imageCams(ctx, "alta", ALTA_WEATHER_URL, parseAltaCams)],
@@ -152,7 +162,7 @@ export const resortCamsSource: SourceDefinition<ResortCamsPayload> = {
       // Keep this resort's cameras from the previous run: image cams carry their
       // own capture time, and a stream player shows its own live/offline state.
       cameras.push(...prev(resort));
-      failures.push(`${resort}: ${r.status === "rejected" ? (r.reason instanceof Error ? r.reason.message : String(r.reason)) : "no matching cameras"}`);
+      failures.push(`${resort}: ${r.status === "rejected" ? (r.reason instanceof Error ? r.reason.message : String(r.reason)) : "no cameras found"}`);
     });
     assertValid(cameras.length > 0, `No resort cameras found (${failures.join("; ")})`);
     return { payload: { cameras, failures, streamTitles }, sourceUpdatedAt: null };

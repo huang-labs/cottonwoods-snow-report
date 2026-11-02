@@ -72,9 +72,9 @@ Cost: about 90–130 ms CPU per station in Node, once per new model run. Same-ru
 
 ### Resort webcams (`resortcams` source, optional)
 
-Discovered from each resort's own page on every run. Each resort is isolated: on failure, that resort keeps its previous cameras, and the failure is listed.
+Discovered from each resort's own page on every run. Every camera a resort publishes is shown (since 2026-11-02, see "All resort webcams" below); the featured cameras in this table come first, the rest follow in the resort's page order. Each resort is isolated: on failure, that resort keeps its previous cameras, and the failure is listed.
 
-| Resort | Discovery | Cameras shown | Capture time |
+| Resort | Discovery | Featured first | Capture time |
 | --- | --- | --- | --- |
 | Alta | `window.Alta.weather.mountainCams` on `alta.com/weather` | Snow Stake (Collins), Albion Basin | Image `Last-Modified`. Albion Basin (prismcam) sends a Last-Modified about an hour in the future, which is rejected ("capture time not published"). Alta publishes no lift-line camera. |
 | Snowbird | Webcam cards on `snowbird.com/the-mountain/webcams/view-all-webcams/` (name + `manage.hdrelay.com/snapshot/<id>` image) | Tram Bullpen (the tram lift line), Snowstake | Image `Last-Modified`. **No Gad Zoom camera is published** on Snowbird's site (cards: Snowstake, Peruvian Gulch, Mineral Basin, Little Cloud, Tram Bullpen; plus Hidden Peak 360 pages). hdrelay returns 500 to HEAD, so the probe falls back to a ranged GET. |
@@ -82,6 +82,17 @@ Discovered from each resort's own page on every run. Each resort is isolated: on
 | Brighton | YouTube live embeds on `brightonresort.com/conditions` | Milly Express, Parking Lot | Live stream. |
 
 Stream titles come from oEmbed, not page layout. On Solitude's page each caption follows its player, so reading the preceding caption mislabels every stream by one. Titles are cached in the payload, so an unchanged page costs no oEmbed calls. Live-stream thumbnails were rejected: they carry no capture time, and an offline stream serves its custom promo still. Images that become unreachable are dropped. Images older than 3 h are labelled "not updating".
+
+### All resort webcams (2026-11-02)
+
+Resort pages now show every camera each resort publishes instead of two hand-picked ones. `FEATURED` in `src/lib/sources/resortcams.ts` only orders the list (snow stake and lift lines first, as before); everything else follows in the resort's page order. Live run on 2026-11-02: 30 cameras, no failures. Alta 7 (Snow Stake, Albion Basin, Mount Baldy, Mount Superior, Sugarloaf Peak, East Greeley, Salt Lake Valley); Snowbird 7 (adds Peruvian Gulch, Mineral Basin, Little Cloud, Hidden Peak, Hidden Peak 360); Solitude 11 streams; Brighton 5 streams.
+
+- **oEmbed titles:** two Solitude streams (Moonbeam Parking Lot, Summit Express Lift Line) return oEmbed JSON with no `title` field; the title is only on the embed `<iframe title>`. The collector now falls back to it. One Solitude embed (`j65wBm5rr_0`) has no public oEmbed (404, private or unlisted), so it can't be labelled and is skipped; it is looked up again each run, as before.
+- **Snowbird Hidden Peak** cameras are Roundshot URLs that redirect to a timestamped JPEG with a plausible `Last-Modified`. "Hidden Peak 360" is a 1549 × 300 panorama: an image wider than 2.4:1 spans the full row at its own aspect ratio (detected on load in the browser) instead of being letterboxed in the 16:10 frame.
+- **Autoplay:** only the first two streams on a page autoplay (muted), matching the previous page; the others load a paused player and play on tap, so Solitude's page doesn't start 11 live streams at once. Images and players are lazy-loaded.
+- **Cost:** Alta and Snowbird now probe 7 images each per 5-minute run instead of 2 (+10 HEAD or ranged GET requests per run). Stream titles stay cached, so YouTube adds no steady-state requests apart from the one unresolvable embed.
+- Daily Snow still picks snow-stake stills by title (`/snow ?stake/i` on image cameras), so it is unaffected; Solitude's stake is a stream and stays excluded.
+- Not run: a real-browser check. The preview browser and Playwright's Chromium both lack system libraries on this host, so layout was verified by component tests only.
 
 ### Travel-time freshness (resolved: not shown as live)
 
