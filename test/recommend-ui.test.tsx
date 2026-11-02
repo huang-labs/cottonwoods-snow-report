@@ -19,10 +19,15 @@ it("shows today's card, conditional plan, backup and recommended row", () => {
   expect(screen.getByText(/Backup: Solitude/)).toBeTruthy();
   expect(screen.getByText("AI pick").closest("tr")?.textContent).toContain("Alta");
 });
-it("labels tomorrow and explicitly shows no pick", () => {
-  render(<RegionalSlide now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, targetDate: "2026-12-02", pick: null, headline: "No pick: all resorts closed" } }} />);
+it("labels tomorrow's resort pick", () => {
+  render(<RegionalSlide now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, targetDate: "2026-12-02" } }} />);
   expect(screen.getByText(/Recommendation · Tomorrow's resort pick/)).toBeTruthy();
-  expect(screen.getByRole("heading", { name: "No pick: all resorts closed" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: recommendation.headline })).toBeTruthy();
+});
+it("hides the card when no resort is picked", () => {
+  render(<RegionalSlide now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, targetDate: "2026-12-02", pick: null, headline: "No pick: all resorts closed" } }} />);
+  expect(screen.queryByRole("complementary", { name: "Recommendation" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "No pick: all resorts closed" })).toBeNull();
   expect(screen.queryByText("AI pick")).toBeNull();
 });
 it("retains stale output with a warning and removes the row endorsement", () => {
