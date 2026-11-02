@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { sectionHref, type SectionDef } from "./sections";
 
 export const SITE_TITLE = "Cottonwoods Snow Report";
+// Set at build time for PR previews; production keeps its custom domain.
+export const metadataBase = new URL(process.env.SITE_URL || "https://cottonwoods-snow-report.huang.mx");
 export const SITE_DESCRIPTION = "Live snowfall, forecast, plumes and canyon roads for Alta, Snowbird, Solitude and Brighton.";
 export const DAILY_SNOW_DESCRIPTION = "A daily snow forecast for Little and Big Cottonwood Canyons, with storm updates, snowfall outlooks and mountain weather.";
 

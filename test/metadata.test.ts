@@ -1,6 +1,29 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { sectionMetadata, SITE_TITLE } from "@/lib/metadata";
 import { SECTIONS, sectionHref } from "@/lib/sections";
+
+describe("deployment metadata base", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("resolves share images against the preview deployment when configured", async () => {
+    const origin = "https://pr-7-cottonwoods-snow-report.huang-inc.workers.dev";
+    vi.stubEnv("SITE_URL", origin);
+    vi.resetModules();
+    const metadata = await import("@/lib/metadata");
+    const base = metadata.metadataBase;
+    expect(new URL("/daily-snow/opengraph-image", base).href).toBe(`${origin}/daily-snow/opengraph-image`);
+  });
+
+  it("defaults to the production origin", async () => {
+    vi.stubEnv("SITE_URL", undefined);
+    vi.resetModules();
+    const metadata = await import("@/lib/metadata");
+    expect(metadata.metadataBase.origin).toBe("https://cottonwoods-snow-report.huang.mx");
+  });
+});
 
 describe("section share metadata", () => {
   it.each(SECTIONS.slice(1))("matches the document title and URL for $id", (section) => {

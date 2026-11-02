@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { AppShell } from "@/components/AppShell";
-import { SITE_TITLE as title, SITE_DESCRIPTION as description, siteOpenGraph } from "@/lib/metadata";
+import { SITE_TITLE as title, SITE_DESCRIPTION as description, siteOpenGraph, metadataBase } from "@/lib/metadata";
 import "./globals.css";
 
 // The share image comes from app/opengraph-image.tsx (live numbers); Next adds it to openGraph.
 export const metadata: Metadata = {
-  metadataBase: new URL("https://cottonwoods-snow-report.huang.mx"),
+  metadataBase,
   title: { default: title, template: `%s · ${title}` },
   description,
   robots: { index: false, follow: false },
