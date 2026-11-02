@@ -43,7 +43,7 @@ it("shows the post as page content with the AI badge, sections and figures", () 
   expect(screen.getByRole("heading", { level: 1, name: "Storm Underway" })).toBeTruthy();
   expect(screen.getByText(/Daily Snow/, { selector: ".recommendation__eyebrow" }).querySelector(".badge--ai")?.textContent).toBe("AI");
   expect(screen.getByText(/Storm$/, { selector: ".recommendation__eyebrow" })).toBeTruthy();
-  expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Update", "Extended Forecast"]);
+  expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Today", "Extended Forecast"]);
   // Page content, not a card like the resort pick.
   expect(document.querySelector(".slide--dailysnow .recommendation")).toBeNull();
   const article = within(document.querySelector<HTMLElement>(".dailysnow__article")!);
