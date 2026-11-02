@@ -188,12 +188,6 @@
   font-size: 12px;
   margin-top: 20px;
 }
-.resort-report__columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-}
 .resort-observations {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
@@ -226,27 +220,6 @@
 }
 .resort-observation .metric--md {
   font-size: 23px;
-}
-.resort-access > p {
-  font-size: 14px;
-  margin-bottom: 16px;
-}
-.resort-parking {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 14px;
-}
-.resort-parking li {
-  border-top: 1px solid var(--line);
-  padding-top: 14px;
-  display: grid;
-  gap: 4px;
-  font-size: 14px;
-}
-.resort-parking li > span {
-  color: var(--accent);
 }
 .resort-report .resort-status-key {
   display: flex;
@@ -360,11 +333,7 @@
   line-height: 1.6;
   margin-top: 0;
 }
-@media (max-width: 1050px) {
-  .resort-report__columns {
-    grid-template-columns: 1fr;
-  }
-}
+
 @media (max-width: 600px) {
   .resort-report {
     gap: 20px;

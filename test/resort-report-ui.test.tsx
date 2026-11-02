@@ -30,9 +30,7 @@ it.each(["alta", "snowbird", "solitude", "brighton"])(
     expect(
       screen.getByRole("heading", { name: "Lifts & terrain" }),
     ).toBeTruthy();
-    expect(
-      screen.getByRole("link", { name: "Canyon roads ↗" }).getAttribute("href"),
-    ).toBe("/traffic");
+    expect(screen.queryByRole("heading", { name: "Getting there" })).toBeNull();
     rerender(renderSection(id, report, FIXTURE_NOW, null));
     expect(container.querySelector(".resort-report")).toBeNull();
     expect(container.querySelector(".resort-grid")).toBeTruthy();

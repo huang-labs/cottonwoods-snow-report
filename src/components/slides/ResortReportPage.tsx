@@ -183,88 +183,55 @@ export function ResortReportPage({
         )}
       </section>
 
-      <div className="resort-report__columns">
-        <section
-          className="panel resort-weather"
-          aria-labelledby="resort-weather-heading"
-        >
-          <div className="resort-section-heading">
-            <h2 id="resort-weather-heading">On the mountain</h2>
-            <a href="/weather">Forecast ↗</a>
-          </div>
-          {r.observations.length === 0 ? (
-            <p className="muted">
-              Temperature and wind observations aren’t provided in {r.resort}’s
-              feed. Check the mountain forecast for weather guidance.
-            </p>
-          ) : (
-            <div className="resort-observations">
-              {r.observations.map((observation) => (
-                <div key={observation.location} className="resort-observation">
-                  <div className="resort-observation__heading">
-                    <h3>{observation.location}</h3>
-                    <span className="muted small">
-                      Observed {formatDenver(observation.observedAt, now)}
-                    </span>
-                  </div>
-                  {observation.sky && (
-                    <p className="muted">{observation.sky}</p>
-                  )}
-                  <dl>
-                    <div>
-                      <dt>Temperature</dt>
-                      <dd>
-                        <MetricValue m={observation.temperature} size="md" />
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Wind {observation.direction}</dt>
-                      <dd>
-                        <MetricValue m={observation.wind} size="md" />
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Gust / high</dt>
-                      <dd>
-                        <MetricValue m={observation.gust} size="md" />
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section
-          className="panel resort-access"
-          aria-labelledby="resort-access-heading"
-        >
-          <div className="resort-section-heading">
-            <h2 id="resort-access-heading">Getting there</h2>
-            <a href="/traffic">Canyon roads ↗</a>
-          </div>
+      <section
+        className="panel resort-weather"
+        aria-labelledby="resort-weather-heading"
+      >
+        <div className="resort-section-heading">
+          <h2 id="resort-weather-heading">On the mountain</h2>
+          <a href="/weather">Forecast ↗</a>
+        </div>
+        {r.observations.length === 0 ? (
           <p className="muted">
-            Check road restrictions and travel times before heading up the
-            canyon.
+            Temperature and wind observations aren’t provided in {r.resort}’s
+            feed. Check the mountain forecast for weather guidance.
           </p>
-          {r.parking.length > 0 ? (
-            <ul className="resort-parking">
-              {r.parking.map((parking) => (
-                <li key={parking.name}>
-                  <strong>{parking.name}</strong>
-                  <span>{parking.status}</span>
-                  {parking.note && <p className="muted">{parking.note}</p>}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="muted">
-              Parking status isn’t provided in this report.
-            </p>
-          )}
-        </section>
-      </div>
+        ) : (
+          <div className="resort-observations">
+            {r.observations.map((observation) => (
+              <div key={observation.location} className="resort-observation">
+                <div className="resort-observation__heading">
+                  <h3>{observation.location}</h3>
+                  <span className="muted small">
+                    Observed {formatDenver(observation.observedAt, now)}
+                  </span>
+                </div>
+                {observation.sky && <p className="muted">{observation.sky}</p>}
+                <dl>
+                  <div>
+                    <dt>Temperature</dt>
+                    <dd>
+                      <MetricValue m={observation.temperature} size="md" />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Wind {observation.direction}</dt>
+                    <dd>
+                      <MetricValue m={observation.wind} size="md" />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Gust / high</dt>
+                    <dd>
+                      <MetricValue m={observation.gust} size="md" />
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section
         className="panel resort-operations"
