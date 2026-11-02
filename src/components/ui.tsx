@@ -21,7 +21,7 @@ export function MetricValue({ m, size = "lg", showLabel = false }: { m: Metric; 
     body = (
       <span className={`metric__value ${m.value === 0 ? "metric__value--zero" : ""}`}>
         {formatNumber(m.value)}
-        <span className="metric__unit">{unit}</span>
+        <span className={`metric__unit${m.unit === "in" ? " metric__unit--in" : ""}`}>{unit}</span>
       </span>
     );
   } else if (m.state === "not_reported") {

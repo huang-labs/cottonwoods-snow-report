@@ -166,3 +166,25 @@ The Daily Snow teaser now remains visible on the regional snowfall slide in slid
 Existing files touched: `src/app/globals.css` removes the slideshow-only teaser hiding rule; `src/components/RecommendationCard.tsx` gates the card on a pick; `test/dailysnow-ui.test.tsx` covers absent/no-pick recommendations and preservation of an old pick; `README.md` documents visibility; this file records the decision and validation. No collection, model, API or storage behavior changes.
 
 Validation: 25 tests across Daily Snow UI and navigation/playback pass; `npm run typecheck`, `npm run build` and `git diff --check` pass. Local workerd on port 8791 serves a read-only copy of the live report with all 12 source payloads and the real “Storm On, Better Snow Tonight” teaser; no production writes or live model calls. Browser/responsive visual checks were not run. The existing regional slide permits vertical scrolling when content exceeds the viewport.
+
+## Regional snowfall resort links (2026-11-01)
+
+Each resort name in the regional snowfall table now links to its existing resort page (`/alta`, `/snowbird`, `/solitude`, `/brighton`), including when its report is missing or stale. Native anchors support keyboard activation, opening in another tab and leaving the slideshow for the selected resort page. Scoped underlines, hover color and focus outlines make the links discoverable without changing table dimensions or measurement rendering.
+
+Existing files touched: `src/components/slides/RegionalSlide.tsx` adds links through the existing `sectionHref` helper; `src/app/globals.css` styles only those links; this file records the decision and validation. No routes, storage or setup change.
+
+Validation: 25 tests across playback and Daily Snow UI pass; `npm run typecheck`, `npm run build` and `git diff --check` pass. Local workerd at http://localhost:8794 serves this branch with successfully collected real reports for all four resorts (all current). Browser visual checks at phone, laptop and TV widths were not run; links preserve existing name sizing and table layout. No production writes.
+
+## Inch-mark alignment (2026-11-01)
+
+Snowfall and base-depth metrics now align the small inch mark with the visible top of the number in both browse and TV presentations. The previous 60% unit size shared the number's baseline, leaving the mark near the middle. The inch-only modifier raises the mark by the difference in cap heights (`2cap / 3` at 60% size). Aligning to the line box's top was visibly too high; the final cap-height offset follows the glyphs instead. Full-size inch marks in prose, weather tables and figures already share the number's cap height.
+
+Existing files touched in this follow-up: `src/components/ui.tsx` adds the inch-only unit modifier; `src/app/globals.css` supplies its cap-height offset; this file records validation. Other units and missing/unavailable values retain their rendering. No setup, routes, storage or README changes are needed.
+
+Validation: 33 playback, resort-report UI and Daily Snow UI tests pass; typecheck, final static build and git diff --check pass. Browser checks with real resort data cover the regional snowfall page and all four resort pages at 390×844 and 1366×768 in browse mode and 1920×1080 in paused TV mode (15 page/viewport combinations). Inch marks align across large/small totals and zeros; canvas/range checks put visible glyph tops within 1.8 CSS pixels across these fonts and sizes. Other units remain baseline-aligned; none of these pages overflows horizontally. The regional table retains its existing internal horizontal scroll on phones. Phone/laptop/TV screenshots were inspected during tuning. Local data includes reported zeros and unavailable measurements; no production writes. No persistent test was added for this small presentation change: jsdom cannot verify glyph positioning.
+
+## Whole-row resort navigation (2026-11-01)
+
+The regional snowfall links now cover each entire resort row, including measurements, badges, padding and the report-time cell. The native anchor is stretched within its isolated row so zeros and translucent unit text cannot intercept clicks. Each resort remains one keyboard stop, with native Enter/new-tab behavior and preserved table semantics. Names return to clean, un-underlined text; hovering highlights the row and name, while keyboard focus adds a row outline. Hover styling is limited to hover-capable pointers.
+
+This follow-up changes only `src/app/globals.css` and this note. Browser validation with real data confirms all four rows' hit targets at five positions each at laptop/TV widths (1366×768 and 1920×1080), plus phone targets at 390×844 before and after horizontal table scrolling. Clicking Alta's report-time cell navigates to `/alta`; Tab focuses the single Alta link with a visible row outline, and Enter navigates correctly. Hover screenshot reviewed. No page overflow; phone table scrolling remains available. 25 playback/resort UI tests, typecheck, final build and git diff --check pass. The inch-mark fix is preserved. No production writes.
