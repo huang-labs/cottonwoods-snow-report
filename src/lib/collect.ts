@@ -31,7 +31,15 @@ export interface CollectSummary {
   /** Recommendation outcome this run, when the AI binding is configured. */
   recommendation?: { generatedAt: string | null; model: string | null; trigger: string | null; error: string | null };
   /** Daily Snow outcome this run, when the AI binding is configured and a post was due. */
-  dailySnow?: { date: string | null; model: string | null; trigger: string | null; error: string | null; skipped: string | null };
+  dailySnow?: {
+    date: string | null;
+    model: string | null;
+    trigger: string | null;
+    error: string | null;
+    skipped: string | null;
+    /** Why the primary model failed, when the fallback wrote the post. */
+    fallbackReason?: string | null;
+  };
 }
 
 /**
@@ -194,6 +202,7 @@ export async function runCollection(env: CollectorEnv, opts: CollectOptions = {}
             trigger: posted?.trigger ?? null,
             error: daily.run ? (snapshot.dailySnow?.lastError ?? null) : null,
             skipped: daily.skipped ?? null,
+            fallbackReason: posted?.fallbackReason ?? null,
           },
         }
       : {}),

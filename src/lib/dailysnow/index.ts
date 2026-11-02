@@ -111,6 +111,7 @@ export function planDailySnow(
         generatedAt: now.toISOString(),
         model: r.model,
         trigger,
+        ...(r.fallbackReason ? { fallbackReason: r.fallbackReason } : {}),
       };
       await env.SNOW_KV.put(dailySnowKey(date), JSON.stringify(post), { expirationTtl: DAILY_SNOW_TTL_S });
       const history = [historyEntry(post), ...base.history.filter((h) => h.date !== date)].slice(0, DAILY_SNOW_HISTORY);
