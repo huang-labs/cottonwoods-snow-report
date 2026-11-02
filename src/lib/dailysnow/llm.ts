@@ -1,10 +1,14 @@
-import { FALLBACK_MODEL, LLM_TIMEOUT_MS, PRIMARY_MODEL, responseJson, type AiLike } from "../recommend/llm";
+import { FALLBACK_MODEL, PRIMARY_MODEL, responseJson, type AiLike } from "../recommend/llm";
 import type { DailySnowParagraph, DailySnowSectionId } from "../types";
 import type { DailyDigest } from "./digest";
 
 export const DAILY_SNOW_MAX_TOKENS = 8000;
-/** Long-form output with reasoning takes longer than the resort pick. */
-export const DAILY_SNOW_TIMEOUT_MS = 2 * LLM_TIMEOUT_MS;
+/**
+ * Long-form output with high reasoning takes far longer than the resort pick:
+ * on 2026-11-02 GLM needed 128 s for a valid post (8.3k prompt, 3.9k output
+ * tokens). Two timeouts in a row still fit the 15-minute cron wall-time limit.
+ */
+export const DAILY_SNOW_TIMEOUT_MS = 5 * 60_000;
 export const MAX_FIGURES = 6;
 
 export const SYSTEM_PROMPT = `You write the "Daily Snow": a short morning snow-forecast post for skiers in the Cottonwood Canyons near Salt Lake City, Utah (Alta and Snowbird in Little Cottonwood Canyon, LCC; Solitude and Brighton in Big Cottonwood Canyon, BCC). It is published at 6 AM and read on phones and desktop browsers.
@@ -195,16 +199,26 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-/** Ask the primary model, then the fallback once. Throws when both fail. */
-export async function askDailySnow(ai: AiLike, digest: DailyDigest, gatewayId: string | undefined): Promise<LlmDailySnow & { model: string }> {
+/**
+ * Ask the primary model, then the fallback once. Throws when both fail. When
+ * the fallback writes the post, `fallbackReason` says why the primary didn't.
+ */
+export async function askDailySnow(
+  ai: AiLike,
+  digest: DailyDigest,
+  gatewayId: string | undefined,
+): Promise<LlmDailySnow & { model: string; fallbackReason?: string }> {
   const errors: string[] = [];
   for (const model of [PRIMARY_MODEL, FALLBACK_MODEL]) {
     try {
       const opts = gatewayId ? { gateway: { id: gatewayId, skipCache: true } } : {};
       const res = await withTimeout(ai.run(model, buildModelInput(model, digest), opts), DAILY_SNOW_TIMEOUT_MS);
-      return { ...validateDailySnow(responseJson(res), digest), model };
+      const post = { ...validateDailySnow(responseJson(res), digest), model };
+      return errors.length ? { ...post, fallbackReason: errors.join(" | ").slice(0, 500) } : post;
     } catch (e) {
-      errors.push(`${model}: ${e instanceof Error ? e.message : String(e)}`);
+      const message = `${model}: ${e instanceof Error ? e.message : String(e)}`;
+      console.warn(`dailysnow: ${message}`);
+      errors.push(message);
     }
   }
   throw new Error(errors.join(" | "));

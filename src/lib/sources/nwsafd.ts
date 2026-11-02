@@ -22,22 +22,29 @@ interface Product {
   productText: string;
 }
 
-/** Split product text into `.NAME...` sections ending at `&&` or `$$`. */
+/**
+ * Split product text into `.NAME...` sections ending at `&&` or `$$`. Updated
+ * products repeat unchanged sections with their original time:
+ * `.DISCUSSION, Issued 1037 PM MST Sun Nov 1 2026...`.
+ */
 export function parseAfd(text: string): AfdPayload["sections"] {
   const sections: AfdPayload["sections"] = [];
-  const re = /^\.([A-Z][A-Z0-9 /&()-]*?)\.\.\.([\s\S]*?)(?=^&&|^\$\$|^\.[A-Z][A-Z0-9 /&()-]*?\.\.\.)/gm;
+  const re = /^\.([A-Z][A-Z0-9 /&()-]*?)(?:,\s*Issued\s+([^\n]*?))?\.\.\.([\s\S]*?)(?=^&&|^\$\$|^\.[A-Z][A-Z0-9 /&()-]*?(?:,[^\n]*?)?\.\.\.)/gm;
   for (const m of text.replaceAll("\r", "").matchAll(re)) {
     const name = m[1].trim().replace(/^SLC /, "");
+    const issued = m[2]?.trim();
     if (!KEEP.test(name)) continue;
     // Unwrap the 70-column lines; keep bullets and paragraph breaks.
-    const body = m[2]
+    const body = m[3]
       .split(/\n\s*\n/)
       .map((para) => para.replace(/\s*\n\s*/g, " ").replace(/\s+/g, " ").trim())
       .filter(Boolean)
       .join("\n\n")
       .replace(/ (- )/g, "\n$1")
       .trim();
-    if (body) sections.push({ name, text: body.length > MAX_SECTION_CHARS ? `${body.slice(0, MAX_SECTION_CHARS - 1)}…` : body });
+    if (!body) continue;
+    const clipped = body.length > MAX_SECTION_CHARS ? `${body.slice(0, MAX_SECTION_CHARS - 1)}…` : body;
+    sections.push(issued ? { name, text: clipped, issued } : { name, text: clipped });
   }
   return sections;
 }

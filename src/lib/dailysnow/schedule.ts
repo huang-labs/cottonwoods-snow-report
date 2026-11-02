@@ -1,4 +1,5 @@
 import { denverDate } from "../recommend/digest";
+import { DAILY_SNOW_TIMEOUT_MS } from "./llm";
 import { denverParts } from "../time";
 import type { DailySnowState } from "../types";
 
@@ -19,7 +20,7 @@ export const MAX_ATTEMPTS = 3;
 /** Model requests reserved per day (two per attempt, manual runs included). */
 export const DAILY_CALL_CAP = 12;
 /** Longer than the worst case of one attempt (two model timeouts plus figure copies). */
-export const IN_FLIGHT_MS = 6 * 60_000;
+export const IN_FLIGHT_MS = 2 * DAILY_SNOW_TIMEOUT_MS + 2 * 60_000;
 
 export function attemptsToday(state: DailySnowState | undefined, now: Date): { count: number; calls: number } {
   const a = state?.attempts;
