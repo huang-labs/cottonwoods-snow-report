@@ -2,17 +2,18 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SectionView } from "@/components/SectionView";
 import { findSection, SECTIONS } from "@/lib/sections";
+import { sectionMetadata } from "@/lib/metadata";
 
 // Every section except the first (served at `/`) gets a static page; anything else 404s.
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return SECTIONS.slice(1).map((s) => ({ section: s.id }));
+  return SECTIONS.slice(1).filter((s) => s.id !== "daily-snow").map((s) => ({ section: s.id }));
 }
 
 export async function generateMetadata({ params }: PageProps<"/[section]">): Promise<Metadata> {
   const section = findSection((await params).section);
-  return section ? { title: section.title } : {};
+  return section ? sectionMetadata(section) : {};
 }
 
 export default async function Page({ params }: PageProps<"/[section]">) {

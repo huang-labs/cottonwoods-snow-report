@@ -4,6 +4,9 @@ import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // OpenNext can render static pages again inside the Worker. Inline the public
+  // deployment URL so it survives without a matching runtime environment var.
+  env: { SITE_URL: process.env.SITE_URL || "https://cottonwoods-snow-report.huang.mx" },
 };
 
 export default nextConfig;
