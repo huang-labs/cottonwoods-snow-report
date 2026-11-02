@@ -57,13 +57,13 @@ a { color: var(--accent); }
 .editorial-nav__brand span { font-weight: 450; color: var(--accent); }
 .editorial-nav__brand:hover { background: transparent; color: var(--text); }
 .editorial-nav__brand:focus-visible { background: transparent; outline: 2px solid var(--text); outline-offset: 2px; }
-.appearance-control { display: flex; gap: 2px; flex-shrink: 0; }
-.appearance-control button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; color: var(--muted); background: transparent; cursor: pointer; }
+
+.appearance-control { display: flex; gap: 2px; flex-shrink: 0; }.appearance-control button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; color: var(--muted); background: transparent; cursor: pointer; }
 .appearance-control button[aria-pressed="true"] { background: var(--panel-2); color: var(--accent); }
 .appearance-control button:hover { background: var(--panel); }
 .editorial-nav nav { display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
 .editorial-nav nav > a, .editorial-nav summary { display: flex; align-items: center; min-height: 44px; padding: 8px 14px; border-radius: 7px; text-decoration: none; font-size: 16px; font-weight: 600; color: var(--muted); cursor: pointer; }
-.editorial-nav nav > a[aria-current], .editorial-nav summary:hover, .editorial-nav a:hover { color: var(--accent); background: var(--panel); }
+.editorial-nav nav > a[aria-current], .editorial-nav summary:hover, .editorial-nav nav a:hover { color: var(--accent); background: var(--panel); }
 .editorial-nav nav > a[aria-current] { font-weight: 700; }
 .editorial-nav__resorts { position: relative; }
 .editorial-nav summary { list-style: none; gap: 8px; }
@@ -101,13 +101,13 @@ a { color: var(--accent); }
 .metric { display: inline-flex; flex-direction: column; line-height: 1; }
 .metric__value { font-weight: 750; letter-spacing: -1px; color: var(--accent); }
 .metric__value--zero { color: var(--muted); opacity: 1; }
-.metric__unit { font-weight: 600; font-size: 0.6em; margin-left: 0.05em; opacity: 0.8; }
+.metric__unit { font-weight: 600; font-size: 0.6em; margin-left: 0.15em; opacity: 0.8; }
 /* At 60% size, raise the inch mark by the missing 40% of the number's cap height. */
 .metric__unit--in { vertical-align: calc(2cap / 3); }
 .metric__missing { color: var(--warn); font-style: italic; font-size: 0.55em; font-weight: 500; }
 .metric__na { color: var(--muted); font-size: 0.55em; font-weight: 500; }
 .metric--sm .metric__missing, .metric--md .metric__missing, .metric--sm .metric__na, .metric--md .metric__na { font-size: 0.8em; }
-.metric__label { font-size: 0.35em; color: var(--muted); margin-top: 0.4em; }
+.metric__label { font-size: 0.35em; color: var(--muted); margin-top: 6px; }
 .metric--xl { font-size: 3.6em; }
 .metric--lg { font-size: 2.4em; }
 .metric--md { font-size: 1.35em; }
@@ -128,9 +128,13 @@ a { color: var(--accent); }
 .unavailable h2 { color: var(--bad); font-size: 22px; margin-bottom: 0.4em; }
 
 /* ---- regional snowfall ---- */
-.snow-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+/* The table box reaches 16px into the page gutters (like the teaser panel), so row tints,
+   dividers and hover highlights all share one width without any painted extensions.
+   First/last-cell padding cancels the bleed, keeping text on the page's aligned edge. */
+.snow-table { width: calc(100% + 32px); margin-inline: -16px; border-collapse: collapse; font-size: 14px; }
 .snow-table th, .snow-table td { text-align: left; padding: 18px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
-.snow-table th:first-child, .snow-table td:first-child { padding-left: 0; }
+.snow-table th:first-child, .snow-table td:first-child { padding-left: 16px; }
+.snow-table th:last-child, .snow-table td:last-child { padding-right: 16px; }
 .snow-table thead th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
 .snow-table .row--primary { position: relative; isolation: isolate; transition: background-color 150ms ease; }
 .snow-table .row--primary th[scope="row"] .resort-name { font: 700 20px/1.25 var(--font); letter-spacing: -0.4px; margin-bottom: 6px; }
@@ -163,34 +167,24 @@ a { color: var(--accent); }
 .recommendation__plan { font-weight: 600; }
 
 /* Recommendation belongs to the resort's row, immediately after its measured data. */
-.snow-table .recommendation-row > td { padding: 16px 0 20px; }
+.snow-table .recommendation-row > td { padding: 16px 16px 20px; }
 .recommendation-row__body { width: min(100%, calc(100vw - 40px)); font-size: 14px; line-height: 1.5; }
 .recommendation-row__body > strong { font-size: 16px; }
 .recommendation-row__body p { margin: 6px 0; }
 .recommendation-row__caveats { color: var(--warn); }
 .recommendation-row__meta { color: var(--muted); font-size: 11px; margin-top: 10px; overflow-wrap: anywhere; }
 
-/* The AI pick is marked by an accent line in the left gutter, spanning its data row and reasoning.
+/* The AI pick is marked by an accent line spanning its data row and reasoning, 12px left of the text.
    The pseudo lives on the cells: on the <tr> itself Chromium wraps it in an anonymous table cell and shifts the row. */
 .snow-table .row--recommended { background: none; }
 .snow-table .row--recommended > th:first-child,
 .snow-table .recommendation-row > td { position: relative; }
 .snow-table .row--recommended > th:first-child::before,
 .snow-table .recommendation-row > td::before {
-  content: ""; position: absolute; left: -12px; top: 0; bottom: 0; width: 3px; border-radius: 2px; background: var(--accent);
+  content: ""; position: absolute; left: 4px; top: 0; bottom: 0; width: 3px; border-radius: 2px; background: var(--accent);
 }
 .snow-table .row--recommended > th:first-child::before { bottom: -1px; border-radius: 2px 2px 0 0; }
 .snow-table .recommendation-row > td::before { border-radius: 0 0 2px 2px; }
-/* Hover/focus highlights extend 16px past the content, so names sit inside the painted box rather than on its edge.
-   The strips also carry the row's top/bottom dividers 1px outward, so the divider spans the same width as the highlight. */
-.snow-table .row--primary > th:first-child::after { content: ""; position: absolute; left: -16px; top: -1px; bottom: -1px; width: 16px; border-block: 1px solid var(--line); background: transparent; transition: background-color 150ms ease; }
-.snow-table .row--primary > td:last-child::before { content: ""; position: absolute; right: -16px; top: -1px; bottom: -1px; width: 16px; border-block: 1px solid var(--line); background: transparent; transition: background-color 150ms ease; }
-@media (hover: hover) {
-  .snow-table .row--primary:hover > th:first-child::after,
-  .snow-table .row--primary:hover > td:last-child::before { background: rgba(124, 196, 255, 0.1); }
-}
-.snow-table .row--primary:has(.resort-name__link:focus-visible) > th:first-child::after,
-.snow-table .row--primary:has(.resort-name__link:focus-visible) > td:last-child::before { background: rgba(124, 196, 255, 0.1); }
 
 /* ---- resort pages ---- */
 .rcam { margin: 0; min-height: 0; flex: 1; display: flex; flex-direction: column; gap: 0.3em; }
@@ -281,7 +275,7 @@ a { color: var(--accent); }
 .dailysnow__summary { font-size: 1.15em; }
 .dailysnow__section h2 { font: 700 22px/1.2 var(--font); letter-spacing: -0.5px; color: var(--text); margin: 32px 0 0.3em; }
 .dailysnow__section p { margin: 14px 0; line-height: 1.75; }
-.dailysnow-figure { margin: 24px 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.dailysnow-figure { margin: 24px 0; background: var(--panel); border: 0; border-radius: 8px; padding: 16px; }
 .dailysnow-figure img { display: block; width: 100%; height: auto; border-radius: 4px; }
 .dailysnow-figure .plume__svg { display: block; height: auto; min-height: 0; }
 .dailysnow-figure--plume img { background: #fff; padding: 2%; box-sizing: border-box; }
@@ -326,12 +320,22 @@ a { color: var(--accent); }
   body { overflow-x: hidden; }
   .slide__meta { font-size: 16px; gap: 0.4em 1em; }
   .obs-table, .travel-table { display: block; overflow-x: auto; }
-  /* The table scrolls inside a reserved gutter so the pick's accent line renders beside the row. */
-  .snow-table { display: block; overflow-x: auto; width: calc(100% + 32px); margin-inline: -16px; padding-inline: 16px; }
-  .snow-table th, .snow-table td { min-width: 95px; padding: 14px 10px; }
-  .snow-table th:first-child, .snow-table td:first-child { min-width: 125px; }
-  .snow-table .metric--xl { font-size: 28px; }
-  .snow-table .row--primary th[scope="row"] .resort-name { font-size: 19px; }
+  /* The snowfall table becomes full-width stacked resort blocks — no horizontal scrolling. */
+  .snow-table { display: block; width: calc(100% + 40px); margin-inline: -20px; }
+  .snow-table thead { display: none; }
+  .snow-table tbody { display: block; }
+  .snow-table tbody tr { display: block; }
+  .snow-table .row--primary { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; padding: 18px 20px 14px; border-bottom: 1px solid var(--line); }
+  .snow-table tbody tr.row--primary :is(th, td) { border: 0; padding: 0; text-align: left; }
+  .snow-table .row--primary > th { grid-column: 1 / -1; }
+  .snow-table .metric--xl { font-size: 24px; }
+  .snow-table .recommendation-row { position: relative; border-bottom: 1px solid var(--line); }
+  .snow-table .recommendation-row > td { display: block; padding: 0 20px 16px; }
+  /* In block layout the line can hang off the row box directly, 12px left of the text. */
+  .snow-table .row--recommended > th:first-child::before,
+  .snow-table .recommendation-row > td::before { content: none; }
+  .snow-table .row--recommended::before { content: ""; position: absolute; left: 8px; top: 0; bottom: -1px; width: 3px; border-radius: 2px 2px 0 0; background: var(--accent); }
+  .snow-table .recommendation-row::before { content: ""; position: absolute; left: 8px; top: 0; bottom: 0; width: 3px; border-radius: 0 0 2px 2px; background: var(--accent); }
   .plume__svg, .plume--full img { min-height: 40vh; }
   /* Full-width teaser band: no gutters, no radius; the text keeps the page's aligned edge. */
   .dailysnow-teaser { margin-inline: -20px; padding: 24px 20px; border-radius: 0; grid-template-columns: minmax(0, 1fr); }

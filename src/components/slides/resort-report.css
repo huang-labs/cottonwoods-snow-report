@@ -8,10 +8,10 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 36px;
   font-size: 16px;
   line-height: 1.5;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .resort-report .muted {
   color: var(--resort-muted);
@@ -150,9 +150,8 @@
 .resort-snow {
   background: none;
   border: 0;
-  border-block: 1px solid var(--line);
   border-radius: 0;
-  padding: 24px 0;
+  padding: 0;
 }
 .resort-snow__headline {
   display: grid;
@@ -170,7 +169,7 @@
 .resort-metric__label {
   color: var(--resort-muted);
   font-size: 13px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .resort-metric .metric--xl {
   font-size: 48px;
@@ -200,11 +199,10 @@
 .resort-observations {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  gap: 20px;
+  gap: 28px;
 }
 .resort-observation {
-  border-top: 1px solid var(--line);
-  padding-top: 20px;
+  padding-top: 0;
 }
 .resort-observation__heading {
   display: flex;
@@ -215,14 +213,14 @@
 }
 .resort-observation dl {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr));
+  gap: 16px 20px;
   margin: 12px 0 0;
 }
 .resort-observation dt {
   color: var(--resort-muted);
   font-size: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .resort-observation dd {
   margin: 0;
@@ -245,13 +243,11 @@
   margin: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 28px;
+  gap: 14px 28px;
 }
 .resort-lift {
-  padding: 14px 0;
+  padding: 0;
   border: 0;
-  border-top: 1px solid var(--line);
-  border-radius: 0;
   background: none;
 }
 .resort-lift__heading {
@@ -290,7 +286,7 @@
   margin: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 28px;
+  gap: 12px 28px;
 }
 .resort-terrain li {
   display: flex;
@@ -298,8 +294,7 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 6px 16px;
-  border-top: 1px solid var(--line);
-  padding: 12px 0;
+  padding: 0;
   font-size: 14px;
 }
 .resort-terrain li > div {
@@ -346,7 +341,7 @@
 
 @media (max-width: 900px) {
   .resort-report {
-    gap: 24px;
+    gap: 28px;
   }
   .resort-report__header {
     align-items: flex-start;
@@ -375,7 +370,6 @@
   .resort-metric--hero:last-child {
     grid-column: 1 / -1;
     padding-top: 16px;
-    border-top: 1px solid var(--line);
   }
   .resort-metric--hero:last-child .metric--xl {
     font-size: 32px;
