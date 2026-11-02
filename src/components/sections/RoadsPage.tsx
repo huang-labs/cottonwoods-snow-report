@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ApiSource, ReportResponse, ResortReport, RoadNotice, RoadsPayload, TravelTimesPayload, WebcamsPayload } from "@/lib/types";
 import { formatAge, formatDenver } from "@/lib/time";
-import { FreshnessBadge, SourceLine } from "../ui";
+import { SourceLine } from "../ui";
 
 function Notices({ notices, canyon }: { notices: RoadNotice[]; canyon: "LCC" | "BCC" }) {
   const list = notices.filter((n) => n.canyon === canyon || n.canyon === "both");
@@ -13,8 +13,8 @@ function Notices({ notices, canyon }: { notices: RoadNotice[]; canyon: "LCC" | "
     <ul className="notices">
       {[...list].sort((a, b) => order[a.severity] - order[b.severity]).map((n, i) => (
         <li key={i} className={`notice notice--${n.severity}`}>
-          <strong>{n.title}:</strong> {n.text}
-          <span className="notice__src"> — {n.source}{n.updatedAt ? `, ${formatDenver(n.updatedAt)}` : ""}</span>
+          <strong>{n.title}</strong> {n.text}
+          <span className="notice__meta">{n.source}{n.updatedAt ? ` · ${formatDenver(n.updatedAt)}` : ""}</span>
         </li>
       ))}
     </ul>
@@ -47,7 +47,7 @@ function TravelTimes({ source, canyon, now }: { source: ApiSource; canyon: "LCC"
           {segs.map((s) => (
             <tr key={s.name}>
               <th scope="row">
-                {s.from} → {s.to} <span className="muted small">{s.direction === "Up" ? "uphill" : "downhill"}</span>
+                {s.from} → {s.to} <span className="travel__dir">{s.direction === "Up" ? "uphill" : "downhill"}</span>
               </th>
               <td className="travel__now">{s.currentMin === null ? "—" : `${s.currentMin} min`}</td>
               <td>{s.freeFlowMin === null ? "—" : `${s.freeFlowMin} min`}</td>
@@ -73,13 +73,13 @@ function Cam({ cam, bust }: { cam: WebcamsPayload["cameras"][number]; bust: numb
       )}
       <figcaption>
         <strong>{cam.title}</strong> — {cam.description}
-        <span className="muted small"> · image requested {formatDenver(new Date(bust).toISOString())}; UDOT does not publish capture time</span>
+        <span className="cam__time"> · image requested {formatDenver(new Date(bust).toISOString())}; UDOT does not publish capture time</span>
       </figcaption>
     </figure>
   );
 }
 
-export function TrafficSlide({ report, now, loadedAt }: { report: ReportResponse; now: Date; loadedAt: number | null }) {
+export function RoadsPage({ report, now, loadedAt }: { report: ReportResponse; now: Date; loadedAt: number | null }) {
   const roads = report.sources.roads;
   const travel = report.sources.traveltimes;
   const cams = report.sources.webcams;
@@ -89,7 +89,9 @@ export function TrafficSlide({ report, now, loadedAt }: { report: ReportResponse
   // Resort-published road/parking information complements UDOT feeds.
   const parking = (["alta", "snowbird", "solitude", "brighton"] as const).flatMap((id) => {
     const r = report.sources[id].payload as ResortReport | null;
-    return (r?.parking ?? []).map((p) => ({ resort: report.sources[id].label, ...p }));
+    const resort = report.sources[id].label;
+    // Some feeds already name the resort ("Alta parking"); don't print "Alta Alta parking".
+    return (r?.parking ?? []).map((p) => ({ ...p, name: p.name.toLowerCase().startsWith(resort.toLowerCase()) ? p.name : `${resort} ${p.name}` }));
   });
   const resortRoad = (["alta", "snowbird", "solitude", "brighton"] as const).flatMap((id) => {
     const r = report.sources[id].payload as ResortReport | null;
@@ -102,17 +104,14 @@ export function TrafficSlide({ report, now, loadedAt }: { report: ReportResponse
   const bust = Math.floor((loadedAt ?? now.getTime()) / 60_000) * 60_000;
 
   return (
-    <section className="slide slide--traffic">
-      <header className="slide__header slide__header--row">
+    <section className="page page--roads">
+      <header className="page__header">
         <h1>Canyon roads</h1>
-        <div className="slide__meta">
-          <span>Roads <FreshnessBadge freshness={roads.freshness} /> checked {formatAge(roads.lastSuccessfulFetchAt, now)}</span>
-          <span>Travel times <FreshnessBadge freshness={travel.freshness} /></span>
-        </div>
+        <p className="page__sub">Road notices, UDOT travel times and highway cameras for Little and Big Cottonwood Canyons.</p>
       </header>
-      <div className="traffic-grid">
+      <div className="roads">
         {(["LCC", "BCC"] as const).map((c) => (
-          <div key={c} className="panel canyon">
+          <section key={c} className="canyon" aria-label={c === "LCC" ? "Little Cottonwood Canyon" : "Big Cottonwood Canyon"}>
             <div className="canyon__info">
               <h2>{c === "LCC" ? "Little Cottonwood · SR-210" : "Big Cottonwood · SR-190"}</h2>
               <Notices notices={all} canyon={c} />
@@ -125,19 +124,24 @@ export function TrafficSlide({ report, now, loadedAt }: { report: ReportResponse
                 <div className="cam__missing">Webcams unavailable ({cams.freshnessNote})</div>
               )}
             </div>
-          </div>
+          </section>
         ))}
       </div>
-      <div className="traffic-footer">
-        {parking.length > 0 && (
-          <p>
-            <strong>Parking:</strong>{" "}
-            {parking.map((p) => `${p.resort} ${p.name}: ${p.status}`).join(" · ")}
-          </p>
-        )}
-        {rp && rp.partialFailures.length > 0 && <p className="muted small">Feeds not included this check: {rp.partialFailures.join(" | ")}</p>}
+      {parking.length > 0 && (
+        <section className="parking" aria-labelledby="parking-heading">
+          <h2 id="parking-heading">Parking</h2>
+          <ul>
+            {parking.map((p, i) => (
+              <li key={i}><span>{p.name}</span> <strong>{p.status}</strong></li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {rp && rp.partialFailures.length > 0 && <p className="page__note">Feeds not included this check: {rp.partialFailures.join(" | ")}</p>}
+      <div className="source-lines">
+        <SourceLine source={roads} now={now} reportLabel="Road notices" />
+        <SourceLine source={travel} now={now} reportLabel="Travel times measured" />
       </div>
-      <SourceLine source={roads} now={now} reportLabel="Notice times" />
     </section>
   );
 }

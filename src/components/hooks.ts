@@ -10,7 +10,7 @@ export interface ReportState {
   error: string | null;
 }
 
-/** Polls the stored snapshot on load and every `intervalMs`, independent of slides. */
+/** Polls the stored snapshot on load and every `intervalMs`, shared by every page. */
 export function useReport(intervalMs = 60_000, fetchImpl: typeof fetch = (...a) => fetch(...a)): ReportState {
   const [state, setState] = useState<ReportState>({ report: null, loadedAt: null, error: null });
   const fetchRef = useRef(fetchImpl);

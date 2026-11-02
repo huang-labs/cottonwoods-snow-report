@@ -24,7 +24,7 @@ function Cam({ cam, now, bust }: { cam: ResortCam; now: Date; bust: number }) {
         </div>
         <figcaption>
           <strong>{cam.title}</strong>{" "}
-          <span className="muted small">
+          <span className="rcam__time">
             · live stream (player shows live/offline status)
           </span>
         </figcaption>
@@ -43,13 +43,13 @@ function Cam({ cam, now, bust }: { cam: ResortCam; now: Date; bust: number }) {
       <figcaption>
         <strong>{cam.title}</strong>{" "}
         {cam.capturedAt === null ? (
-          <span className="muted small">· capture time not published</span>
+          <span className="rcam__time">· capture time not published</span>
         ) : age !== null && age > CAM_STALE_MS ? (
-          <span className="small source-line__error">
+          <span className="rcam__time rcam__time--stale">
             · not updating — last image {formatDenver(cam.capturedAt, now)}
           </span>
         ) : (
-          <span className="muted small">
+          <span className="rcam__time">
             · image {formatAge(cam.capturedAt, now)}
           </span>
         )}
@@ -73,7 +73,7 @@ export function ResortCams({
   const mine = p?.cameras.filter((c) => c.resort === resortId) ?? [];
   const bust = Math.floor((loadedAt ?? now.getTime()) / 60_000) * 60_000;
   return (
-    <div className="panel panel--cams">
+    <div className="resort-cams">
       <h2>Webcams</h2>
       {mine.length ? (
         mine.map((c) => <Cam key={c.title} cam={c} now={now} bust={bust} />)

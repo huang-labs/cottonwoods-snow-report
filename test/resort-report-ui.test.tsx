@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, expect, it } from "vitest";
 import { renderSection } from "@/components/SectionView";
-import { ResortReportPage } from "@/components/slides/ResortReportPage";
+import { ResortReportPage } from "@/components/sections/ResortReportPage";
 import { runCollection } from "@/lib/collect";
 import { buildReport } from "@/lib/report";
 import { MemoryKV, readSnapshot } from "@/lib/store";

@@ -106,7 +106,7 @@ export interface NamedTerrain {
 export interface Notice {
   title: string;
   text: string;
-  /** "critical" notices persist across slides. */
+  /** "critical" notices sort first. */
   severity: "info" | "warning" | "critical";
   updatedAt?: string | null;
 }

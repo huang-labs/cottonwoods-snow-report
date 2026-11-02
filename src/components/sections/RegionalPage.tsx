@@ -45,23 +45,22 @@ function Row({ source, now, recommended }: { source: ApiSource; now: Date; recom
       })}
       <td className="report-time">
         <div>{r ? formatDenver(r.reportTime, now) : "no data"}</div>
-        <div className="muted small">checked {formatAge(source.lastSuccessfulFetchAt, now)}</div>
-        {source.status === "error" && <div className="small source-line__error">latest check failed</div>}
+        <div className="report-time__checked">checked {formatAge(source.lastSuccessfulFetchAt, now)}</div>
+        {source.status === "error" && <div className="report-time__failed">latest check failed</div>}
       </td>
     </tr>
   );
 }
 
-export function RegionalSlide({ report, now }: { report: ReportResponse; now: Date }) {
+export function RegionalPage({ report, now }: { report: ReportResponse; now: Date }) {
   const pick = report.recommendation;
-  const summaries = <DailySnowTeaser post={report.dailySnow} now={now} />;
   return (
-    <section className="slide slide--regional">
-      <header className="slide__header">
+    <section className="page page--regional">
+      <header className="page__header">
         <h1>Regional snowfall</h1>
-        <p className="slide__sub">Resort-reported totals. Measurement windows and sites are source-defined and not strictly comparable — each cell shows the resort’s own label.</p>
+        <p className="page__sub">Resort-reported totals. Measurement windows and sites are source-defined and not strictly comparable — each cell shows the resort’s own label.</p>
       </header>
-      <div className="regional-briefing">{summaries}</div>
+      <DailySnowTeaser post={report.dailySnow} now={now} />
       <table className="snow-table">
         <thead>
           <tr>

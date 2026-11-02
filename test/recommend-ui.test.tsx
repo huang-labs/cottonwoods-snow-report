@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import { RegionalSlide } from "@/components/slides/RegionalSlide";
+import { RegionalPage } from "@/components/sections/RegionalPage";
 import { buildReport } from "@/lib/report";
 import type { ApiRecommendation } from "@/lib/types";
 
@@ -12,7 +12,7 @@ const recommendation: ApiRecommendation = {
 afterEach(cleanup);
 
 it("integrates the pick into the resort's table row with reasoning beneath it", () => {
-  render(<RegionalSlide now={now} report={{ ...buildReport(null, now), recommendation }} />);
+  render(<RegionalPage now={now} report={{ ...buildReport(null, now), recommendation }} />);
   const row = screen.getByText("AI pick").closest("tr");
   expect(row?.textContent).toContain("Alta");
   const reasoning = screen.getByRole("generic", { name: "AI recommendation reasoning" });
@@ -27,21 +27,21 @@ it("integrates the pick into the resort's table row with reasoning beneath it", 
 });
 
 it("falls back to the plan text when no summary was written", () => {
-  render(<RegionalSlide now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, summary: undefined } }} />);
+  render(<RegionalPage now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, summary: undefined } }} />);
   const reasoning = screen.getByRole("generic", { name: "AI recommendation reasoning" });
   expect(reasoning.textContent).toContain(recommendation.plan);
   expect(reasoning.textContent).not.toContain("Model not recorded");
 });
 
 it("shows nothing when no resort is picked", () => {
-  render(<RegionalSlide now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, pick: null, headline: "No pick: all resorts closed" } }} />);
+  render(<RegionalPage now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, pick: null, headline: "No pick: all resorts closed" } }} />);
   expect(screen.queryByRole("generic", { name: "AI recommendation reasoning" })).toBeNull();
   expect(screen.queryByText("AI pick")).toBeNull();
   expect(screen.queryByText("No pick: all resorts closed")).toBeNull();
 });
 
 it("retains stale output with a warning and removes the row endorsement", () => {
-  render(<RegionalSlide now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, outdated: true, failing: true } }} />);
+  render(<RegionalPage now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, outdated: true, failing: true } }} />);
   expect(screen.getByText(/Outdated.*Updates failing/)).toBeTruthy();
   expect(screen.getByText("Alta for deep powder")).toBeTruthy();
   expect(screen.queryByText("AI pick")).toBeNull();

@@ -14,14 +14,14 @@ export function FreshnessBadge({ freshness }: { freshness: Freshness }) {
 }
 
 /** Large metric value. Zero, not-reported and unavailable look different. */
-export function MetricValue({ m, size = "lg", showLabel = false }: { m: Metric; size?: "xl" | "lg" | "md" | "sm"; showLabel?: boolean }) {
+export function MetricValue({ m, size = "lg" }: { m: Metric; size?: "xl" | "lg" | "md" | "sm" }) {
   let body;
   if (m.state === "reported") {
     const unit = m.unit === "in" ? "″" : m.unit === "°F" ? "°" : m.unit === "count" ? "" : ` ${m.unit}`;
     body = (
       <span className={`metric__value ${m.value === 0 ? "metric__value--zero" : ""}`}>
         {formatNumber(m.value)}
-        <span className={`metric__unit${m.unit === "in" ? " metric__unit--in" : ""}`}>{unit}</span>
+        <span className={`metric__unit${m.unit === "in" || m.unit === "°F" ? " metric__unit--mark" : ""}`}>{unit}</span>
       </span>
     );
   } else if (m.state === "not_reported") {
@@ -32,7 +32,6 @@ export function MetricValue({ m, size = "lg", showLabel = false }: { m: Metric; 
   return (
     <span className={`metric metric--${size} metric--${m.state}`}>
       {body}
-      {showLabel && <span className="metric__label">{m.label}</span>}
     </span>
   );
 }

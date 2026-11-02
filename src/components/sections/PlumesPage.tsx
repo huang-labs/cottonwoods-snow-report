@@ -40,18 +40,16 @@ function FullChart({ chart, product }: { chart: PlumeChart; product: string }) {
   );
 }
 
-export function PlumeSlide({ source, now }: { source: ApiSource; now: Date }) {
+export function PlumesPage({ source, now }: { source: ApiSource; now: Date }) {
   const p = source.payload as PlumePayload | null;
   return (
-    <section className="slide slide--plumes">
-      <header className="slide__header slide__header--row">
+    <section className="page page--plumes">
+      <header className="page__header">
         <h1>Utah ensemble snow plumes</h1>
         {p && (
-          <div className="slide__meta">
-            <span>
-              Run <strong>{p.runCode}</strong> · initialized <strong>{formatDenver(p.initTime, now)} MT</strong> ({initLabel(p.initTime)})
-            </span>
-          </div>
+          <p className="page__sub">
+            Run <strong>{p.runCode}</strong> · initialized <strong>{formatDenver(p.initTime, now)} MT</strong> ({initLabel(p.initTime)}). Times are Mountain Time (the original charts are labelled in UTC); dashed lines mark midnight and the orange line is now.
+          </p>
         )}
       </header>
       {p ? (
@@ -66,7 +64,6 @@ export function PlumeSlide({ source, now }: { source: ApiSource; now: Date }) {
       ) : (
         <Unavailable source={source} what="Plume charts" />
       )}
-      {p && <p className="plume__note">Times in Mountain Time (the original charts are labelled in UTC). Dashed lines mark midnight; the orange line is now.</p>}
       <SourceLine source={source} now={now} reportLabel="Model initialization" />
     </section>
   );

@@ -18,11 +18,11 @@ const postDate = (date: string) => dateFmt.format(new Date(`${date}T12:00:00Z`))
 
 function Eyebrow({ post, now, archived }: { post: ApiDailySnow; now: Date; archived: boolean }) {
   return (
-    <div className="recommendation__heading">
-      <span className="recommendation__eyebrow">
+    <div className="dailysnow__meta">
+      <span className="eyebrow">
         Daily Snow<span className="badge badge--ai">AI</span> · {postDate(post.date)} · {PHASE_LABEL[post.phase]}
       </span>
-      <span className="muted small">
+      <span className="dailysnow__posted">
         Posted {formatDenver(post.generatedAt, now)}
         {archived ? " · Archive" : (post.outdated || post.failing) && (
           <span className="dailysnow__warn">{post.outdated ? " · Outdated" : ""}{post.failing ? " · Today's post failed" : ""}</span>
@@ -55,7 +55,7 @@ function Article({ post }: { post: ApiDailySnow }) {
 
 function Footer({ post }: { post: ApiDailySnow }) {
   return (
-    <p className="muted small dailysnow__footer">
+    <p className="dailysnow__footer">
       AI-generated from NWS forecasts and discussion, University of Utah plumes and resort reports · {modelName(post.model)}. Check official forecasts and avalanche conditions before heading out.
     </p>
   );
@@ -98,7 +98,7 @@ function useArchivedPost(date: string | null): { post: ApiDailySnow | null; erro
 }
 
 /** Daily Snow page: the full post with figures and archive links. */
-export function DailySnowSlide({ report, now }: { report: ReportResponse; now: Date }) {
+export function DailySnowPage({ report, now }: { report: ReportResponse; now: Date }) {
   const [date, setDate] = useState<string | null>(null);
   useEffect(() => setDate(readDateParam()), []);
   const current = report.dailySnow ?? null;
@@ -116,10 +116,12 @@ export function DailySnowSlide({ report, now }: { report: ReportResponse; now: D
 
   if (!post) {
     return (
-      <section className="slide slide--dailysnow">
+      <section className="page page--dailysnow">
         <div className="dailysnow">
-          <span className="recommendation__eyebrow">Daily Snow<span className="badge badge--ai">AI</span></span>
-          <h1 className="dailysnow__title">{date && date !== current?.date ? (archived.error ? "Post not available" : "Loading…") : "Waiting for the first post"}</h1>
+          <header className="dailysnow__header">
+            <span className="eyebrow">Daily Snow<span className="badge badge--ai">AI</span></span>
+            <h1 className="dailysnow__title">{date && date !== current?.date ? (archived.error ? "Post not available" : "Loading…") : "Waiting for the first post"}</h1>
+          </header>
           <p className="muted">{archived.error ?? "An AI-written snow forecast is posted every morning at 6 AM."}</p>
           {date && <button type="button" className="dailysnow__back" onClick={() => pick(null)}>Back to the latest post</button>}
         </div>
@@ -127,11 +129,13 @@ export function DailySnowSlide({ report, now }: { report: ReportResponse; now: D
     );
   }
   return (
-    <section className="slide slide--dailysnow">
+    <section className="page page--dailysnow">
       <article className="dailysnow" aria-label="Daily Snow">
-        <Eyebrow post={post} now={now} archived={!!date && date !== current?.date} />
-        <h1 className="dailysnow__title">{post.title}</h1>
-        <p className="recommendation__plan dailysnow__summary">{post.summary}</p>
+        <header className="dailysnow__header">
+          <Eyebrow post={post} now={now} archived={!!date && date !== current?.date} />
+          <h1 className="dailysnow__title">{post.title}</h1>
+          <p className="dailysnow__summary">{post.summary}</p>
+        </header>
         <Article post={post} />
         <Footer post={post} />
         <ArchiveNav post={post} onPick={pick} />
@@ -144,14 +148,14 @@ export function DailySnowSlide({ report, now }: { report: ReportResponse; now: D
 export function DailySnowTeaser({ post, now }: { post: ApiDailySnow | null | undefined; now: Date }) {
   if (!post) return null;
   return (
-    <Link href="/daily-snow" className={`recommendation dailysnow-teaser${post.outdated ? " recommendation--outdated" : ""}`} aria-label={`Daily Snow: ${post.title}`}>
-      <span className="recommendation__eyebrow">
+    <Link href="/daily-snow" className="dailysnow-teaser" aria-label={`Daily Snow: ${post.title}`}>
+      <span className="eyebrow">
         Daily Snow<span className="badge badge--ai">AI</span> · {postDate(post.date)}{post.outdated ? " · Outdated" : ""}
       </span>
       <strong className="dailysnow-teaser__title">{post.title}</strong>
       <span className="dailysnow-teaser__summary">{post.summary}</span>
       <span className="dailysnow-teaser__more">Read →</span>
-      <span className="muted small dailysnow-teaser__time">Posted {formatDenver(post.generatedAt, now)}</span>
+      <span className="dailysnow-teaser__time">Posted {formatDenver(post.generatedAt, now)}</span>
     </Link>
   );
 }

@@ -1,15 +1,36 @@
 /* Cottonwoods Snow Report — light-first design for phones and desktop browsers.
    The dark appearance is a full theme: the saved choice lives on <html data-theme>,
    set before first paint by the layout's inline script; with no saved choice the
-   system preference decides. Layout is mobile-first; 901px and up widen to the
-   desktop grids. Long-form content (resort reports, Daily Snow) is page content:
-   no card borders, one aligned reading width. */
+   system preference decides. Layout is mobile-first in spirit; 901px and up widen
+   to the desktop grids.
+
+   One type scale serves every page (use the tokens, not new pixel sizes):
+     display  page titles (h1)            label    uppercase eyebrows, table heads
+     h2       section headings            caption  figure captions, notes, timestamps
+     title    item names (resorts, teaser) meta    secondary lines under headings
+     prose    Daily Snow reading text      body     everything else
+   Long-form content is page content: no card borders. The pale --panel fill is
+   reserved for summary panels (Daily Snow teaser, next storm, snow tiles, charts). */
 
 :root {
   --bg: #f8fafc; --panel: #edf3f9; --panel-2: #e1ebf5; --line: #dbe3ec;
   --text: #172b42; --muted: #586b7d; --accent: #1266a3; /* snow */
   --ok: #287040; --warn: #87570a; --bad: #b23831; --hold: #755396;
   --font: "Inter", "Segoe UI", "Helvetica Neue", Roboto, Arial, sans-serif;
+
+  --fs-display: clamp(28px, 1.5vw + 22px, 40px);
+  --fs-h2: 22px;
+  --fs-title: 20px;
+  --fs-h3: 17px;
+  --fs-prose: 17px;
+  --fs-body: 16px;
+  --fs-meta: 14px;
+  --fs-caption: 13px;
+  --fs-label: 12px;
+
+  --gutter: 32px;   /* page side padding */
+  --bleed: 16px;    /* how far highlighted panels reach into the gutter */
+  --page-gap: 40px; /* between a page's sections */
   color-scheme: light;
 }
 :root[data-theme="dark"] {
@@ -26,43 +47,51 @@
     color-scheme: dark;
   }
 }
+@media (max-width: 900px) {
+  :root { --fs-h2: 20px; --gutter: 20px; --bleed: 20px; --page-gap: 32px; }
+}
 
+/* ---- base ---- */
 * { box-sizing: border-box; }
 html { background: var(--bg); }
 html, body { margin: 0; min-height: 100%; }
 body {
   font-family: var(--font);
-  font-size: 16px;
+  font-size: var(--fs-body);
   line-height: 1.55;
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   background: var(--bg);
   color: var(--text);
+  overflow-x: clip;
 }
-h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+h1, h2, h3 { margin: 0; color: var(--text); }
+h1 { font: 750 var(--fs-display)/1.12 var(--font); letter-spacing: -0.025em; }
+h2 { font: 700 var(--fs-h2)/1.25 var(--font); letter-spacing: -0.015em; }
+h3 { font: 650 var(--fs-h3)/1.3 var(--font); letter-spacing: -0.005em; }
+p { margin: 0; }
 button, select { font: inherit; color: inherit; }
 a { color: var(--accent); }
 :is(button, select, summary, a):focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .muted { color: var(--muted); }
-.small { font-size: 0.82em; }
 
-/* ---- app frame ---- */
+/* ---- app frame and masthead ---- */
 .app { min-height: 100dvh; display: flex; flex-direction: column; }
-.loading { display: grid; place-items: center; min-height: 50vh; font-size: 22px; color: var(--muted); }
+.loading { display: grid; place-items: center; min-height: 50vh; font-size: var(--fs-title); color: var(--muted); }
 
-/* ---- editorial masthead ---- */
-.editorial-nav { max-width: 1180px; margin: auto; padding: 24px 32px 0; width: 100%; }
+.editorial-nav { max-width: 1180px; width: 100%; margin: 0 auto; padding: 24px var(--gutter) 0; }
 .editorial-nav__masthead { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 20px; }
-.editorial-nav__brand { font: 800 26px/1.15 var(--font); letter-spacing: -1px; color: var(--text); text-decoration: none; padding: 8px 10px; margin-left: -10px; border-radius: 8px; }
+.editorial-nav__brand { font: 800 26px/1.15 var(--font); letter-spacing: -1px; color: var(--text); text-decoration: none; }
 .editorial-nav__brand span { font-weight: 450; color: var(--accent); }
-.editorial-nav__brand:hover { background: transparent; color: var(--text); }
-.editorial-nav__brand:focus-visible { background: transparent; outline: 2px solid var(--text); outline-offset: 2px; }
+.editorial-nav__brand:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; border-radius: 2px; }
 
-.appearance-control { display: flex; gap: 2px; flex-shrink: 0; }.appearance-control button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; color: var(--muted); background: transparent; cursor: pointer; }
+.appearance-control { display: flex; gap: 2px; flex-shrink: 0; }
+.appearance-control button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; color: var(--muted); background: transparent; cursor: pointer; }
 .appearance-control button[aria-pressed="true"] { background: var(--panel-2); color: var(--accent); }
 .appearance-control button:hover { background: var(--panel); }
+
 .editorial-nav nav { display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
-.editorial-nav nav > a, .editorial-nav summary { display: flex; align-items: center; min-height: 44px; padding: 8px 14px; border-radius: 7px; text-decoration: none; font-size: 16px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.editorial-nav nav > a, .editorial-nav summary { display: flex; align-items: center; min-height: 44px; padding: 8px 14px; border-radius: 7px; text-decoration: none; font-size: var(--fs-body); font-weight: 600; color: var(--muted); cursor: pointer; }
 .editorial-nav nav > a[aria-current], .editorial-nav summary:hover, .editorial-nav nav a:hover { color: var(--accent); background: var(--panel); }
 .editorial-nav nav > a[aria-current] { font-weight: 700; }
 .editorial-nav__resorts { position: relative; }
@@ -73,173 +102,204 @@ a { color: var(--accent); }
 .editorial-nav__resorts a { display: block; min-height: 44px; padding: 10px 12px; border-radius: 6px; text-decoration: none; }
 .editorial-nav__resorts a[aria-current="page"] { background: var(--panel); color: var(--accent); font-weight: 600; }
 
-/* ---- page container ---- */
-.editorial-page { max-width: 1180px; width: 100%; margin: auto; padding: 36px 32px 64px; }
+.editorial-page { max-width: 1180px; width: 100%; margin: 0 auto; padding: 36px var(--gutter) 64px; }
 
-/* ---- section pages ---- */
-.slide { width: 100%; height: auto; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 28px; overflow: visible; }
-.slide__header h1, .resort-report__header h1, .dailysnow__title { font-family: var(--font); font-weight: 750; font-size: clamp(30px, 3.5vw, 42px); line-height: 1.12; letter-spacing: -1.3px; }
-.slide__header--row { display: flex; align-items: baseline; justify-content: space-between; gap: 2em; flex-wrap: wrap; }
-.slide__sub { font-size: 15px; line-height: 1.55; max-width: 76ch; margin: 12px 0 0; color: var(--muted); }
-.slide__meta { display: flex; gap: 1.6em; align-items: center; color: var(--muted); font-size: 18px; flex-wrap: wrap; }
-.slide__meta strong { color: var(--text); }
-/* Status chips sit between text, so give each meta item even internal spacing. */
-.slide__meta > span { display: inline-flex; align-items: center; gap: 7px; min-width: 0; flex-wrap: wrap; }
-.panel { background: none; border: 0; border-radius: 0; padding: 0; min-height: 0; overflow: visible; }
-.panel h2 { font: 700 22px/1.2 var(--font); letter-spacing: -0.5px; color: var(--text); margin: 0.2em 0 0.6em; }
-.panel h2:not(:first-child) { margin-top: 1em; }
-.pill { background: none; border: 0; border-radius: 0; padding: 0; color: var(--text); }
+.banner { max-width: calc(1180px - 2 * var(--gutter)); width: calc(100% - 2 * var(--gutter)); margin: 12px auto 0; border-radius: 8px; padding: 8px 14px; font-size: var(--fs-meta); border: 1px solid var(--line); background: var(--panel); color: var(--bad); }
 
-/* ---- badges & metrics ---- */
+/* ---- page primitives ---- */
+.page { display: flex; flex-direction: column; gap: var(--page-gap); }
+.page__header { display: flex; flex-direction: column; gap: 12px; }
+.page__sub { max-width: 72ch; font-size: var(--fs-meta); line-height: 1.6; color: var(--muted); }
+.page__sub strong { color: var(--text); font-weight: 600; }
+.page__note { font-size: var(--fs-caption); color: var(--muted); }
+
+.eyebrow { color: var(--accent); font-size: var(--fs-label); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.eyebrow .badge { margin: 0 0.5em; vertical-align: 1px; }
+
 /* Freshness and AI chips carry color: green fresh, amber aging, red stale, blue AI. */
-.badge { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 10.5px; font-weight: 650; letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; background: color-mix(in srgb, var(--muted) 12%, transparent); color: var(--muted); }
+.badge { display: inline-block; border-radius: 4px; padding: 2px 7px; font-size: 11px; line-height: 1.45; font-weight: 650; letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; background: color-mix(in srgb, var(--muted) 12%, transparent); color: var(--muted); }
 .badge--current { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
 .badge--old-report, .badge--time-unknown { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
 .badge--stale, .badge--unavailable { background: color-mix(in srgb, var(--bad) 15%, transparent); color: var(--bad); }
-.badge--ai { background: color-mix(in srgb, var(--accent) 13%, transparent); color: var(--accent); margin-left: 0.5em; }
+.badge--ai { background: color-mix(in srgb, var(--accent) 13%, transparent); color: var(--accent); }
 
+/* Measured values. Tight tracking only at display sizes; small numbers keep normal
+   spacing so digits like "33.2" don't touch. Inch and degree marks are raised to
+   the cap line; other units (mph) sit on the baseline after a space. */
 .metric { display: inline-flex; flex-direction: column; line-height: 1; }
-.metric__value { font-weight: 750; letter-spacing: -1px; color: var(--accent); }
-.metric__value--zero { color: var(--muted); opacity: 1; }
-.metric__unit { font-weight: 600; font-size: 0.6em; margin-left: 0.15em; opacity: 0.8; }
-/* At 60% size, raise the inch mark by the missing 40% of the number's cap height. */
-.metric__unit--in { vertical-align: calc(2cap / 3); }
+.metric__value { font-weight: 750; color: var(--accent); white-space: nowrap; }
+.metric--xl .metric__value, .metric--lg .metric__value { letter-spacing: -0.02em; }
+.metric__value--zero { color: var(--muted); }
+.metric__unit { font-weight: 600; font-size: 0.6em; opacity: 0.8; }
+/* At 60% size, raise the mark by the missing 40% of the number's cap height. */
+.metric__unit--mark { vertical-align: calc(2cap / 3); margin-left: 0.08em; }
 .metric__missing { color: var(--warn); font-style: italic; font-size: 0.55em; font-weight: 500; }
 .metric__na { color: var(--muted); font-size: 0.55em; font-weight: 500; }
-.metric--sm .metric__missing, .metric--md .metric__missing, .metric--sm .metric__na, .metric--md .metric__na { font-size: 0.8em; }
-.metric__label { font-size: 0.35em; color: var(--muted); margin-top: 6px; }
-.metric--xl { font-size: 3.6em; }
-.metric--lg { font-size: 2.4em; }
-.metric--md { font-size: 1.35em; }
-.metric--sm { font-size: 1em; }
+.metric--sm .metric__missing, .metric--md .metric__missing, .metric--sm .metric__na, .metric--md .metric__na { font-size: 0.75em; }
+.metric--xl { font-size: 44px; }
+.metric--lg { font-size: 28px; }
+.metric--md { font-size: 24px; }
+.metric--sm { font-size: var(--fs-body); }
 
-.source-line { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--muted); font-size: 12px; line-height: 1.5; border-top: 1px solid var(--line); padding-top: 0.7em; }
-.source-line strong { color: var(--text); font-weight: 600; }
-.source-line__error { color: var(--bad); }
-.source-line__attr { margin-left: auto; }
-
-.dot { display: inline-block; width: 0.7em; height: 0.7em; border-radius: 50%; flex: none; background: var(--muted); }
+.dot { display: inline-block; width: 0.6em; height: 0.6em; border-radius: 50%; flex: none; background: var(--muted); vertical-align: 0.05em; }
 .dot--open { background: var(--ok); }
 .dot--closed { background: var(--muted); }
 .dot--hold { background: var(--hold); }
 .dot--scheduled { background: var(--warn); }
 
-.unavailable { background: color-mix(in srgb, var(--bad) 6%, transparent); border: 1px dashed var(--bad); border-radius: 8px; padding: 2em; }
-.unavailable h2 { color: var(--bad); font-size: 22px; margin-bottom: 0.4em; }
+/* Notices (resort alerts and road notices): a severity rule, title, text, meta. */
+.notices { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.notice { border-left: 3px solid var(--line); padding: 2px 0 2px 14px; }
+.notice > strong { display: block; }
+.notice > p { margin-top: 2px; color: var(--muted); }
+.notice--warning { border-color: var(--warn); }
+.notice--critical { border-color: var(--bad); }
+.notice__meta { display: block; margin-top: 4px; font-size: var(--fs-caption); color: var(--muted); }
 
-/* ---- regional snowfall ---- */
-/* The table box reaches 16px into the page gutters (like the teaser panel), so row tints,
-   dividers and hover highlights all share one width without any painted extensions.
-   First/last-cell padding cancels the bleed, keeping text on the page's aligned edge. */
-.snow-table { width: calc(100% + 32px); margin-inline: -16px; border-collapse: collapse; font-size: 14px; }
+/* Each page ends with its sources: freshness, source time, last check, attribution. */
+.source-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--fs-caption); line-height: 1.5; }
+.source-line strong { color: var(--text); font-weight: 600; }
+.source-line__error { color: var(--bad); }
+.source-line__attr { margin-left: auto; }
+.source-lines { display: flex; flex-direction: column; gap: 10px; }
+.source-lines .source-line + .source-line { border-top: 0; padding-top: 0; }
+
+.unavailable { background: color-mix(in srgb, var(--bad) 6%, transparent); border: 1px dashed var(--bad); border-radius: 8px; padding: 24px; }
+.unavailable h2 { color: var(--bad); margin-bottom: 8px; }
+
+/* Code-drawn charts: drawn at the measured width, so these sizes are real pixels. */
+.chart { width: 100%; min-width: 0; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart__bar { fill: var(--accent); }
+.chart__grid { stroke: var(--line); stroke-width: 1; }
+.chart__axis { stroke: var(--muted); stroke-width: 1; }
+.chart__label { fill: var(--muted); font-size: 12px; }
+.chart__value { fill: var(--text); font-size: 12px; font-weight: 700; }
+.snow-level__line { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
+/* Dashed so it stays readable where the two canyons' snow levels coincide. */
+.snow-level__line--bcc { stroke-dasharray: 7 5; }
+.snow-level__line--lcc, .snow-level__key--lcc::before { stroke: var(--accent); background: var(--accent); }
+.snow-level__line--bcc, .snow-level__key--bcc::before { stroke: var(--hold); background: var(--hold); }
+.snow-level__legend { display: inline-flex; gap: 12px; }
+.snow-level__key::before { content: ""; display: inline-block; width: 14px; height: 3px; margin-right: 5px; vertical-align: middle; }
+
+/* ---- Snowfall (regional) ---- */
+/* The table box reaches into the page gutters (like the teaser panel), so row tints,
+   dividers and hover highlights share one width; first/last-cell padding keeps the
+   text on the page's aligned edge. */
+.snow-table { width: calc(100% + 2 * var(--bleed)); margin: 0 calc(-1 * var(--bleed)); border-collapse: collapse; font-size: var(--fs-meta); }
 .snow-table th, .snow-table td { text-align: left; padding: 18px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
-.snow-table th:first-child, .snow-table td:first-child { padding-left: 16px; }
-.snow-table th:last-child, .snow-table td:last-child { padding-right: 16px; }
-.snow-table thead th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+.snow-table :is(th, td):first-child { padding-left: var(--bleed); }
+.snow-table :is(th, td):last-child { padding-right: var(--bleed); }
+.snow-table thead th { padding-block: 12px; color: var(--muted); font-weight: 650; font-size: var(--fs-label); text-transform: uppercase; letter-spacing: 0.06em; }
 .snow-table .row--primary { position: relative; isolation: isolate; transition: background-color 150ms ease; }
-.snow-table .row--primary th[scope="row"] .resort-name { font: 700 20px/1.25 var(--font); letter-spacing: -0.4px; margin-bottom: 6px; }
+.snow-table .row--primary > th .badge { margin-right: 6px; }
+.resort-name { font: 700 var(--fs-title)/1.25 var(--font); letter-spacing: -0.015em; margin-bottom: 6px; }
 .resort-name__link { color: inherit; text-decoration: none; }
 /* Stretch the native link across its table row, keeping one keyboard stop per resort. */
 .resort-name__link::after { content: ""; position: absolute; inset: 0; z-index: 1; }
 .resort-name__link:focus-visible { outline: none; }
-.snow-table .row--primary:has(.resort-name__link:focus-visible) { background: rgba(124, 196, 255, 0.1); outline: 2px solid var(--accent); outline-offset: -2px; }
+.snow-table .row--primary:has(.resort-name__link:focus-visible) { background: color-mix(in srgb, var(--accent) 7%, transparent); outline: 2px solid var(--accent); outline-offset: -2px; }
 .snow-table .row--primary:has(.resort-name__link:focus-visible) .resort-name__link { color: var(--accent); }
 @media (hover: hover) {
-  .snow-table .row--primary:hover { background: rgba(124, 196, 255, 0.1); }
+  .snow-table .row--primary:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
   .snow-table .row--primary:hover .resort-name__link { color: var(--accent); }
 }
-.cell-label { color: var(--muted); max-width: 17ch; line-height: 1.4; font-size: 11px; margin-top: 0.25em; }
-.report-time { font-size: 12px; }
-.legend { color: var(--muted); font-size: 12px; margin: 0; }
-.legend .metric__missing, .legend .metric__na { font-size: 1em; }
 .snow-table .metric--xl { font-size: 32px; }
+.cell-label { color: var(--muted); max-width: 17ch; line-height: 1.35; font-size: var(--fs-label); margin-top: 6px; }
+.report-time { font-size: var(--fs-caption); }
+.report-time__checked { color: var(--muted); font-size: var(--fs-label); }
+.report-time__failed { color: var(--bad); font-size: var(--fs-label); }
+.legend { color: var(--muted); font-size: var(--fs-caption); margin-top: calc(16px - var(--page-gap)); }
+.legend .metric__missing, .legend .metric__na { font-size: 1em; }
 
-/* Daily Snow teaser: a highlighted panel that reaches into the gutters while its
-   text keeps the page's aligned edge; on phones it becomes a full-width band. */
-.regional-briefing { display: grid; }
-.dailysnow-teaser { margin-inline: -16px; padding: 24px 16px; border-radius: 8px; background: var(--panel); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 28px; color: var(--text); text-decoration: none; }
-.dailysnow-teaser__title { font: 700 clamp(23px, 2.6vw, 30px)/1.2 var(--font); letter-spacing: -0.7px; grid-column: 1 / -1; max-width: 33ch; }
-.dailysnow-teaser__summary { grid-column: 1; max-width: 75ch; font-size: 16px; line-height: 1.6; }
-.dailysnow-teaser__time { grid-column: 2; grid-row: 1; text-align: right; font-size: 12px; }
-.dailysnow-teaser__more { grid-column: 2; grid-row: 3; text-align: right; align-self: end; color: var(--accent); font-weight: 600; font-size: 14px; }
-.recommendation__heading { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5em 1.5em; flex-wrap: wrap; }
-.recommendation__eyebrow { grid-column: 1; color: var(--accent); font-weight: 700; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
-.recommendation__plan { font-weight: 600; }
-
-/* Recommendation belongs to the resort's row, immediately after its measured data. */
-.snow-table .recommendation-row > td { padding: 16px 16px 20px; }
-.recommendation-row__body { width: min(100%, calc(100vw - 40px)); font-size: 14px; line-height: 1.5; }
-.recommendation-row__body > strong { font-size: 16px; }
-.recommendation-row__body p { margin: 6px 0; }
+/* AI pick: an accent line spanning its data row and reasoning row, in the bleed.
+   The pseudo lives on the cells: on the <tr> itself Chromium wraps it in an
+   anonymous table cell and shifts the row. */
+.snow-table .recommendation-row > td { padding: 0 var(--bleed) 20px; }
+.recommendation-row__body { max-width: 75ch; font-size: var(--fs-meta); line-height: 1.55; }
+.recommendation-row__body > strong { font-size: var(--fs-body); }
+.recommendation-row__body p { margin-top: 6px; }
 .recommendation-row__caveats { color: var(--warn); }
-.recommendation-row__meta { color: var(--muted); font-size: 11px; margin-top: 10px; overflow-wrap: anywhere; }
-
-/* The AI pick is marked by an accent line spanning its data row and reasoning, 12px left of the text.
-   The pseudo lives on the cells: on the <tr> itself Chromium wraps it in an anonymous table cell and shifts the row. */
-.snow-table .row--recommended { background: none; }
+.recommendation-row__meta { color: var(--muted); font-size: var(--fs-label); margin-top: 10px; overflow-wrap: anywhere; }
 .snow-table .row--recommended > th:first-child,
 .snow-table .recommendation-row > td { position: relative; }
+.snow-table .row--recommended > th:first-child { border-bottom-color: transparent; }
 .snow-table .row--recommended > th:first-child::before,
-.snow-table .recommendation-row > td::before {
-  content: ""; position: absolute; left: 4px; top: 0; bottom: 0; width: 3px; border-radius: 2px; background: var(--accent);
-}
+.snow-table .recommendation-row > td::before { content: ""; position: absolute; left: 4px; top: 0; bottom: 0; width: 3px; background: var(--accent); }
 .snow-table .row--recommended > th:first-child::before { bottom: -1px; border-radius: 2px 2px 0 0; }
 .snow-table .recommendation-row > td::before { border-radius: 0 0 2px 2px; }
+.snow-table .row--recommended > :is(th, td) { border-bottom-color: transparent; }
 
-/* ---- resort pages ---- */
-.rcam { margin: 0; min-height: 0; flex: 1; display: flex; flex-direction: column; gap: 0.3em; }
-.rcam__frame { flex: 1; min-height: 0; position: relative; background: #0b0f14; border-radius: 0.5em; overflow: hidden; }
-.rcam__frame img, .rcam__frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; border: 0; }
-.rcam figcaption { font-size: 0.85em; }
-.obs-table, .travel-table, .wx-table { width: 100%; border-collapse: collapse; }
-.obs-table { font-size: 0.92em; }
-.obs-table th, .obs-table td { text-align: left; padding: 0.35em 0.4em; border-bottom: 1px solid var(--line); }
-.obs-table thead th { color: var(--muted); font-weight: 600; font-size: 0.85em; }
-.closed-list { font-size: 0.85em; margin: 0.3em 0; color: var(--muted); }
-.notices { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.35em; }
-.notice { border-left: 0.25em solid var(--line); padding: 0.2em 0.6em; }
-.notice--warning { border-color: var(--warn); }
-.notice--critical { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 6%, transparent); }
-.notice__src { color: var(--muted); font-size: 0.8em; }
-.narrative { color: var(--muted); font-size: 0.9em; margin-top: 0.8em; white-space: pre-line; }
-
-/* ---- weather ---- */
-.weather-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; min-width: 0; }
-.weather-point { display: flex; flex-direction: column; gap: 0.6em; min-width: 0; }
-.weather-point h2 .small { display: block; font: 400 14px/1.5 var(--font); margin-top: 6px; }
-.next-storm { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3em 1em; background: var(--panel-2); border-radius: 0.6em; padding: 0.6em 0.9em; }
-.next-storm__label { color: var(--muted); width: 100%; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em; }
-.next-storm__value { font-size: 2.6em; font-weight: 800; color: var(--accent); line-height: 1; }
-/* Grid items must shrink so forecast tables scroll locally, not the whole page. */
-.weather-point .wx-table { display: block; max-width: 100%; overflow-x: auto; }
-.wx-table th, .wx-table td { padding: 0.3em 0.4em; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
-.wx-table thead th { color: var(--muted); font-weight: 600; font-size: 0.85em; }
-.wx-table tbody th { text-align: left; color: var(--muted); font-weight: 500; font-size: 0.85em; }
-.wx-table__snow td { color: var(--accent); font-weight: 800; font-size: 1.35em; }
-@media (min-width: 901px) {
-  /* Forecast tables otherwise miss the 542px desktop column by ~15px and grow a scrollbar. */
-  .weather-point .wx-table { font-size: 0.92em; }
+/* Daily Snow teaser: a highlighted summary panel reaching into the gutters while
+   its text keeps the page's aligned edge; on phones it becomes a full-width band. */
+.dailysnow-teaser { margin: 0 calc(-1 * var(--bleed)); padding: 24px var(--bleed); border-radius: 8px; background: var(--panel); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 28px; color: var(--text); text-decoration: none; }
+.dailysnow-teaser__title { font: 700 var(--fs-title)/1.25 var(--font); letter-spacing: -0.015em; grid-column: 1 / -1; margin-top: 4px; }
+.dailysnow-teaser__summary { grid-column: 1; max-width: 72ch; line-height: 1.6; }
+.dailysnow-teaser__time { grid-column: 2; grid-row: 1; text-align: right; font-size: var(--fs-caption); color: var(--muted); }
+.dailysnow-teaser__more { grid-column: 2; grid-row: 3; align-self: end; text-align: right; color: var(--accent); font-weight: 650; font-size: var(--fs-meta); }
+@media (hover: hover) {
+  .dailysnow-teaser:hover .dailysnow-teaser__title { color: var(--accent); }
 }
-.snow-bars-wrap { min-width: 0; max-width: 100%; overflow-x: auto; }
-.snow-bars { width: 100%; min-width: 720px; height: auto; display: block; }
-.snow-bars__bar { fill: var(--accent); }
-.snow-bars__grid { stroke: var(--line); stroke-width: 1; }
-.snow-bars__axis { stroke: var(--muted); stroke-width: 1; }
-.snow-bars__day { fill: var(--muted); font-size: 18px; }
-.snow-bars__val { fill: var(--text); font-size: 16px; font-weight: 700; }
-.periods { margin: 0; display: grid; gap: 0.4em; font-size: 0.85em; }
+
+/* ---- Daily Snow (AI post) ---- */
+.dailysnow { max-width: 720px; width: 100%; margin: 0 auto; font-size: var(--fs-prose); }
+.dailysnow__header { display: flex; flex-direction: column; gap: 16px; }
+.dailysnow__meta { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 24px; flex-wrap: wrap; }
+.dailysnow__posted { color: var(--muted); font-size: var(--fs-caption); }
+.dailysnow__warn { color: var(--warn); }
+.dailysnow__title { margin-top: 4px; }
+.dailysnow__summary { font-size: 19px; line-height: 1.5; font-weight: 500; color: var(--text); }
+.dailysnow__article { margin-top: 8px; }
+.dailysnow__section h2 { margin: 40px 0 0; }
+.dailysnow__section p { margin: 14px 0 0; line-height: 1.7; }
+.dailysnow-figure { margin: 28px 0; }
+.dailysnow-figure--chart { padding: 16px; border-radius: 8px; background: var(--panel); }
+.dailysnow-figure img, .dailysnow-figure .plume__svg { display: block; width: 100%; height: auto; }
+/* Posts written before plume axes were stored show the bare crop: give it the same white margin. */
+.dailysnow-figure--plume img { padding: 2%; background: #fff; }
+.dailysnow-figure figcaption { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 10px; color: var(--muted); font-size: var(--fs-caption); line-height: 1.5; }
+.dailysnow-totals { width: 100%; border-collapse: collapse; font-size: var(--fs-meta); }
+.dailysnow-totals th, .dailysnow-totals td { text-align: left; padding: 5px 8px 5px 0; }
+.dailysnow-totals thead th { color: var(--muted); font-weight: 650; font-size: var(--fs-label); text-transform: uppercase; letter-spacing: 0.06em; }
+.dailysnow-totals tbody th { font-weight: 650; }
+.dailysnow-totals td { width: 26%; }
+.dailysnow-totals__cell { position: relative; display: block; padding-left: 6px; }
+.dailysnow-totals__bar { position: absolute; left: 0; top: 1px; bottom: 1px; background: color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 3px; }
+.dailysnow-totals__cell > span:last-child { position: relative; font-weight: 700; }
+.dailysnow__footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--fs-caption); line-height: 1.6; }
+.dailysnow__nav { display: flex; justify-content: space-between; gap: 8px 24px; margin-top: 8px; flex-wrap: wrap; }
+.dailysnow__nav button, .dailysnow__back { background: transparent; border: 0; padding: 12px 0; color: var(--accent); cursor: pointer; text-align: left; font-size: var(--fs-meta); font-weight: 650; }
+.dailysnow__nav button:hover, .dailysnow__back:hover { text-decoration: underline; }
+
+/* ---- Weather ---- */
+.weather-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px 40px; }
+.weather-point { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.weather-point__grid { margin-top: 4px; font-size: var(--fs-caption); color: var(--muted); }
+.next-storm { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; padding: 16px; border-radius: 8px; background: var(--panel); font-size: var(--fs-meta); }
+.next-storm .eyebrow { width: 100%; }
+.next-storm__value { font-size: 36px; font-weight: 750; letter-spacing: -0.02em; color: var(--accent); line-height: 1; }
+/* Forecast tables scroll locally on phones rather than widening the page. */
+.table-scroll { max-width: 100%; overflow-x: auto; }
+.wx-table { width: 100%; border-collapse: collapse; font-size: var(--fs-meta); }
+.wx-table th, .wx-table td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+.wx-table thead th { color: var(--muted); font-weight: 650; font-size: var(--fs-caption); }
+.wx-table tbody th { padding-left: 0; text-align: left; color: var(--muted); font-weight: 500; font-size: var(--fs-caption); }
+.wx-table__snow td { color: var(--accent); font-weight: 750; font-size: var(--fs-title); }
+.weather-point__chart { margin: 0; }
+.weather-point__chart figcaption { margin-bottom: 4px; font-size: var(--fs-caption); color: var(--muted); }
+.periods { margin: 0; display: grid; gap: 8px; font-size: var(--fs-meta); }
 .periods dt { font-weight: 700; display: inline; }
 .periods dd { margin: 0; display: inline; color: var(--muted); }
 .periods dt::after { content: " — "; }
 
-/* ---- plumes ---- */
-.plume-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(2, minmax(0, 1fr)); grid-auto-flow: column; gap: 0.8em 1.4em; }
+/* ---- Plumes ---- */
+.plume-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto auto; grid-auto-flow: column; gap: 28px 24px; }
 .plume--full { grid-row: span 2; }
-.plume { margin: 0; min-height: 0; display: flex; flex-direction: column; gap: 0.3em; }
-.plume__title { font-size: 1.05em; font-weight: 700; text-align: center; }
-.plume__note { color: var(--muted); font-size: 0.85em; margin: 0.4em 0 0; }
-.plume__svg { flex: 1; min-height: 0; width: 100%; height: auto; border-radius: 0.4em; }
-.plume--full img { flex: 1; min-height: 0; width: 100%; object-fit: contain; background: #fff; border-radius: 0.4em; }
+.plume { margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.plume__title { font: 650 var(--fs-h3)/1.3 var(--font); text-align: center; }
+.plume__svg { display: block; width: 100%; height: auto; border-radius: 6px; }
+.plume--full img { width: 100%; height: auto; object-fit: contain; background: #fff; border-radius: 6px; }
 .plume__midnight { stroke: #3b4a5c; stroke-width: 1.5; stroke-dasharray: 6 5; opacity: 0.55; }
 .plume__tick { stroke: #000; stroke-width: 2; }
 .plume__day { font: 600 22px system-ui, sans-serif; fill: #111; text-anchor: middle; }
@@ -247,55 +307,30 @@ a { color: var(--accent); }
 .plume__now { stroke: #e8590c; stroke-width: 3; }
 .plume__nowlabel { font: 700 20px system-ui, sans-serif; fill: #e8590c; text-anchor: middle; }
 
-/* ---- traffic ---- */
-.traffic-grid { flex: 1; min-height: 0; display: grid; grid-template-rows: auto; gap: 36px; }
-.canyon { display: grid; grid-template-columns: 1.25fr 1fr; gap: 1.2em; }
-.canyon__info { min-height: 0; overflow: visible; display: flex; flex-direction: column; gap: 0.5em; }
-.canyon__info h2 { margin-bottom: 0.1em; }
-.canyon__cam { min-height: 0; display: flex; }
-.travel-table th, .travel-table td { text-align: left; padding: 0.15em 0.5em; border-bottom: 1px solid var(--line); font-size: 0.92em; }
-.travel-table thead th { color: var(--muted); font-weight: 600; }
-.travel__now { font-weight: 800; color: var(--accent); }
+/* ---- Roads ---- */
+.roads { display: flex; flex-direction: column; gap: 48px; }
+.canyon { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px 32px; align-items: start; }
+.canyon__info { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.travel__warning { color: var(--warn); font-size: var(--fs-caption); line-height: 1.5; margin-bottom: 8px; }
+.travel-table { width: 100%; border-collapse: collapse; font-size: var(--fs-meta); }
+.travel-table th, .travel-table td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: baseline; }
+.travel-table :is(th, td):first-child { padding-left: 0; }
+.travel-table :is(th, td):last-child { padding-right: 0; text-align: right; }
+.travel-table td { white-space: nowrap; }
+.travel-table thead th { color: var(--muted); font-weight: 650; font-size: var(--fs-label); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+.travel-table tbody th { font-weight: 600; }
+.travel__dir { color: var(--muted); font-weight: 400; font-size: var(--fs-caption); }
+.travel__now { font-weight: 750; color: var(--accent); }
 .travel--stale .travel__now { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 50%, transparent); }
-.travel__warning { color: var(--warn); margin: 0 0 0.3em; font-size: 0.9em; }
-.cam { margin: 0; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 0.3em; }
-.cam img { flex: 1; min-height: 0; width: 100%; object-fit: contain; background: #000; border-radius: 0.4em; }
-.cam figcaption { font-size: 0.82em; color: var(--muted); }
+.cam { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.cam img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: contain; background: #000; border-radius: 6px; }
+.cam figcaption { font-size: var(--fs-caption); color: var(--muted); line-height: 1.5; }
 .cam figcaption strong { color: var(--text); }
-.cam__missing { flex: 1; display: grid; place-items: center; border: 1px dashed var(--line); border-radius: 0.4em; color: var(--muted); }
-.traffic-footer p { margin: 0; }
-
-/* ---- data banners: inline under the navbar ---- */
-.banner { max-width: 1116px; margin: 12px auto 0; border-radius: 8px; padding: 8px 14px; font-size: 14px; border: 1px solid; }
-.banner--offline, .banner--required-missing { background: var(--panel); color: var(--bad); border-color: var(--line); }
-
-/* ---- Daily Snow (AI post) ---- */
-.dailysnow { max-width: 740px; width: 100%; margin: 0 auto; font-size: 17px; }
-.dailysnow__warn { color: var(--warn); }
-.dailysnow__summary { font-size: 1.15em; }
-.dailysnow__section h2 { font: 700 22px/1.2 var(--font); letter-spacing: -0.5px; color: var(--text); margin: 32px 0 0.3em; }
-.dailysnow__section p { margin: 14px 0; line-height: 1.75; }
-.dailysnow-figure { margin: 24px 0; background: var(--panel); border: 0; border-radius: 8px; padding: 16px; }
-.dailysnow-figure img { display: block; width: 100%; height: auto; border-radius: 4px; }
-.dailysnow-figure .plume__svg { display: block; height: auto; min-height: 0; }
-.dailysnow-figure--plume img { background: #fff; padding: 2%; box-sizing: border-box; }
-.dailysnow-figure figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; display: flex; gap: 1em; flex-wrap: wrap; }
-.dailysnow-level__line { fill: none; stroke-width: 4; }
-/* Dashed so it stays readable where the two canyons' snow levels coincide. */
-.dailysnow-level__line--bcc { stroke-dasharray: 10 8; }
-.dailysnow-level__line--lcc, .dailysnow-level__key--lcc::before { stroke: var(--accent); background: var(--accent); }
-.dailysnow-level__line--bcc, .dailysnow-level__key--bcc::before { stroke: var(--hold); background: var(--hold); }
-.dailysnow-level__legend { display: inline-flex; gap: 0.8em; }
-.dailysnow-level__key::before { content: ""; display: inline-block; width: 1em; height: 0.25em; margin-right: 0.3em; vertical-align: middle; }
-.dailysnow-totals { width: 100%; border-collapse: collapse; }
-.dailysnow-totals th, .dailysnow-totals td { text-align: left; padding: 0.25em 0.5em; }
-.dailysnow-totals__cell { position: relative; display: block; padding-left: 0.3em; }
-.dailysnow-totals__bar { position: absolute; left: 0; top: 0.1em; bottom: 0.1em; background: color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 0.2em; }
-.dailysnow-totals__cell > span:last-child { position: relative; font-weight: 700; }
-.dailysnow__footer { margin-top: 1.2em; }
-.dailysnow__nav { display: flex; justify-content: space-between; gap: 1em; margin-top: 0.8em; flex-wrap: wrap; }
-.dailysnow__nav button, .dailysnow__back { background: transparent; border: 0; padding: 12px 0; border-radius: 0; color: var(--accent); cursor: pointer; text-align: left; font-weight: 600; }
-.dailysnow__nav button:hover, .dailysnow__back:hover { text-decoration: underline; }
+.cam__time { font-size: var(--fs-label); }
+.cam__missing { display: grid; place-items: center; aspect-ratio: 16 / 10; border: 1px dashed var(--line); border-radius: 6px; color: var(--muted); font-size: var(--fs-meta); }
+.parking ul { list-style: none; padding: 0; margin: 16px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 32px; font-size: var(--fs-meta); }
+.parking li { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.parking li strong { font-weight: 650; text-align: right; }
 
 @media (prefers-reduced-motion: reduce) {
   .snow-table .row--primary { transition: none; }
@@ -303,41 +338,42 @@ a { color: var(--accent); }
 
 /* ---- narrow screens (phones and small tablets) ---- */
 @media (max-width: 900px) {
-  .editorial-nav { padding: 16px 20px 0; }
+  .editorial-nav { padding-top: 16px; }
   .editorial-nav__masthead { padding-bottom: 14px; }
   .editorial-nav__brand { font-size: 23px; }
   .editorial-nav__brand span { display: block; font-size: 15px; margin-top: 3px; letter-spacing: -0.4px; }
   .editorial-nav nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 8px; }
-  .editorial-nav nav > a, .editorial-nav summary { min-height: 44px; font-size: 15px; padding: 8px; }
-  .editorial-page { padding: 28px 20px 40px; }
-  .editorial-footer { margin-inline: 20px; padding-inline: 0; }
-  .slide { gap: 24px; }
-  .plume-grid, .canyon { grid-template-columns: 1fr; }
+  .editorial-nav nav > a, .editorial-nav summary { font-size: 15px; padding: 8px; }
+  .editorial-page { padding-top: 28px; padding-bottom: 40px; }
+
+  .weather-grid, .plume-grid, .canyon, .parking ul { grid-template-columns: minmax(0, 1fr); }
   .plume-grid { grid-template-rows: none; grid-auto-flow: row; }
   .plume--full { grid-row: auto; }
-  .weather-grid { grid-template-columns: minmax(0, 1fr); }
-  .traffic-grid { grid-template-rows: none; }
-  body { overflow-x: hidden; }
-  .slide__meta { font-size: 16px; gap: 0.4em 1em; }
-  .obs-table, .travel-table { display: block; overflow-x: auto; }
-  /* The snowfall table becomes full-width stacked resort blocks — no horizontal scrolling. */
-  .snow-table { display: block; width: calc(100% + 40px); margin-inline: -20px; }
+
+  /* Snowfall table → full-width stacked resort blocks: name and chips on one line,
+     then a three-column metric grid, then the report time. No horizontal scrolling. */
+  .snow-table, .snow-table tbody, .snow-table tbody tr { display: block; }
   .snow-table thead { display: none; }
-  .snow-table tbody { display: block; }
-  .snow-table tbody tr { display: block; }
-  .snow-table .row--primary { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; padding: 18px 20px 14px; border-bottom: 1px solid var(--line); }
-  .snow-table tbody tr.row--primary :is(th, td) { border: 0; padding: 0; text-align: left; }
-  .snow-table .row--primary > th { grid-column: 1 / -1; }
-  .snow-table .metric--xl { font-size: 24px; }
+  .snow-table .row--primary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 12px; padding: 20px var(--bleed); border-bottom: 1px solid var(--line); }
+  .snow-table tbody tr.row--primary > :is(th, td) { border: 0; padding: 0; }
+  .snow-table .row--primary > th { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+  .snow-table .row--primary > th .resort-name { margin: 0 4px 0 0; }
+  .snow-table .row--primary > th .badge { margin: 0; }
+  .snow-table .metric--xl { font-size: 26px; }
+  .snow-table .report-time { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+  .snow-table .row--recommended { border-bottom: 0; }
   .snow-table .recommendation-row { position: relative; border-bottom: 1px solid var(--line); }
-  .snow-table .recommendation-row > td { display: block; padding: 0 20px 16px; }
-  /* In block layout the line can hang off the row box directly, 12px left of the text. */
+  .snow-table .recommendation-row > td { display: block; padding: 0 var(--bleed) 20px; }
+  /* In block layout the accent line hangs off the row boxes directly. */
   .snow-table .row--recommended > th:first-child::before,
   .snow-table .recommendation-row > td::before { content: none; }
-  .snow-table .row--recommended::before { content: ""; position: absolute; left: 8px; top: 0; bottom: -1px; width: 3px; border-radius: 2px 2px 0 0; background: var(--accent); }
-  .snow-table .recommendation-row::before { content: ""; position: absolute; left: 8px; top: 0; bottom: 0; width: 3px; border-radius: 0 0 2px 2px; background: var(--accent); }
-  .plume__svg, .plume--full img { min-height: 40vh; }
-  /* Full-width teaser band: no gutters, no radius; the text keeps the page's aligned edge. */
-  .dailysnow-teaser { margin-inline: -20px; padding: 24px 20px; border-radius: 0; grid-template-columns: minmax(0, 1fr); }
+  .snow-table .row--recommended::before, .snow-table .recommendation-row::before { content: ""; position: absolute; left: 8px; top: 0; bottom: 0; width: 3px; background: var(--accent); }
+  .snow-table .row--recommended::before { border-radius: 2px 2px 0 0; }
+  .snow-table .recommendation-row::before { border-radius: 0 0 2px 2px; }
+
+  .dailysnow-teaser { border-radius: 0; grid-template-columns: minmax(0, 1fr); }
   .dailysnow-teaser__time, .dailysnow-teaser__summary, .dailysnow-teaser__more { grid-column: 1; grid-row: auto; text-align: left; }
+
+  .dailysnow__summary { font-size: 18px; }
+  .dailysnow-figure--chart { padding: 12px; }
 }

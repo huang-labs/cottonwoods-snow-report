@@ -27,7 +27,7 @@ function SnowMetric({
   );
 }
 
-/** Browse report: normal document flow, independent of the TV's viewport budget. */
+/** One resort's report page: header, snowfall, weather, narrative, lifts and terrain, webcams. */
 export function ResortReportPage({
   source,
   now,
@@ -86,7 +86,7 @@ export function ResortReportPage({
     <article className="resort-report" aria-label={`${r.resort} resort report`}>
       <header className="resort-report__header">
         <div>
-          <p className="resort-report__eyebrow">Mountain report</p>
+          <p className="eyebrow">Mountain report</p>
           <h1>{r.resort}</h1>
           <p className="resort-report__time">
             {r.reportTimeLabel}:{" "}
@@ -96,7 +96,7 @@ export function ResortReportPage({
         <div className="resort-report__state">
           <FreshnessBadge freshness={source.freshness} />
           {r.operatingStatus && (
-            <span className="pill">{r.operatingStatus}</span>
+            <span>{r.operatingStatus}</span>
           )}
           {r.liftsOpen !== null && r.liftsTotal !== null && (
             <span>
@@ -116,7 +116,7 @@ export function ResortReportPage({
               <strong>{notice.title}</strong>
               <p>{notice.text}</p>
               {notice.updatedAt && (
-                <span className="muted small">
+                <span className="notice__meta">
                   Updated {formatDenver(notice.updatedAt, now)}
                 </span>
               )}
@@ -168,7 +168,7 @@ export function ResortReportPage({
       </section>
 
       <section
-        className="panel resort-weather"
+        className="resort-weather"
         aria-labelledby="resort-weather-heading"
       >
         <div className="resort-section-heading">
@@ -186,7 +186,7 @@ export function ResortReportPage({
               <div key={observation.location} className="resort-observation">
                 <div className="resort-observation__heading">
                   <h3>{observation.location}</h3>
-                  <span className="muted small">
+                  <span className="resort-observation__time">
                     Observed {formatDenver(observation.observedAt, now)}
                   </span>
                 </div>
@@ -223,7 +223,7 @@ export function ResortReportPage({
 
       {r.narrative && (
         <section
-          className="panel resort-narrative"
+          className="resort-narrative"
           aria-labelledby="resort-narrative-heading"
         >
           <div className="resort-section-heading">
@@ -252,7 +252,7 @@ export function ResortReportPage({
       )}
 
       <section
-        className="panel resort-operations"
+        className="resort-operations"
         aria-labelledby="resort-lifts-heading"
       >
         <div className="resort-section-heading">
@@ -277,20 +277,20 @@ export function ResortReportPage({
         ) : r.lifts.length === 0 ? (
           <p className="muted">No individual lifts listed in this report.</p>
         ) : (
-          <ul className="resort-lifts">
+          <ul className="status-list">
             {byStatus(r.lifts).map((lift) => (
               <li
                 key={lift.name}
-                className={`resort-lift resort-lift--${lift.status}`}
+                className={`status-item status-item--${lift.status}`}
               >
-                <div className="resort-lift__heading">
+                <div className="status-item__row">
                   <strong>{lift.name}</strong>
                   <span>
                     <StatusDot status={lift.status} /> {lift.rawStatus}
                   </span>
                 </div>
-                {lift.hours && <p className="muted">{lift.hours}</p>}
-                {lift.note && <p className="resort-lift__note">{lift.note}</p>}
+                {lift.hours && <p className="status-item__meta">{lift.hours}</p>}
+                {lift.note && <p className="status-item__note">{lift.note}</p>}
               </li>
             ))}
           </ul>
@@ -303,17 +303,20 @@ export function ResortReportPage({
         ) : r.terrain.length === 0 ? (
           <p className="muted">No named terrain listed in this report.</p>
         ) : (
-          <ul className="resort-terrain">
+          <ul className="status-list">
             {byStatus(r.terrain).map((terrain) => (
-              <li key={`${terrain.kind}-${terrain.name}`}>
-                <div>
+              <li
+                key={`${terrain.kind}-${terrain.name}`}
+                className={`status-item status-item--${terrain.status}`}
+              >
+                <div className="status-item__row">
                   <strong>{terrain.name}</strong>
-                  <span className="muted small">{terrain.kind}</span>
+                  <span>
+                    <StatusDot status={terrain.status} /> {terrain.rawStatus}
+                  </span>
                 </div>
-                <span>
-                  <StatusDot status={terrain.status} /> {terrain.rawStatus}
-                </span>
-                {terrain.note && <p className="muted">{terrain.note}</p>}
+                <p className="status-item__meta">{terrain.kind}</p>
+                {terrain.note && <p className="status-item__note">{terrain.note}</p>}
               </li>
             ))}
           </ul>
