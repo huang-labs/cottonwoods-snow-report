@@ -17,6 +17,14 @@ These supersede the brief where they differ.
 - **Resort webcams** on each resort slide (below).
 - **Per-source collection intervals** (2026-11-01): slow sources skip cron runs. NWS and travel times are collected every 15 min and plumes every 30 min; everything else every 5 min. Cost is unchanged (usage is a few percent of Workers Paid included limits); this saves about 80 upstream requests an hour, roughly 22% of the collector's requests, mostly to weather.utah.edu and api.weather.gov.
 
+## All resort webcams on the resort pages (2026-11-02)
+
+Each resort page's Webcams section used to show only two curated cameras per resort (the featured lift-line/snow-stake picks). The collector already discovered every camera on each resort's own page, so it now keeps all of them except a small exclusion list: featured cameras first, then the rest in page order (Alta 7, Snowbird 6, Solitude 9, Brighton 5 as of 2026-11). Featured leads per the owner: Solitude's Snowstake and Brighton's Parking Lot come first — the parking lot answers "how busy is it" before the lift line; Snowbird's Hidden Peak 360 is excluded as a 360° panorama with no snow information. Costs per run: about five more image probes, and oEmbed lookups for YouTube IDs not yet cached — including failed lookups, which are cached too, so a private stream costs one call ever. Embeds with no public oEmbed title show "video unavailable" in their players, so they are dropped instead of listed. The section's styles were unchanged (the existing grid takes any count; phones collapse to one column). Snowbird's Hidden Peak camera turned out to be a `backend.roundshot.com` image, now covered by a fixture route.
+
+## Resort page headings (2026-11-02)
+
+"Lifts & terrain" is now just **Lifts**, and **Named terrain & gates** was promoted from an h3 sub-heading to an equal h2 section heading (same `resort-section-heading` treatment as every other resort section). They stay in one `resort-operations` section; the jump nav gained a "Terrain" anchor for the new heading.
+
 ## Concurrent snapshot writes (2026-11-02)
 
 The snapshot is a read-modify-write cycle on one KV key, and two runs can overlap: a manual `POST /api/admin/collect` during a cron run, or a cron whose model calls (up to 2 × 5 min for the Daily Snow) span the next triggers. Because KV has no compare-and-swap, the second writer used to store the snapshot it had read at its own start, silently reverting the first writer's fresh records (and AI state) wholesale.
@@ -72,16 +80,16 @@ Cost: about 90–130 ms CPU per station in Node, once per new model run. Same-ru
 
 ### Resort webcams (`resortcams` source, optional)
 
-Discovered from each resort's own page on every run. Each resort is isolated: on failure, that resort keeps its previous cameras, and the failure is listed.
+Discovered from each resort's own page on every run. Every camera the resort publishes is collected, with the featured cameras (lift lines, snow stakes) first and the rest in page order. Each resort is isolated: on failure, that resort keeps its previous cameras, and the failure is listed.
 
-| Resort | Discovery | Cameras shown | Capture time |
+| Resort | Discovery | Featured cameras | Capture time |
 | --- | --- | --- | --- |
-| Alta | `window.Alta.weather.mountainCams` on `alta.com/weather` | Snow Stake (Collins), Albion Basin | Image `Last-Modified`. Albion Basin (prismcam) sends a Last-Modified about an hour in the future, which is rejected ("capture time not published"). Alta publishes no lift-line camera. |
-| Snowbird | Webcam cards on `snowbird.com/the-mountain/webcams/view-all-webcams/` (name + `manage.hdrelay.com/snapshot/<id>` image) | Tram Bullpen (the tram lift line), Snowstake | Image `Last-Modified`. **No Gad Zoom camera is published** on Snowbird's site (cards: Snowstake, Peruvian Gulch, Mineral Basin, Little Cloud, Tram Bullpen; plus Hidden Peak 360 pages). hdrelay returns 500 to HEAD, so the probe falls back to a ranged GET. |
-| Solitude | YouTube live embeds on the webcams page; titles from YouTube oEmbed | Moonbeam Lift Line, Apex Express and Sunrise Lift Lines | Live stream. The embedded player shows live/offline status. |
-| Brighton | YouTube live embeds on `brightonresort.com/conditions` | Milly Express, Parking Lot | Live stream. |
+| Alta | `window.Alta.weather.mountainCams` on `alta.com/weather` (7 cameras) | Snow Stake (Collins), Albion Basin; then Mount Baldy, Mount Superior, Sugarloaf Peak, East Greeley, Salt Lake Valley | Image `Last-Modified`. Albion Basin and Mount Baldy (prismcam) send a Last-Modified about an hour in the future, which is rejected ("capture time not published"). Alta publishes no lift-line camera. |
+| Snowbird | Webcam cards on `snowbird.com/the-mountain/webcams/view-all-webcams/` (name + snapshot image) (6 cameras) | Tram Bullpen (the tram lift line), Snowstake; then Peruvian Gulch, Mineral Basin, Little Cloud, Hidden Peak | Image `Last-Modified`. **No Gad Zoom camera is published** on Snowbird's site. Hidden Peak is a `backend.roundshot.com` image; the rest are `manage.hdrelay.com`, which returns 500 to HEAD, so the probe falls back to a ranged GET. Hidden Peak 360 (also roundshot) is excluded as a 360° panorama with no snow information. |
+| Solitude | YouTube live embeds on the webcams page (9 cameras) | Solitude Snowstake, Moonbeam Lift Line, Apex Express and Sunrise Lift Lines; then the other six in page order | Live stream. The embedded player shows live/offline status. |
+| Brighton | YouTube live embeds on `brightonresort.com/conditions` (5 cameras) | Parking Lot, Milly Express; then Molly Greens View, Top of Crest Lift, Explorer Lift | Live stream. |
 
-Stream titles come from oEmbed, not page layout. On Solitude's page each caption follows its player, so reading the preceding caption mislabels every stream by one. Titles are cached in the payload, so an unchanged page costs no oEmbed calls. Live-stream thumbnails were rejected: they carry no capture time, and an offline stream serves its custom promo still. Images that become unreachable are dropped. Images older than 3 h are labelled "not updating".
+Stream titles come from oEmbed, not page layout. On Solitude's page each caption follows its player, so reading the preceding caption mislabels every stream by one. Titles are cached in the payload — including failed lookups, so a private stream costs one oEmbed call ever — and an unchanged page costs no oEmbed calls. Embeds with no public oEmbed title (three on Solitude's page as of 2026-11) are dropped: their players only show "video unavailable". Live-stream thumbnails were rejected: they carry no capture time, and an offline stream serves its custom promo still. Images that become unreachable are dropped. Images older than 3 h are labelled "not updating".
 
 ### Travel-time freshness (resolved: not shown as live)
 
