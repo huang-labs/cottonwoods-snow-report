@@ -33,6 +33,8 @@ Structure:
 - summary: 2–3 sentences (at most 320 characters) covering the whole story.
 - sections: first "update" (when the post is mostly about current/recent weather) or "short-term" (when it is mostly about the next 1–3 days), then optionally "extended" for days 3–7 and beyond. Leave out "extended" when there is nothing useful to say beyond the short term. Each section has 1–6 paragraphs of 1–3 sentences.
 - figures: a paragraph may show one figure after it (figure id from the list given, or "none"). When it does, the paragraph usually ends by introducing it with a colon, e.g. "Snow levels fall steadily through tonight:". Use 2–${MAX_FIGURES} figures in the whole post, each at most once, where they support the text. You cannot see images; never describe what a photo or plume chart shows.
+- Include an accumulated-snow plume when a plume-snow-* figure is available, preferably plume-snow-cln. Introduce it neutrally as University of Utah ensemble guidance; do not imply it plots the numerical six-hour rows or read values from the image.
+- Use only ONE opening section: choose update OR short-term. Keep any next-1–3-day outlook in that same section, rather than adding the other opening section. Only extended may follow it.
 - About 250–450 words in total across sections.
 
 Rules:
@@ -165,10 +167,12 @@ export function validateDailySnow(raw: unknown, digest: DailyDigest): LlmDailySn
   for (const s of Array.isArray(o.sections) ? o.sections : []) {
     const id = (s as { id?: unknown })?.id as DailySnowSectionId;
     if (!SECTION_IDS.includes(id) || seen.has(id)) continue;
-    // "extended" may only follow the opening section; the opening is "update" or "short-term".
-    if (!sections.length ? id === "extended" : id !== "extended") continue;
+    // A second opening label is a model formatting error, not a reason to lose
+    // its forecast and figures. Fold it into the opening before any extended outlook.
+    if (!sections.length && id === "extended") continue;
+    if (sections.some((s) => s.id === "extended") && id !== "extended") continue;
     const paragraphs: DailySnowParagraph[] = [];
-    for (const p of ((s as { paragraphs?: unknown }).paragraphs as unknown[] | undefined) ?? []) {
+    for (const p of (((s as { paragraphs?: unknown }).paragraphs as unknown[] | undefined) ?? []).slice(0, 6)) {
       const text = clip((p as { text?: unknown })?.text, 600);
       if (!text) continue;
       const f = (p as { figure?: unknown }).figure;
@@ -178,7 +182,8 @@ export function validateDailySnow(raw: unknown, digest: DailyDigest): LlmDailySn
     }
     if (!paragraphs.length) continue;
     seen.add(id);
-    sections.push({ id, paragraphs: paragraphs.slice(0, 6) });
+    if (sections.length && id !== "extended") sections[0].paragraphs.push(...paragraphs);
+    else sections.push({ id, paragraphs });
   }
   if (!sections.length) throw new Error("Model output has no usable sections");
 

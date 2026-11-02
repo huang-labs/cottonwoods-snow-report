@@ -191,6 +191,22 @@ describe("validation", () => {
     expect(() => validateDailySnow(answer([], { title: "" }), d)).toThrow(/no title or summary/);
     expect(() => validateDailySnow(answer([], { sections: [] }), d)).toThrow(/sections/);
   });
+  it.each([['update', 'short-term'], ['short-term', 'update']])("preserves the outlook and plume when %s is followed by %s", (first, second) => {
+    const d = withData();
+    const raw = answer([], { sections: [
+      { id: first, paragraphs: [{ text: "Reported snowfall:", figure: "resort-totals" }] },
+      { id: second, paragraphs: [{ text: "The next system:", figure: "nws-snow-lcc" }, { text: "University of Utah ensemble guidance:", figure: "plume-snow-cln" }] },
+    ] });
+    const validated = validateDailySnow(raw, d);
+    expect(validated.sections).toEqual([{ id: first, paragraphs: [
+      { text: "Reported snowfall:", figure: "resort-totals" },
+      { text: "The next system:", figure: "nws-snow-lcc" },
+      { text: "University of Utah ensemble guidance:", figure: "plume-snow-cln" },
+    ] }]);
+    // Recovered paragraphs still undergo the same amount validation.
+    raw.sections[1].paragraphs[0].text = "Expect 999″ tomorrow.";
+    expect(() => validateDailySnow(raw, d)).toThrow(/not in the data: 999/);
+  });
   it("constrains figures to the available ids in the schema", () => {
     const d = withData();
     const input = buildModelInput(PRIMARY_MODEL, d) as { response_format: { json_schema: { schema: { properties: { sections: { items: { properties: { paragraphs: { items: { properties: { figure: { enum: string[] } } } } } } } } } } } };
@@ -246,6 +262,55 @@ describe("posting", () => {
     const post = (await readSnapshot(kv))!.dailySnow!.current!;
     expect(post.figures["plume-snow-cln"]).toBeUndefined();
     expect(post.sections[0].paragraphs.map((p) => p.figure)).toEqual([null, "nws-snow-lcc"]);
+  });
+  it("adds a frozen snow plume when the model omits it, without adding model prose or calls", async () => {
+    const kv = await seeded();
+    const { ai, calls } = fakeAi(() => answer(["resort-totals", "nws-snow-level"]));
+    await runCollection({ SNOW_KV: kv, AI: ai }, { now: SIX_AM, sources: [] });
+    const post = (await readSnapshot(kv))!.dailySnow!.current!;
+    expect(Object.keys(post.figures)).toEqual(expect.arrayContaining(["resort-totals", "nws-snow-level", "plume-snow-cln"]));
+    expect(post.sections[0].paragraphs.map((p) => p.figure)).toEqual(["resort-totals", "nws-snow-level"]);
+    expect(post.figures["plume-snow-cln"]).toMatchObject({ axis: { forecastHours: 240 } });
+    expect(JSON.parse((await kv.get(dailySnowKey("2026-11-01"), "text"))!).figures).toEqual(post.figures);
+    expect(calls.filter((c) => c.schema === "daily_snow")).toHaveLength(1);
+  });
+  it("uses another snow plume if the preferred still is missing", async () => {
+    const kv = new MemoryKV();
+    await writeSnapshot(kv, captured);
+    const candidate = buildDailyDigest(captured, null, [], SIX_AM).figures.find((c) => c.figure.id === "plume-snow-pkcu1")!;
+    if (candidate.source?.kind !== "kv") throw new Error("expected stored plume");
+    await kv.put(candidate.source.key, new Uint8Array([1, 2, 3]).buffer);
+    const { ai } = fakeAi(() => answer(["plume-snow-cln", "nws-snow-level"]));
+    await runCollection({ SNOW_KV: kv, AI: ai }, { now: SIX_AM, sources: [] });
+    const post = (await readSnapshot(kv))!.dailySnow!.current!;
+    expect(post.figures["plume-snow-cln"]).toBeUndefined();
+    expect(post.figures["plume-snow-pkcu1"]).toBeDefined();
+    expect(post.sections[0].paragraphs[0].figure).toBeNull();
+  });
+  it("publishes normally when the plume source is unavailable", async () => {
+    const kv = new MemoryKV();
+    const snapshot = snap();
+    delete snapshot.sources.plumes;
+    await writeSnapshot(kv, snapshot);
+    const { ai } = fakeAi(() => answer(["resort-totals", "nws-snow-level"]));
+    const result = await runCollection({ SNOW_KV: kv, AI: ai }, { now: SIX_AM, sources: [] });
+    expect(result.dailySnow?.error).toBeNull();
+    expect(Object.keys((await readSnapshot(kv))!.dailySnow!.current!.figures)).toEqual(["nws-snow-level", "resort-totals"]);
+  });
+  it("reserves a slot for the required snow plume when six optional figures were selected", async () => {
+    const kv = await seeded();
+    const candidates = buildDailyDigest(captured, null, [], SIX_AM).figures;
+    const ids = ["resort-totals", "nws-snow-level", "nws-snow-lcc", "nws-snow-bcc", "plume-slr-cln", "plume-slr-pkcu1"];
+    for (const c of candidates.filter((c) => ids.includes(c.figure.id))) {
+      if (c.source?.kind === "kv") await kv.put(c.source.key, new Uint8Array([1, 2, 3]).buffer);
+    }
+    const { ai } = fakeAi(() => answer([], { sections: [{ id: "update", paragraphs: ids.map((figure) => ({ text: "Forecast guidance:", figure })) }] }));
+    await runCollection({ SNOW_KV: kv, AI: ai }, { now: SIX_AM, sources: [] });
+    const post = (await readSnapshot(kv))!.dailySnow!.current!;
+    expect(Object.keys(post.figures)).toHaveLength(6);
+    expect(post.figures["plume-snow-cln"]).toBeDefined();
+    expect(post.figures["plume-slr-pkcu1"]).toBeUndefined();
+    expect(post.sections[0].paragraphs.at(-1)?.figure).toBeNull();
   });
   it("falls back to the second model, then keeps yesterday's post when both fail", async () => {
     const kv = await seeded();
