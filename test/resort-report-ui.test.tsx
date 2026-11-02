@@ -28,8 +28,14 @@ it.each(["alta", "snowbird", "solitude", "brighton"])(
     );
     expect(container.querySelector(".resort-report")).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "Lifts & terrain" }),
+      screen.getByRole("heading", { name: "Lifts" }),
     ).toBeTruthy();
+    // Named terrain & gates is a sibling of Lifts, not a sub-heading.
+    const terrain = screen.getByRole("heading", { name: "Named terrain & gates" });
+    expect(terrain.tagName).toBe("H2");
+    expect(
+      screen.getByRole("heading", { name: "Lifts" }).tagName,
+    ).toBe("H2");
     expect(screen.queryByRole("heading", { name: "Getting there" })).toBeNull();
   },
 );

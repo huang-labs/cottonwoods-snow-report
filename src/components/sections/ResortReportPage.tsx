@@ -128,7 +128,8 @@ export function ResortReportPage({
         <a href="#resort-snow-heading">Snowfall</a>
         <a href="#resort-weather-heading">Weather</a>
         {r.narrative && <a href="#resort-narrative-heading">Resort report</a>}
-        <a href="#resort-lifts-heading">Lifts &amp; terrain</a>
+        <a href="#resort-lifts-heading">Lifts</a>
+        <a href="#resort-terrain-heading">Terrain</a>
         <a href="#resort-webcams">Webcams</a>
       </nav>
 
@@ -263,7 +264,7 @@ export function ResortReportPage({
         aria-labelledby="resort-lifts-heading"
       >
         <div className="resort-section-heading">
-          <h2 id="resort-lifts-heading">Lifts &amp; terrain</h2>
+          <h2 id="resort-lifts-heading">Lifts</h2>
           {r.liftsOpen !== null && r.liftsTotal !== null && (
             <span>
               {r.liftsOpen} of {r.liftsTotal} lifts open
@@ -302,7 +303,9 @@ export function ResortReportPage({
             ))}
           </ul>
         )}
-        <h3 className="resort-terrain-heading">Named terrain &amp; gates</h3>
+        <div className="resort-section-heading resort-terrain-heading">
+          <h2 id="resort-terrain-heading">Named terrain &amp; gates</h2>
+        </div>
         {r.terrain === null ? (
           <p className="muted">
             Named terrain status not provided by this source.

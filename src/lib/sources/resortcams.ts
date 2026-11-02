@@ -6,8 +6,9 @@ import { assertValid, type SourceDefinition } from "./types";
 
 /**
  * Resort-operated cameras for the individual resort pages: every camera each
- * resort publishes, with the useful ones first — lift lines where a resort has
- * them (crowds), otherwise snow stakes and base areas.
+ * resort publishes except the small exclusion list, with the useful ones
+ * first — lift lines where a resort has them (crowds), otherwise snow stakes
+ * and base areas.
  *
  * Cameras are discovered from each resort's own webcam page on every run, so
  * re-pointed streams (YouTube live IDs change when a stream restarts) are
@@ -45,6 +46,16 @@ function order<T extends { title: string }>(found: T[], featured: RegExp[]): T[]
     return match ? [match] : [];
   });
   return [...lead, ...found.filter((c) => !taken.has(c))];
+}
+
+/** Cameras the resorts publish that the dashboard does not show. */
+const EXCLUDED: Partial<Record<PrimaryResortId, RegExp[]>> = {
+  // A gimmick 360° panorama with no snow-information value.
+  snowbird: [/^hidden peak 360$/i],
+};
+
+function notExcluded(resort: PrimaryResortId, title: string): boolean {
+  return !(EXCLUDED[resort] ?? []).some((re) => re.test(title));
 }
 
 /** A Last-Modified header as capture time, rejecting future values (some hosts send local time as GMT). */
@@ -112,7 +123,10 @@ async function youtubeCams(
         .catch(() => null);
       titles[id] = title = meta?.title ?? "";
     }
-    if (title) found.push({ title: title.replace(/\s*-\s*(Brighton Ski Resort|Solitude.*)$/i, ""), videoId: id });
+    if (title) {
+      const clean = title.replace(/\s*-\s*(Brighton Ski Resort|Solitude.*)$/i, "");
+      if (notExcluded(resort, clean)) found.push({ title: clean, videoId: id });
+    }
   }
   return order(found, WANTED[resort]).map((c) => ({ resort, kind: "youtube", pageUrl, ...c }));
 }
@@ -123,7 +137,10 @@ async function imageCams(
   pageUrl: string,
   parse: (html: string) => Array<{ title: string; imageUrl: string }>,
 ): Promise<ResortCam[]> {
-  const chosen = order(parse(await ctx.fetchText(pageUrl, { browserLike: true })), WANTED[resort]);
+  const chosen = order(
+    parse(await ctx.fetchText(pageUrl, { browserLike: true })).filter((c) => notExcluded(resort, c.title)),
+    WANTED[resort],
+  );
   const cams = await Promise.all(
     chosen.map(async (c): Promise<ResortCam | null> => {
       const res = await ctx.probe(c.imageUrl, { browserLike: true }).catch(() => null);

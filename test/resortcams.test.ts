@@ -66,7 +66,7 @@ describe("resort webcam collection", () => {
       ["snowbird", "Mineral Basin", "2026-10-31T00:52:00.000Z"],
       ["snowbird", "Little Cloud", "2026-10-31T00:52:00.000Z"],
       ["snowbird", "Hidden Peak", "2026-10-31T00:52:00.000Z"],
-      ["snowbird", "Hidden Peak 360", "2026-10-31T00:52:00.000Z"],
+      // Hidden Peak 360 is excluded: a 360° panorama with no snow information.
       ["solitude", "Solitude Snowstake", "lkEM6EC8NVA"],
       ["solitude", "Moonbeam Lift Line", "NSiItCGabfo"],
       ["solitude", "Apex Express and Sunrise Lift Lines", "l2X9DlRzX54"],
@@ -113,7 +113,6 @@ describe("resort webcam collection", () => {
       "Mineral Basin",
       "Little Cloud",
       "Hidden Peak",
-      "Hidden Peak 360",
     ]);
     expect(payload.cameras.filter((c) => c.resort === "alta")).toHaveLength(7);
   });
@@ -127,7 +126,6 @@ describe("resort webcam collection", () => {
       "Mineral Basin",
       "Little Cloud",
       "Hidden Peak",
-      "Hidden Peak 360",
     ]);
   });
 

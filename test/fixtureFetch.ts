@@ -85,7 +85,7 @@ export function fixtureRoutes(): Array<[RegExp, Handler]> {
       return title ? json({ title }) : new Response("Unauthorized", { status: 401 });
     }],
     [/manage\.hdrelay\.com\/snapshot\//, () => new Response(null, { headers: { "content-type": "image/jpeg", "last-modified": "Sat, 31 Oct 2026 00:52:00 GMT" } })],
-    // Snowbird's Hidden Peak and Hidden Peak 360 cards.
+    // Snowbird's Hidden Peak card.
     [/backend\.roundshot\.com\/cams\//, () => new Response(null, { headers: { "content-type": "image/jpeg", "last-modified": "Sat, 31 Oct 2026 00:52:00 GMT" } })],
     [/alta-webcams\.sfo3\.cdn\.digitaloceanspaces\.com\//, () => new Response(null, { headers: { "content-type": "image/jpeg", "last-modified": "Sat, 31 Oct 2026 00:55:00 GMT" } })],
     // prismcam sends a Last-Modified ahead of real time.
