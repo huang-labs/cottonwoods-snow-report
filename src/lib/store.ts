@@ -1,4 +1,4 @@
-import type { Snapshot } from "./types";
+import type { Snapshot, SourceId, SourceRecord } from "./types";
 
 /** Minimal KV surface used here (Cloudflare KVNamespace satisfies it). */
 export interface KVLike {
@@ -25,8 +25,59 @@ export async function readSnapshot(kv: KVLike): Promise<Snapshot | null> {
   }
 }
 
+/**
+ * Reconcile a snapshot built from an older read against the latest one stored
+ * by a concurrent run (a cron overlapping a manual collect, or a slow model
+ * call spanning the next trigger). KV has no compare-and-swap, so instead of
+ * the last write winning wholesale, each stored record keeps whichever copy
+ * has the newer attempt: per source, the newer lastAttemptAt wins; AI states
+ * compare lastAttemptAt, falling back to the current output's generatedAt.
+ * Sources absent from the incoming snapshot (removed from the code) still drop.
+ */
+const attemptMs = (r: SourceRecord | undefined): number => (r?.lastAttemptAt ? Date.parse(r.lastAttemptAt) : -1);
+
+function stateAttemptMs(s: { lastAttemptAt: string | null; current: { generatedAt: string } | null } | undefined): number {
+  if (s?.lastAttemptAt) return Date.parse(s.lastAttemptAt);
+  return s?.current?.generatedAt ? Date.parse(s.current.generatedAt) : -1;
+}
+
+function newerState<T extends { lastAttemptAt: string | null; current: { generatedAt: string } | null }>(
+  latest: T | undefined,
+  incoming: T | undefined,
+): T | undefined {
+  if (!latest) return incoming;
+  if (!incoming) return latest;
+  return stateAttemptMs(incoming) >= stateAttemptMs(latest) ? incoming : latest;
+}
+
+export function mergeSnapshot(latest: Snapshot | null, incoming: Snapshot): Snapshot {
+  if (!latest) return incoming;
+  const sources: Snapshot["sources"] = {};
+  for (const id of Object.keys(incoming.sources) as SourceId[]) {
+    const incomingRecord = incoming.sources[id];
+    if (!incomingRecord) continue;
+    const latestRecord = latest.sources[id];
+    sources[id] = !latestRecord || attemptMs(incomingRecord) >= attemptMs(latestRecord) ? incomingRecord : latestRecord;
+  }
+  const merged: Snapshot = { schemaVersion: incoming.schemaVersion, writtenAt: incoming.writtenAt, sources };
+  const recommendation = newerState(latest.recommendation, incoming.recommendation);
+  if (recommendation) merged.recommendation = recommendation;
+  const dailySnow = newerState(latest.dailySnow, incoming.dailySnow);
+  if (dailySnow) merged.dailySnow = dailySnow;
+  return merged;
+}
+
+/**
+ * Store a snapshot, merging it with whatever a concurrent collection run wrote
+ * since this run read the snapshot. The merge read narrows the lost-update
+ * window from a whole run (source collection plus model calls) to the gap
+ * between that read and the put; KV's eventual propagation leaves a small
+ * residual window, which is accepted rather than serialized with a lock KV
+ * cannot make atomic.
+ */
 export async function writeSnapshot(kv: KVLike, snapshot: Snapshot): Promise<void> {
-  await kv.put(SNAPSHOT_KEY, JSON.stringify(snapshot));
+  const latest = await readSnapshot(kv);
+  await kv.put(SNAPSHOT_KEY, JSON.stringify(mergeSnapshot(latest, snapshot)));
 }
 
 /**

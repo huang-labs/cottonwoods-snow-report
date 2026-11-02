@@ -17,6 +17,14 @@ These supersede the brief where they differ.
 - **Resort webcams** on each resort slide (below).
 - **Per-source collection intervals** (2026-11-01): slow sources skip cron runs. NWS and travel times are collected every 15 min and plumes every 30 min; everything else every 5 min. Cost is unchanged (usage is a few percent of Workers Paid included limits); this saves about 80 upstream requests an hour, roughly 22% of the collector's requests, mostly to weather.utah.edu and api.weather.gov.
 
+## Concurrent snapshot writes (2026-11-02)
+
+The snapshot is a read-modify-write cycle on one KV key, and two runs can overlap: a manual `POST /api/admin/collect` during a cron run, or a cron whose model calls (up to 2 × 60 s) span the next trigger. Because KV has no compare-and-swap, the second writer used to store the snapshot it had read at its own start, silently reverting the first writer's fresh records (and AI state) wholesale.
+
+`writeSnapshot` (`src/lib/store.ts`) now re-reads the stored snapshot immediately before each put and merges (`mergeSnapshot`): per source, the record with the newer `lastAttemptAt` wins; the recommendation and Daily Snow states compare `lastAttemptAt` (falling back to the current output's `generatedAt`), so a later attempt — booked or completed — wins and equal timestamps let the writing run's state through. The incoming snapshot must contain a record for every live source (`runCollection` guarantees this by carrying previous records); keys missing from it are treated as removed sources and dropped, as before. This narrows the lost-update window from a whole run (collection plus model calls) to the gap between the merge read and the put, plus KV's own propagation lag (up to ~60 s across locations). A KV-based advisory lock was considered and rejected: KV's get-then-put is itself not atomic, so a lock cannot provide real mutual exclusion and only adds failure modes. True serialization would need a Durable Object, which is not justified at this write volume.
+
+Known residual risks, accepted: two runs that both start before either books an AI attempt can both run the model, so the daily call cap can drift upward by one attempt in a rare overlap; and a merge read that misses a just-written snapshot due to KV propagation still behaves like the old last-writer-wins for that pair. Tests cover the overlap interleaving and the merge policy in `test/collect.test.ts` (`concurrent snapshot writers`).
+
 ## Platform versions (verified 2026-10-30)
 
 - Initial implementation (before the static-export migration): `next@16.4.3`, `react@19.3.1`, `@opennextjs/cloudflare@1.20.15` (peer range `next >=15.5.28 <16 || >=16.4.1`; the adapter changelog adds Next 16.4 support and Turbopack builds), `wrangler@4.156.0`, TypeScript 7.0.2.
@@ -30,7 +38,7 @@ The brief asks to store "the latest successful normalized data per source in KV"
 
 - One write per run (288/day) fits KV's free-tier write limit (1,000/day). Per-source keys would need about 3,500 writes/day.
 - The API serves a mutually consistent snapshot with a single read.
-- Only the single cron writes, so read-modify-write has no concurrent writers.
+- Only the collection cron writes during normal operation (`POST /api/admin/collect` is the other writer, disabled unless `ADMIN_TOKEN` is set), and `writeSnapshot` merges against the latest stored snapshot so concurrent runs keep each other's records (2026-11-02, above).
 
 ## Sources: final integrations
 
