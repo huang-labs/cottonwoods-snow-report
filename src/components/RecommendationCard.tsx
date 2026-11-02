@@ -5,7 +5,7 @@ const dateFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Denver", y
 const names = { alta: "Alta", snowbird: "Snowbird", solitude: "Solitude", brighton: "Brighton" };
 
 export function RecommendationCard({ recommendation: r, now }: { recommendation: ApiRecommendation | null | undefined; now: Date }) {
-  if (!r) return <aside className="recommendation"><h2>Recommendation<span className="badge badge--ai">AI</span></h2><p className="muted">Waiting for the first recommendation.</p></aside>;
+  if (!r?.pick) return null;
   const day = r.targetDate === dateFmt.format(now) ? "Today's" : "Tomorrow's";
   return (
     <aside className={`recommendation${r.outdated || r.failing ? " recommendation--outdated" : ""}`} aria-label="Recommendation">
