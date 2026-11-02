@@ -38,6 +38,7 @@ const html = (v: string) => new Response(v, { headers: { "content-type": "text/h
 
 export function fixtureRoutes(): Array<[RegExp, Handler]> {
   return [
+    [/weather\.utah\.edu\/text\/ensgefsdslccforecast\.html/, () => html(fixture("utah-ensemble-CLN-2026110112.html"))],
     [/alta\.com\/lift-terrain-status/, () => html(fixture("alta-lift-terrain-status.html"))],
     [/api\.snowbird\.com\/api\/v1\/dor\/drupal\/snow-reports/, () => json(fixture("snowbird-snow-reports.json"))],
     [/api\.snowbird\.com\/api\/v1\/dor\/drupal\/lifts/, () => json(fixture("snowbird-lifts.json"))],

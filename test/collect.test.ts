@@ -8,6 +8,8 @@ import type { SourceRecord } from "@/lib/types";
 import { createFixtureFetch, FAKE_TOKENS, FIXTURE_NOW } from "./fixtureFetch";
 
 const MIN = 60_000;
+// Newest source capture: ensemble 12Z Nov 1. Older captures remain valid parser fixtures.
+const ALL_SOURCES_NOW = new Date("2026-11-01T18:30:00Z");
 
 function fakeSource(id: "alta" | "snowbird", impl: () => Promise<{ payload: unknown; sourceUpdatedAt: string | null }>): SourceDefinition {
   return { id, label: id, category: "resort", required: true, attribution: "", sourceUrl: "", reportMaxAgeMs: 26 * 60 * MIN, collect: impl };
@@ -21,7 +23,7 @@ describe("collection with independent failure handling", () => {
 
   it("collects every real-source adapter against captured fixtures", async () => {
     const { fetchImpl } = createFixtureFetch();
-    const summary = await runCollection({ SNOW_KV: kv }, { now: FIXTURE_NOW, fetchImpl });
+    const summary = await runCollection({ SNOW_KV: kv }, { now: ALL_SOURCES_NOW, fetchImpl });
     const failed = summary.results.filter((r) => !r.ok);
     expect(failed).toEqual([]);
     expect(summary.results.map((r) => r.id).sort()).toEqual(SOURCES.map((s) => s.id).sort());
@@ -58,7 +60,7 @@ describe("collection with independent failure handling", () => {
 
   it("treats a validation failure in one feed as that source's failure only", async () => {
     const { fetchImpl } = createFixtureFetch([[/alta\.com/, () => new Response("<html>maintenance</html>")]]);
-    const summary = await runCollection({ SNOW_KV: kv }, { now: FIXTURE_NOW, fetchImpl });
+    const summary = await runCollection({ SNOW_KV: kv }, { now: ALL_SOURCES_NOW, fetchImpl });
     expect(summary.results.find((r) => r.id === "alta")).toMatchObject({ ok: false });
     expect(summary.results.find((r) => r.id === "alta")!.error).toMatch(/ValidationError/);
     expect(summary.results.filter((r) => r.ok).length).toBe(SOURCES.length - 1);

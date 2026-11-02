@@ -78,7 +78,8 @@ export type SourceId =
   | "traveltimes"
   | "webcams"
   | "resortcams"
-  | "nwsafd";
+  | "nwsafd"
+  | "ensemble";
 
 // ---------- Resort payloads ----------
 
@@ -518,4 +519,23 @@ export interface ApiDailySnow extends DailySnowPost {
   failing: boolean;
   /** Archived posts, newest first. */
   archive: Array<{ date: string; title: string }>;
+}
+
+/** Each variable is percentile rows × 40 six-hour lead columns. Totals are from initialization. */
+export type EnsembleVariable = "totalLiquidIn" | "totalSnowIn" | "liquidIn" | "snowIn" | "slr" | "wetBulbHalfFt";
+export interface EnsemblePayload {
+  /** Exact -0.01 in six-hour liquid normalized to zero; no other negative accepted. */
+  traceLiquidCorrections: number;
+  sourceUrl: string;
+  model: string;
+  station: "CLN";
+  scope: string;
+  latitude: number;
+  longitude: number;
+  elevationFt: number;
+  initializedAt: string;
+  members: number;
+  periodEnds: string[];
+  percentiles: string[];
+  values: Record<EnsembleVariable, number[][]>;
 }
