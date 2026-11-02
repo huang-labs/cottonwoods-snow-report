@@ -1,5 +1,6 @@
 import type { ApiSource, Metric, ReportResponse, ResortReport, SnowfallSet, SourceId } from "@/lib/types";
 import { formatAge, formatDenver } from "@/lib/time";
+import { sectionHref } from "@/lib/sections";
 import { FreshnessBadge, MetricValue } from "../ui";
 import { RecommendationCard } from "../RecommendationCard";
 import { DailySnowTeaser } from "../dailysnow/DailySnow";
@@ -28,7 +29,7 @@ function Row({ source, now, recommended }: { source: ApiSource; now: Date; recom
   return (
     <tr className={`row--primary${recommended ? " row--recommended" : ""}`}>
       <th scope="row">
-        <div className="resort-name">{source.label}</div>
+        <div className="resort-name"><a className="resort-name__link" href={sectionHref(source.id)}>{source.label}</a></div>
         <FreshnessBadge freshness={source.freshness} />
         {recommended && <span className="badge badge--ai">AI pick</span>}
       </th>
