@@ -4,7 +4,8 @@ import { denverDate } from "../recommend/digest";
 import type { KVLike } from "../store";
 import type { DailySnowFigure, DailySnowPost, DailySnowState, Snapshot } from "../types";
 import { buildDailyDigest, historyEntry, type FigureCandidate } from "./digest";
-import { askDailySnow } from "./llm";
+import { askDailySnow, MAX_FIGURES } from "./llm";
+import { isSnowPlume } from "./plume";
 import { attemptsToday, DAILY_CALL_CAP, shouldRunDailySnow } from "./schedule";
 
 export interface DailySnowEnv extends RecommendEnv, CollectorSecrets {
@@ -100,6 +101,24 @@ export function planDailySnow(
       const r = await askDailySnow(ai, build.digest, env.AI_GATEWAY_ID);
       const wanted = new Set(r.sections.flatMap((s) => s.paragraphs.map((p) => p.figure)).filter((f): f is string => !!f));
       const figures = await storeFigures(build.figures.filter((c) => wanted.has(c.figure.id)), date, env, now, opts.fetchImpl);
+      // A plume is part of the report even if the model omitted it. Prefer CLN,
+      // then try another station if its frozen still is unavailable. Never invent
+      // prose or values for the image; the article renders its code-written caption.
+      if (!Object.keys(figures).some(isSnowPlume)) {
+        const candidates = build.figures.filter((c) => isSnowPlume(c.figure.id) && !wanted.has(c.figure.id))
+          .sort((a, b) => Number(b.figure.id === "plume-snow-cln") - Number(a.figure.id === "plume-snow-cln"));
+        for (const candidate of candidates) {
+          const copied = await storeFigures([candidate], date, env, now, opts.fetchImpl);
+          if (!copied[candidate.figure.id]) continue;
+          // Reserve one of the six figure slots for the required plume.
+          if (Object.keys(figures).length >= MAX_FIGURES) {
+            const lastOptional = [...wanted].reverse().find((id) => figures[id]);
+            if (lastOptional) delete figures[lastOptional];
+          }
+          Object.assign(figures, copied);
+          break;
+        }
+      }
       const post: DailySnowPost = {
         date,
         phase: build.digest.phase,
