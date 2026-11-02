@@ -1,0 +1,410 @@
+/* Only resort browse pages leave the fixed-height slide frame. Other pages and
+   the slideshow retain their existing layout, including after route changes. */
+.app--browse:has(.resort-report) {
+  height: auto;
+}
+.app--browse .slide-wrap:has(> .resort-report) {
+  position: static;
+}
+
+.resort-report {
+  --resort-muted: #a3b2c5;
+  width: min(100%, 1280px);
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 56px) clamp(16px, 4vw, 48px) 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.resort-report .muted {
+  color: var(--resort-muted);
+}
+.resort-report p {
+  margin: 0;
+}
+.resort-report a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.resort-report a:hover {
+  text-decoration: underline;
+}
+.resort-report a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+  border-radius: 2px;
+}
+.resort-report h2 {
+  font-size: 20px;
+  margin: 0;
+}
+.resort-report h3 {
+  font-size: 16px;
+}
+.resort-report .panel {
+  padding: 24px;
+  border-radius: 16px;
+  overflow: visible;
+}
+.resort-report .panel h2 {
+  margin: 0;
+}
+.resort-report [id] {
+  scroll-margin-top: 140px;
+}
+.resort-report__jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.resort-report__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.resort-report__eyebrow {
+  color: var(--accent);
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+.resort-report__header h1 {
+  font-size: clamp(40px, 5vw, 64px);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  margin: 8px 0 12px;
+}
+.resort-report__time {
+  color: var(--resort-muted);
+  font-size: 14px;
+}
+.resort-report__time strong {
+  color: var(--text);
+  font-weight: 500;
+}
+.resort-report__state {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--resort-muted);
+}
+.resort-report__state .pill {
+  max-width: 320px;
+  text-align: center;
+}
+.resort-alerts {
+  display: grid;
+  gap: 10px;
+}
+.resort-alerts .notice {
+  border-radius: 0 10px 10px 0;
+  padding: 14px 18px;
+  background: var(--panel);
+}
+.resort-alerts .notice--critical {
+  background: rgba(255, 107, 107, 0.1);
+}
+.resort-alerts .notice--warning {
+  background: rgba(240, 180, 41, 0.07);
+}
+.resort-alerts .notice p {
+  margin-top: 4px;
+  color: #c3cfdd;
+  font-size: 14px;
+}
+.resort-report__gap {
+  padding: 12px 16px;
+  border: 1px solid var(--warn);
+  border-radius: 10px;
+  color: var(--warn);
+  font-size: 14px;
+}
+.resort-section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 20px;
+}
+.resort-section-heading > span,
+.resort-section-heading > a {
+  font-size: 13px;
+}
+.resort-section-heading > span {
+  color: var(--resort-muted);
+}
+.resort-snow {
+  background: linear-gradient(120deg, #142536, var(--panel) 75%);
+  border: 1px solid #2e455d;
+  border-radius: 16px;
+  padding: 24px;
+}
+.resort-snow__headline {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.resort-metric {
+  min-width: 0;
+}
+.resort-metric__label {
+  color: var(--resort-muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.resort-metric .metric--xl {
+  font-size: clamp(40px, 5vw, 64px);
+}
+.resort-metric .metric--lg {
+  font-size: 28px;
+}
+.resort-report .resort-metric__note {
+  color: var(--resort-muted);
+  font-size: 12px;
+  margin-top: 10px;
+  max-width: 35ch;
+}
+.resort-snow__history {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 20px;
+  padding-top: 20px;
+  margin-top: 24px;
+  border-top: 1px solid #2e455d;
+}
+.resort-report .resort-snow__unavailable {
+  color: var(--resort-muted);
+  font-size: 12px;
+  margin-top: 20px;
+}
+.resort-report__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.resort-observations {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 20px;
+}
+.resort-observation {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+.resort-observation__heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+}
+.resort-observation dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 0 0;
+}
+.resort-observation dt {
+  color: var(--resort-muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.resort-observation dd {
+  margin: 0;
+}
+.resort-observation .metric--md {
+  font-size: 23px;
+}
+.resort-access > p {
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+.resort-parking {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+}
+.resort-parking li {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+.resort-parking li > span {
+  color: var(--accent);
+}
+.resort-report .resort-status-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  color: var(--resort-muted);
+  font-size: 12px;
+  margin: -6px 0 20px;
+}
+.resort-lifts {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.resort-lift {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+.resort-lift__heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.resort-lift__heading > span {
+  color: var(--resort-muted);
+  font-size: 13px;
+}
+.resort-lift--open .resort-lift__heading > span {
+  color: var(--ok);
+}
+.resort-lift--hold .resort-lift__heading > span {
+  color: var(--hold);
+}
+.resort-lift--scheduled .resort-lift__heading > span {
+  color: var(--warn);
+}
+.resort-lift p {
+  margin-top: 6px;
+  font-size: 12px;
+}
+.resort-lift__note {
+  color: var(--warn);
+}
+.resort-report .resort-terrain-heading {
+  margin: 28px 0 16px;
+}
+.resort-terrain {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 28px;
+}
+.resort-terrain li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px 16px;
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+  font-size: 14px;
+}
+.resort-terrain li > div {
+  display: flex;
+  flex-direction: column;
+}
+.resort-terrain li > span {
+  font-size: 12px;
+}
+.resort-terrain li > p {
+  flex-basis: 100%;
+  font-size: 12px;
+}
+.resort-report .panel--cams {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.resort-report .panel--cams h2,
+.resort-report .panel--cams > p {
+  grid-column: 1 / -1;
+}
+.resort-report .rcam {
+  gap: 10px;
+}
+.resort-report .rcam__frame {
+  flex: none;
+  min-height: 0;
+  aspect-ratio: 16 / 10;
+}
+.resort-report .rcam figcaption {
+  line-height: 1.5;
+}
+.resort-narrative > p {
+  color: #c3cfdd;
+  white-space: pre-line;
+  max-width: 80ch;
+}
+.resort-report .source-line {
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 0;
+}
+@media (max-width: 1050px) {
+  .resort-report__columns {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .resort-report {
+    gap: 20px;
+  }
+  .resort-report__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .resort-report__state {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+  }
+  .resort-report .panel,
+  .resort-snow {
+    padding: 18px;
+    border-radius: 12px;
+  }
+  .resort-section-heading {
+    margin-bottom: 16px;
+  }
+  .resort-snow__headline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .resort-metric--hero:last-child {
+    grid-column: 1 / -1;
+    padding-top: 16px;
+    border-top: 1px solid #2e455d;
+  }
+  .resort-metric--hero:last-child .metric--xl {
+    font-size: 32px;
+  }
+  .resort-snow__history {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .resort-lifts,
+  .resort-terrain,
+  .resort-report .panel--cams {
+    grid-template-columns: 1fr;
+  }
+}
