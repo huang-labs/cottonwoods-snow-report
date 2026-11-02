@@ -7,12 +7,13 @@ The owner builds this dashboard with several AI agents working on features in pa
 Every new chat must own a separate Git worktree and feature branch before editing files, installing dependencies, or starting a dev server.
 
 1. Inspect `git status --short`, `git branch --show-current` and `git worktree list` in the starting checkout. Treat existing worktrees, branches, uncommitted changes and running servers as another task's work unless explicitly assigned to this chat (for example, "update PR #N" assigns that PR's branch and worktree).
-2. Use a worktree and branch provisioned specifically for this chat if available. Otherwise fetch origin and create a new worktree on a unique task branch from the latest `origin/main`, not from the starting checkout's feature branch. Base on another feature only when the task explicitly depends on it:
+2. Run `git fetch origin` and require it to succeed before starting work, even when a worktree and branch have already been provisioned for this chat. Use the freshly fetched `origin/main` as the upstream base; a cached remote-tracking ref or local `main` is not sufficient.
+3. Use a worktree and branch provisioned specifically for this chat if available. Otherwise create a new worktree on a unique task branch from the freshly fetched `origin/main`:
    ```sh
-   git fetch origin
    git worktree add -b <task-branch> ../snow-report-<task> origin/main
    ```
-3. Run all edits, installs, checks, commits and servers from that worktree. State its path and branch when work begins. Keep using it for follow-ups in the same chat, including after context compaction.
+   For a provisioned or explicitly assigned task branch, verify `git merge-base --is-ancestor origin/main HEAD` succeeds in its worktree. If it is behind, rebase that task's branch onto `origin/main`, preserving its work, before editing. Base on another feature only when the user explicitly requests that dependency.
+4. Run all edits, installs, checks, commits and servers from that worktree. State its path and branch when work begins. Keep using it for follow-ups in the same chat, including after context compaction. Before resuming edits on a follow-up, fetch origin again and verify the branch includes the freshly fetched `origin/main` as above.
 
 Never switch branches in another task's checkout, or stash, reset, clean, commit or overwrite its changes. Worktrees isolate files, but Git refs are shared: don't change another task's branch. Leave worktrees and servers in place for ongoing collaboration; remove only this task's resources, and only when cleanup is requested.
 
