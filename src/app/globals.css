@@ -98,6 +98,8 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
 .metric__value { font-weight: 800; color: var(--accent); }
 .metric__value--zero { color: var(--text); opacity: 0.75; }
 .metric__unit { font-weight: 600; font-size: 0.6em; margin-left: 0.05em; opacity: 0.8; }
+/* At 60% size, raise the inch mark by the missing 40% of the number's cap height. */
+.metric__unit--in { vertical-align: calc(2cap / 3); }
 .metric__missing { color: var(--warn); font-style: italic; font-size: 0.55em; font-weight: 500; }
 .metric__na { color: var(--muted); font-size: 0.55em; font-weight: 500; }
 .metric--sm .metric__missing, .metric--md .metric__missing, .metric--sm .metric__na, .metric--md .metric__na { font-size: 0.8em; }
