@@ -30,8 +30,10 @@ export const WANTED: Record<PrimaryResortId, RegExp[]> = {
   // Snow stake first, as at Alta. No Gad Zoom camera is published; Tram
   // Bullpen is Snowbird's lift-line camera.
   snowbird: [/^snowstake$/i, /^tram bullpen$/i],
-  solitude: [/moonbeam.*lift line/i, /apex.*sunrise/i],
-  brighton: [/milly express/i, /parking lot/i],
+  // The named snowstake first, then the featured lift lines.
+  solitude: [/^solitude snowstake$/i, /moonbeam.*lift line/i, /apex.*sunrise/i],
+  // The parking lot answers "how busy is it", before the lift line.
+  brighton: [/^parking lot$/i, /milly express/i],
 };
 
 /** Featured cameras first (first match per pattern), then the rest in page order. */
@@ -90,7 +92,8 @@ interface OEmbed {
  * on different sides of the player on different sites). Titles of IDs already
  * known from the previous run are reused — including lookups that failed, so a
  * private stream costs one oEmbed call ever — so a steady state costs one page
- * fetch per resort. Embeds with no public title keep a numbered fallback name.
+ * fetch per resort. Embeds with no public title are dropped: their players
+ * only show "video unavailable".
  */
 async function youtubeCams(
   ctx: FetchContext,
@@ -101,7 +104,6 @@ async function youtubeCams(
   const ids = youtubeIds(await ctx.fetchText(pageUrl, { browserLike: true }));
   assertValid(ids.length > 0, `${resort}: no YouTube camera embeds found`);
   const found: Array<{ title: string; videoId: string }> = [];
-  let unnamed = 0;
   for (const id of ids) {
     let title: string | undefined = titles[id];
     if (title === undefined) {
@@ -110,11 +112,7 @@ async function youtubeCams(
         .catch(() => null);
       titles[id] = title = meta?.title ?? "";
     }
-    if (title) {
-      found.push({ title: title.replace(/\s*-\s*(Brighton Ski Resort|Solitude.*)$/i, ""), videoId: id });
-    } else {
-      found.push({ title: `Camera ${++unnamed}`, videoId: id });
-    }
+    if (title) found.push({ title: title.replace(/\s*-\s*(Brighton Ski Resort|Solitude.*)$/i, ""), videoId: id });
   }
   return order(found, WANTED[resort]).map((c) => ({ resort, kind: "youtube", pageUrl, ...c }));
 }

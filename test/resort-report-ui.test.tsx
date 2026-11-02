@@ -190,8 +190,8 @@ it("shows every collected webcam on its resort page, featured ones first", () =>
   };
   expect(first("alta")).toBe("Snow Stake");
   expect(first("snowbird")).toBe("Snowstake");
-  expect(first("solitude")).toBe("Moonbeam Lift Line");
-  expect(first("brighton")).toBe("Milly Express");
+  expect(first("solitude")).toBe("Solitude Snowstake");
+  expect(first("brighton")).toBe("Parking Lot");
 });
 
 it("shows the same snowfall slots in the same order for every resort", () => {
