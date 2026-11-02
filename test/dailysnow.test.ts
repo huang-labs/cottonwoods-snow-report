@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { runCollection } from "@/lib/collect";
 import { dailySnowFigureKey, dailySnowKey, emptyDailySnowState, planDailySnow } from "@/lib/dailysnow";
 import { buildDailyDigest, phaseOf } from "@/lib/dailysnow/digest";
-import { buildModelInput, groundNumbers, ungroundedInches, validateDailySnow } from "@/lib/dailysnow/llm";
+import { buildModelInput, DAILY_SNOW_TIMEOUT_MS, groundNumbers, ungroundedInches, validateDailySnow } from "@/lib/dailysnow/llm";
 import { IN_FLIGHT_MS, MAX_ATTEMPTS, RETRY_AFTER_MS, shouldRunDailySnow } from "@/lib/dailysnow/schedule";
 import { FALLBACK_MODEL, PRIMARY_MODEL } from "@/lib/recommend/llm";
 import { buildReport } from "@/lib/report";
@@ -64,6 +64,16 @@ describe("NWS forecast discussion", () => {
     expect(sections[0].text).toContain("Upper elevations of the Cottonwoods and western Uintas may see localized accumulations 18-24\".");
     // Wrapped 70-column lines are joined.
     expect(sections[1].text).not.toMatch(/\w\n\w/);
+    expect(sections.every((s) => s.issued === undefined)).toBe(true);
+  });
+  it("reads updated products whose headers carry the original issuance (2026-11-02 5:13 AM update)", () => {
+    const sections = parseAfd((JSON.parse(fixture("nws-afd-SLC-update.json")) as { productText: string }).productText);
+    expect(sections.map((s) => s.name)).toEqual(["KEY MESSAGES", "DISCUSSION", "WATCHES/WARNINGS/ADVISORIES"]);
+    expect(sections[0].issued).toBe("1037 PM MST Sun Nov 1 2026");
+    expect(sections[1].issued).toBe("1037 PM MST Sun Nov 1 2026");
+    expect(sections[1].text).toMatch(/^Currently, a mid-level trough/);
+    // The next header ends the section rather than being swallowed into it.
+    expect(sections[1].text).not.toContain("AVIATION");
   });
   it("is collected with the other sources and reused while the product is unchanged", async () => {
     const afd = captured.sources.nwsafd!;
@@ -125,9 +135,17 @@ describe("schedule", () => {
     expect(shouldRunDailySnow(posted("2026-11-01"), at("2026-11-01T14:00:00Z"))).toBeNull();
     expect(shouldRunDailySnow(posted("2026-10-31"), at("2026-11-01T14:00:00Z"))).toBe("morning");
   });
+  it("allows slow generations within the cron wall-time limit", () => {
+    // GLM took 128 s for a valid post on 2026-11-02; the old 120 s limit discarded it.
+    expect(DAILY_SNOW_TIMEOUT_MS).toBe(5 * 60_000);
+    expect(IN_FLIGHT_MS).toBeGreaterThan(2 * DAILY_SNOW_TIMEOUT_MS);
+    expect(IN_FLIGHT_MS).toBeLessThanOrEqual(15 * 60_000);
+  });
   it("does not start a second attempt while one is running", () => {
     const running: DailySnowState = { ...emptyDailySnowState(), lastAttemptAt: SIX_AM.toISOString(), attempts: { date: "2026-11-01", count: 1, calls: 2 } };
     expect(shouldRunDailySnow(running, at("2026-11-01T13:05:00Z"))).toBeNull();
+    // Two 5-minute model timeouts: later crons still see the attempt as running.
+    expect(shouldRunDailySnow(running, at("2026-11-01T13:10:00Z"))).toBeNull();
     // Cut off without finishing: tried again once the in-flight window has passed.
     expect(shouldRunDailySnow(running, new Date(SIX_AM.getTime() + IN_FLIGHT_MS))).toBe("morning");
   });
@@ -193,10 +211,11 @@ describe("posting", () => {
     const { ai, calls } = fakeAi(() => answer(["plume-snow-cln", "nws-snow-level"]));
     const env = { SNOW_KV: kv, AI: ai };
     const summary = await runCollection(env, { now: SIX_AM, sources: [] });
-    expect(summary.dailySnow).toMatchObject({ date: "2026-11-01", model: PRIMARY_MODEL, trigger: "morning", error: null });
+    expect(summary.dailySnow).toMatchObject({ date: "2026-11-01", model: PRIMARY_MODEL, trigger: "morning", error: null, fallbackReason: null });
     const state = (await readSnapshot(kv))!.dailySnow!;
     const post = state.current!;
     expect(post.title).toBe("Storm Underway");
+    expect(post).not.toHaveProperty("fallbackReason");
     expect(post.phase).toBe("storm");
     expect(post.figures["plume-snow-cln"]).toMatchObject({ kind: "image", url: "/api/daily-snow/figure/2026-11-01/plume-snow-cln" });
     expect(post.figures["nws-snow-level"].kind).toBe("snow-level");
@@ -225,8 +244,11 @@ describe("posting", () => {
   it("falls back to the second model, then keeps yesterday's post when both fail", async () => {
     const kv = await seeded();
     const { ai } = fakeAi((model) => (model === PRIMARY_MODEL ? { title: "" } : answer([])));
-    await runCollection({ SNOW_KV: kv, AI: ai }, { now: SIX_AM, sources: [] });
-    expect((await readSnapshot(kv))!.dailySnow!.current!.model).toBe(FALLBACK_MODEL);
+    const fellBack = await runCollection({ SNOW_KV: kv, AI: ai }, { now: SIX_AM, sources: [] });
+    const fallbackPost = (await readSnapshot(kv))!.dailySnow!.current!;
+    expect(fallbackPost.model).toBe(FALLBACK_MODEL);
+    expect(fallbackPost.fallbackReason).toBe(`${PRIMARY_MODEL}: Model output has no title or summary`);
+    expect(fellBack.dailySnow?.fallbackReason).toBe(fallbackPost.fallbackReason);
 
     const yesterday = (await readSnapshot(kv))!;
     yesterday.dailySnow!.current!.date = "2026-10-31";

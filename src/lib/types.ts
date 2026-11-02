@@ -431,8 +431,12 @@ export interface AfdPayload {
   productId: string;
   office: string;
   issuedAt: string;
-  /** Forecast-relevant sections in product order (aviation, hydrology, etc. dropped). */
-  sections: Array<{ name: string; text: string }>;
+  /**
+   * Forecast-relevant sections in product order (aviation, hydrology, etc. dropped).
+   * `issued` is set when an updated product carries a section over from an
+   * earlier issuance (".DISCUSSION, Issued 1037 PM MST Sun Nov 1 2026...").
+   */
+  sections: Array<{ name: string; text: string; issued?: string }>;
 }
 
 // ---------- AI Daily Snow ----------
@@ -489,6 +493,8 @@ export interface DailySnowPost {
   generatedAt: string;
   model: string;
   trigger: string;
+  /** Set when the fallback model wrote the post: why the primary model failed. */
+  fallbackReason?: string;
 }
 
 /** Compact record of a past post: archive navigation and forecast verification. */
