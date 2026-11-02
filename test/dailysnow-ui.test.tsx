@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { DailySnowSlide } from "@/components/dailysnow/DailySnow";
-import { RegionalSlide } from "@/components/slides/RegionalSlide";
+import { DailySnowPage } from "@/components/dailysnow/DailySnow";
+import { RegionalPage } from "@/components/sections/RegionalPage";
 import { buildReport } from "@/lib/report";
 import type { ApiDailySnow, ApiRecommendation } from "@/lib/types";
 
@@ -39,13 +39,13 @@ afterEach(() => {
 });
 
 it("shows the post as page content with the AI badge, sections and figures", () => {
-  render(<DailySnowSlide report={report(post)} now={now} />);
+  render(<DailySnowPage report={report(post)} now={now} />);
   expect(screen.getByRole("heading", { level: 1, name: "Storm Underway" })).toBeTruthy();
-  expect(screen.getByText(/Daily Snow/, { selector: ".recommendation__eyebrow" }).querySelector(".badge--ai")?.textContent).toBe("AI");
-  expect(screen.getByText(/Storm$/, { selector: ".recommendation__eyebrow" })).toBeTruthy();
+  expect(screen.getByText(/Daily Snow/, { selector: ".eyebrow" }).querySelector(".badge--ai")?.textContent).toBe("AI");
+  expect(screen.getByText(/Storm$/, { selector: ".eyebrow" })).toBeTruthy();
   expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Today", "Extended Forecast"]);
   // Page content, not a card like the resort pick.
-  expect(document.querySelector(".slide--dailysnow .recommendation")).toBeNull();
+  expect(document.querySelector(".page--dailysnow .dailysnow-teaser")).toBeNull();
   const article = within(document.querySelector<HTMLElement>(".dailysnow__article")!);
   expect(article.getByRole("img", { name: "NWS forecast snow level" })).toBeTruthy();
   expect(article.getByRole("img", { name: "Alta snow stake · 5:55 AM today" }).getAttribute("src")).toBe("/api/daily-snow/figure/2026-11-01/stake-alta");
@@ -53,12 +53,12 @@ it("shows the post as page content with the AI badge, sections and figures", () 
 });
 
 it("marks an old post as outdated", () => {
-  render(<DailySnowSlide report={report({ ...post, outdated: true, failing: true })} now={now} />);
+  render(<DailySnowPage report={report({ ...post, outdated: true, failing: true })} now={now} />);
   expect(screen.getByText(/Outdated · Today's post failed/, { selector: ".dailysnow__warn" })).toBeTruthy();
 });
 
 it("waits for the first post", () => {
-  render(<DailySnowSlide report={report(null)} now={now} />);
+  render(<DailySnowPage report={report(null)} now={now} />);
   expect(screen.getByRole("heading", { level: 1, name: "Waiting for the first post" })).toBeTruthy();
 });
 
@@ -66,7 +66,7 @@ it("opens an archived post and returns to the latest", async () => {
   const older: ApiDailySnow = { ...post, date: "2026-10-31", title: "Storm Arrives", outdated: true };
   const fetchMock = vi.fn(async () => new Response(JSON.stringify(older), { headers: { "content-type": "application/json" } }));
   vi.stubGlobal("fetch", fetchMock);
-  render(<DailySnowSlide report={report(post)} now={now} />);
+  render(<DailySnowPage report={report(post)} now={now} />);
   fireEvent.click(screen.getByRole("button", { name: /Storm Arrives/ }));
   expect(await screen.findByRole("heading", { level: 1, name: "Storm Arrives" })).toBeTruthy();
   expect(fetchMock).toHaveBeenCalledWith("/api/daily-snow?date=2026-10-31");
@@ -78,7 +78,7 @@ it("opens an archived post and returns to the latest", async () => {
 });
 
 it("teases the post on the Snowfall page", () => {
-  render(<RegionalSlide report={report(post)} now={now} />);
+  render(<RegionalPage report={report(post)} now={now} />);
   const link = screen.getByRole("link", { name: "Daily Snow: Storm Underway" });
   expect(link.getAttribute("href")).toBe("/daily-snow");
   expect(link.querySelector(".badge--ai")).not.toBeNull();
@@ -91,16 +91,16 @@ const recommendation: ApiRecommendation = {
 };
 
 it.each([null, { ...recommendation, pick: null }])("hides the recommendation when there is no resort pick (%j)", (pick) => {
-  render(<RegionalSlide report={{ ...report(post), recommendation: pick }} now={now} />);
+  render(<RegionalPage report={{ ...report(post), recommendation: pick }} now={now} />);
   expect(document.querySelector("aside.recommendation")).toBeNull();
   expect(screen.getByRole("link", { name: "Daily Snow: Storm Underway" })).toBeTruthy();
   expect(screen.queryByText("AI pick")).toBeNull();
 });
 
 it("keeps a previous resort pick visible with its update warnings", () => {
-  render(<RegionalSlide report={{ ...report(post), recommendation: { ...recommendation, outdated: true, failing: true } }} now={now} />);
-  expect(screen.getByRole("complementary", { name: "Recommendation" })).toBeTruthy();
-  expect(screen.getByRole("heading", { name: "Alta today" })).toBeTruthy();
+  render(<RegionalPage report={{ ...report(post), recommendation: { ...recommendation, outdated: true, failing: true } }} now={now} />);
+  expect(screen.getByRole("generic", { name: "AI recommendation reasoning" })).toBeTruthy();
+  expect(screen.getByText("Alta today")).toBeTruthy();
   expect(screen.getByText(/Outdated · Updates failing/)).toBeTruthy();
   expect(screen.queryByText("AI pick")).toBeNull();
 });
@@ -121,7 +121,7 @@ it("draws plume figures like the plumes page: padded, Mountain Time axis, postin
     sections: [{ id: "update", paragraphs: [{ text: "The plume:", figure: "plume-snow-cln" }] }],
     figures: { "plume-snow-cln": plume },
   };
-  const { unmount } = render(<DailySnowSlide report={report(withPlume)} now={now} />);
+  const { unmount } = render(<DailySnowPage report={report(withPlume)} now={now} />);
   const svg = screen.getByRole("img", { name: /Accumulated Snow.*times in Mountain Time/ });
   // White margin around the crop (the shared plumes-page drawing).
   expect(svg.getAttribute("viewBox")).toBe("-20 -20 962 639");
@@ -133,14 +133,14 @@ it("draws plume figures like the plumes page: padded, Mountain Time axis, postin
 
   // Posts written before the axis was stored keep the bare still, padded.
   const { axis: _axis, ...legacy } = plume;
-  const { unmount: unmountLegacy } = render(<DailySnowSlide report={report({ ...withPlume, figures: { "plume-snow-cln": legacy } })} now={now} />);
+  const { unmount: unmountLegacy } = render(<DailySnowPage report={report({ ...withPlume, figures: { "plume-snow-cln": legacy } })} now={now} />);
   const img = screen.getByRole("img", { name: plume.caption });
   expect(img.tagName).toBe("IMG");
   expect(img.closest("figure")?.className).toContain("dailysnow-figure--plume");
   unmountLegacy();
 
   // Code-added required figures render after the prose, without invented introductions.
-  render(<DailySnowSlide report={report({ ...withPlume, sections: [{ id: "update", paragraphs: [{ text: "A quiet day.", figure: null }] }] })} now={now} />);
+  render(<DailySnowPage report={report({ ...withPlume, sections: [{ id: "update", paragraphs: [{ text: "A quiet day.", figure: null }] }] })} now={now} />);
   expect(screen.getAllByRole("img", { name: /Accumulated Snow.*times in Mountain Time/ })).toHaveLength(1);
   expect(screen.getByText("A quiet day.")).toBeTruthy();
 });

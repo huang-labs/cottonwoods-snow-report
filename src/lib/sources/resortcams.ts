@@ -5,7 +5,7 @@ import { extractAltaJson } from "./alta";
 import { assertValid, type SourceDefinition } from "./types";
 
 /**
- * Resort-operated cameras for the individual resort slides: lift lines where a
+ * Resort-operated cameras for the individual resort pages: lift lines where a
  * resort has them (crowds), otherwise snow stakes and base areas.
  *
  * Cameras are discovered from each resort's own webcam page on every run, so

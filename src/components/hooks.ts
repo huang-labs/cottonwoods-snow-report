@@ -3,35 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReportResponse } from "@/lib/types";
 
-/**
- * Advances the slideshow after `durationMs`. Only slide index, play state and
- * duration affect the timer — data refreshes never reset it. Pausing keeps the
- * remaining time so resume continues where it stopped.
- */
-export function useSlideTimer(index: number, playing: boolean, durationMs: number, onAdvance: () => void) {
-  const advanceRef = useRef(onAdvance);
-  advanceRef.current = onAdvance;
-  const keyRef = useRef({ index, durationMs });
-  const remainingRef = useRef(durationMs);
-
-  useEffect(() => {
-    if (keyRef.current.index !== index || keyRef.current.durationMs !== durationMs) {
-      keyRef.current = { index, durationMs };
-      remainingRef.current = durationMs;
-    }
-    if (!playing) return;
-    const started = Date.now();
-    const timer = setTimeout(() => {
-      remainingRef.current = durationMs;
-      advanceRef.current();
-    }, remainingRef.current);
-    return () => {
-      clearTimeout(timer);
-      remainingRef.current = Math.max(0, remainingRef.current - (Date.now() - started));
-    };
-  }, [index, playing, durationMs]);
-}
-
 export interface ReportState {
   report: ReportResponse | null;
   /** Browser time of the last successful /api/report load. */
@@ -39,7 +10,7 @@ export interface ReportState {
   error: string | null;
 }
 
-/** Polls the stored snapshot on load and every `intervalMs`, independent of slides. */
+/** Polls the stored snapshot on load and every `intervalMs`, shared by every page. */
 export function useReport(intervalMs = 60_000, fetchImpl: typeof fetch = (...a) => fetch(...a)): ReportState {
   const [state, setState] = useState<ReportState>({ report: null, loadedAt: null, error: null });
   const fetchRef = useRef(fetchImpl);
@@ -80,35 +51,4 @@ export function useNow(intervalMs = 30_000): Date {
     return () => clearInterval(id);
   }, [intervalMs]);
   return now;
-}
-
-// ---------- Preferences (browser-local) ----------
-
-export interface Prefs {
-  /** Slideshow seconds per slide. */
-  durationSec: number;
-}
-
-export const DEFAULT_PREFS: Prefs = { durationSec: 20 };
-export const PREFS_KEY = "cottonwoods-snow-report.prefs.v1";
-export const DURATION_CHOICES = [10, 15, 20, 30, 45, 60, 90, 120];
-
-export function loadPrefs(storage: Pick<Storage, "getItem"> | undefined): Prefs {
-  try {
-    const raw = storage?.getItem(PREFS_KEY);
-    if (!raw) return DEFAULT_PREFS;
-    const p = JSON.parse(raw) as Partial<Prefs>;
-    const durationSec = typeof p.durationSec === "number" && p.durationSec >= 5 && p.durationSec <= 600 ? p.durationSec : DEFAULT_PREFS.durationSec;
-    return { durationSec };
-  } catch {
-    return DEFAULT_PREFS;
-  }
-}
-
-export function savePrefs(storage: Pick<Storage, "setItem"> | undefined, prefs: Prefs) {
-  try {
-    storage?.setItem(PREFS_KEY, JSON.stringify(prefs));
-  } catch {
-    // Storage may be unavailable (private mode / TV browser restrictions).
-  }
 }
