@@ -8,7 +8,7 @@ import { FALLBACK_MODEL, PRIMARY_MODEL } from "@/lib/recommend/llm";
 import { buildReport } from "@/lib/report";
 import { parseAfd } from "@/lib/sources/nwsafd";
 import { MemoryKV, readSnapshot, writeSnapshot } from "@/lib/store";
-import type { AfdPayload, DailySnowState, ResortCamsPayload, Snapshot } from "@/lib/types";
+import type { AfdPayload, DailySnowState, PlumePayload, ResortCamsPayload, Snapshot } from "@/lib/types";
 import { createFixtureFetch, fixture } from "./fixtureFetch";
 
 // Nov 1 2026 is the end of daylight saving time: 13:00 UTC is 6:00 AM MST.
@@ -218,6 +218,12 @@ describe("posting", () => {
     expect(post).not.toHaveProperty("fallbackReason");
     expect(post.phase).toBe("storm");
     expect(post.figures["plume-snow-cln"]).toMatchObject({ kind: "image", url: "/api/daily-snow/figure/2026-11-01/plume-snow-cln" });
+    // The time axis is frozen with the still so the post keeps the run it was written about.
+    const plumes = captured.sources.plumes!.payload as PlumePayload;
+    const cln = plumes.charts.find((c) => c.stationCode === "CLN")!;
+    expect(post.figures["plume-snow-cln"]).toMatchObject({
+      axis: { plot: cln.panels!.find((p) => p.id === "snow")!.plot, initTime: cln.initTime, forecastHours: cln.forecastHours },
+    });
     expect(post.figures["nws-snow-level"].kind).toBe("snow-level");
     expect(await kv.get(dailySnowFigureKey("2026-11-01", "plume-snow-cln"), "arrayBuffer")).not.toBeNull();
     expect(JSON.parse((await kv.get(dailySnowKey("2026-11-01"), "text"))!).title).toBe("Storm Underway");
