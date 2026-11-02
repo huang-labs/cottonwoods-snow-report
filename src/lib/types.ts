@@ -63,6 +63,8 @@ export interface Snapshot {
   sources: Partial<Record<SourceId, SourceRecord>>;
   /** AI resort pick and its scheduling state. Absent until the AI binding is configured. */
   recommendation?: RecommendationState;
+  /** AI Daily Snow post and its scheduling state. Absent until the AI binding is configured. */
+  dailySnow?: DailySnowState;
 }
 
 export type SourceId =
@@ -75,7 +77,8 @@ export type SourceId =
   | "roads"
   | "traveltimes"
   | "webcams"
-  | "resortcams";
+  | "resortcams"
+  | "nwsafd";
 
 // ---------- Resort payloads ----------
 
@@ -417,4 +420,104 @@ export interface ReportResponse {
   requiredMissing: SourceId[];
   /** AI resort pick; null until one has been generated. */
   recommendation: ApiRecommendation | null;
+  /** AI Daily Snow post; null until one has been generated. */
+  dailySnow?: ApiDailySnow | null;
+}
+
+// ---------- NWS Area Forecast Discussion ----------
+
+export interface AfdPayload {
+  productId: string;
+  office: string;
+  issuedAt: string;
+  /** Forecast-relevant sections in product order (aviation, hydrology, etc. dropped). */
+  sections: Array<{ name: string; text: string }>;
+}
+
+// ---------- AI Daily Snow ----------
+
+/** Where the storm cycle stands, decided in code (see dailysnow/digest.ts). */
+export type DailySnowPhase = "pre-storm" | "storm" | "post-storm" | "quiet";
+export type DailySnowSectionId = "update" | "short-term" | "extended";
+
+/** Figures are data or stored stills, frozen at posting time. Captions come from code, never the model. */
+export type DailySnowFigure = { id: string; caption: string } & (
+  | { kind: "snow-bars"; canyon: CanyonId; bars: SixHourSnow[] }
+  | { kind: "snow-level"; series: Array<{ canyon: CanyonId; points: Array<{ start: string; ft: number }> }> }
+  | { kind: "totals"; rows: Array<{ name: string; h24: number | null; h48: number | null; storm: number | null }> }
+  | {
+      kind: "image";
+      /** Same-origin URL of the still copied into KV at posting time. */
+      url: string;
+      /** Where the original image came from (copied when the post is written). */
+      originUrl: string;
+      width: number | null;
+      height: number | null;
+    }
+);
+
+export interface DailySnowParagraph {
+  text: string;
+  /** Figure shown after this paragraph (id into DailySnowPost.figures). */
+  figure: string | null;
+}
+
+/** Code-computed numbers shown beside the post (never model-written). */
+export interface DailySnowNumbers {
+  canyons: Array<{
+    canyon: CanyonId;
+    point: string;
+    next24In: number | null;
+    next72In: number | null;
+    next7dIn: number | null;
+    nextStorm: NextStorm | null;
+    forecastUpdatedAt: string | null;
+  }>;
+  resorts: Array<{ id: PrimaryResortId; name: string; h24: number | null; storm: number | null; reportTime: string | null }>;
+}
+
+export interface DailySnowPost {
+  /** Denver calendar date of the post (YYYY-MM-DD). */
+  date: string;
+  phase: DailySnowPhase;
+  title: string;
+  summary: string;
+  /** 3–4 short bullets for the TV slide. */
+  highlights: string[];
+  sections: Array<{ id: DailySnowSectionId; paragraphs: DailySnowParagraph[] }>;
+  figures: Record<string, DailySnowFigure>;
+  numbers: DailySnowNumbers;
+  generatedAt: string;
+  model: string;
+  trigger: string;
+}
+
+/** Compact record of a past post: archive navigation and forecast verification. */
+export interface DailySnowHistoryEntry {
+  date: string;
+  title: string;
+  phase: DailySnowPhase;
+  forecast: Array<{ canyon: CanyonId; next24In: number | null; next72In: number | null; stormIn: number | null }>;
+}
+
+export interface DailySnowState {
+  current: DailySnowPost | null;
+  lastAttemptAt: string | null;
+  /** End of the last attempt; an attempt newer than this is still running (or was cut off). */
+  lastFinishedAt: string | null;
+  lastError: string | null;
+  consecutiveFailures: number;
+  /** Scheduled attempts and reserved model requests per Denver day. */
+  attempts: { date: string; count: number; calls: number };
+  /** Most recent posts first (at most DAILY_SNOW_HISTORY). */
+  history: DailySnowHistoryEntry[];
+}
+
+export interface ApiDailySnow extends DailySnowPost {
+  /** The post is not today's. */
+  outdated: boolean;
+  /** Recent attempts are failing (the last good post is still shown). */
+  failing: boolean;
+  /** Archived posts, newest first. */
+  archive: Array<{ date: string; title: string }>;
 }

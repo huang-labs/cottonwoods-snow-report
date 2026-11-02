@@ -99,3 +99,30 @@ Validation includes fixture-based digest, canyon, schedule, persistence and fall
 Manual refresh: authenticated `POST /api/admin/collect?recommend=force` (same existing admin bearer token). Prompt inspection: `npm run recommend:once -- --digest`; direct inference: `npx tsx scripts/recommend-once.ts > /tmp/snow-ai.json`, then `cf ai run @cf/zai-org/glm-5.3-flash --body @/tmp/snow-ai.json`. For local remote AI, use `SNOW_AI_REMOTE=1 npm run dev` with Wrangler authentication; routine builds/type generation disable remote bindings so they need no API token. No deployment has been performed for this feature.
 
 Cost: [Cloudflare's pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/) provides 10,000 free Neurons/day, resetting at midnight UTC; Paid usage above that is billed separately from the $5 Workers subscription. The [GLM model](https://developers.cloudflare.com/workers-ai/models/glm-5.3-flash/) is $0.15/M input and $0.50/M output tokens. Observed smoke requests consumed roughly 51–171 Neurons each. The request cap and bounded output keep expected usage modest, but are not a dollar spending cap or a guarantee that shared account usage remains inside the free allowance.
+
+## AI Daily Snow (2026-11-01)
+
+A morning forecast post modeled on OpenSnow's Utah Daily Snow (five sample posts from Oct 10 – Nov 1 2026 were studied for structure and tone), written by the same models as the resort pick from the collected data. It is not a copy of any forecaster's work: no persona, name or sign-off, and it is labeled AI everywhere it appears.
+
+What the samples share, and how each maps to the design:
+
+- **Structure:** a 2–5 word title, a 2–3 sentence Summary, then "Update" or "Short Term Forecast", and "Extended Forecast" only when there is something to say. The schema enforces that order; roads and resort choice are left to the resort pick.
+- **Storm-cycle phase:** posts read differently before, during and after a storm and in quiet spells. The phase is computed in code (`phaseOf`: ≥4″ in the next 12 h, or ≥2″ next 12 h with ≥2″ reported in 24 h = storm; ≥4″ reported in 48 h/storm or ≥2″ in 24 h = post-storm; ≥3″ in 72 h = pre-storm; else quiet) and the prompt tells the model what each phase covers.
+- **Forecast verification** ("we got exactly 5.9″"): each post stores its forecast totals; the next five posts' prompts include them so a recap can compare forecast with reported totals.
+- **Water, snow level, elevation and snow-to-liquid ratio:** passed as NWS blocks with derived SLR, six-hour snow with snow levels, and code-computed 24 h / 72 h / 7-day totals.
+- **Figures introduced by the prose** ("…at the stakes:"): each paragraph may name one figure id from an enum of figures that exist. Captions are written in code. The model is text-only and is told it cannot see images.
+- **Synoptic discussion and confidence:** the NWS Salt Lake City Area Forecast Discussion (`src/lib/sources/nwsafd.ts`) supplies the pattern, timing and confidence language. Key messages, discussion/short/long term and watches are kept; aviation, hydrology and fire weather are dropped. Without it, the extended outlook can only restate the 7-day grid.
+
+Not available, and the prompt forbids inventing them: observed station liquid (the samples use Alta-Collins), model-comparison and 500 mb maps, ensemble statistics (plume charts are images only). A SNOTEL source would add observed liquid later.
+
+Figures are frozen at posting time so archived posts show that morning's data: chart data is stored in the post, and image stills (plume panels from KV, snow-stake cams fetched live; stake stills older than 3 h are not offered) are copied to `dailysnow-fig:v1:<date>:<id>`. A still that can't be copied is dropped from its paragraph.
+
+Validation (`validateDailySnow`): length clips; the opening section must be update or short-term and extended may only follow it; unknown or repeated figures are dropped (at most six); and every inch amount in the text must be within 1″ of some number in the model input, otherwise the attempt fails over to the fallback model. The number check catches invented totals, not arithmetic errors.
+
+Scheduling (`src/lib/dailysnow/schedule.ts`): checked on every cron run in Denver local time, so 6 AM follows daylight-saving changes (Cloudflare crons are UTC only). One post per Denver date; retries every 10 minutes after a failure, at most 3 attempts a day, none after 10 AM. Each attempt reserves two model requests (cap 12/day, manual runs included). An attempt newer than its last finish blocks new ones for 6 minutes, longer than two 120 s model timeouts plus figure copies; as with the pick, KV is not an atomic lock. It runs in parallel with a due resort pick and shares its second snapshot write. Off-season (no resort in season, no snow reported or forecast in 7 days) it does not post.
+
+**AI Gateway limit:** the `snow-report` gateway was created with a sliding limit of 40 requests per 86,400 s, sized for the resort pick. Daily Snow adds up to 12/day (normally 2), so raise the gateway limit to about 52, or a busy pick day can rate-limit the morning post.
+
+Manual run: `POST /api/admin/collect?dailysnow=force` (admin bearer token). Prompt inspection: `npm run dailysnow:once -- --digest`; direct inference: `npm run -s dailysnow:once > /tmp/body.json`, then `cf ai run @cf/zai-org/glm-5.3-flash --body @/tmp/body.json`, and `npm run dailysnow:once -- --validate /tmp/out.json` to check the response. Live inference was not run during development (no Cloudflare credentials in that session); the first real post is the first 6 AM run after deploy.
+
+Expected cost: one or two model requests a day, with up to 8,000 output tokens (reasoning included) on a ~4,000-token prompt.

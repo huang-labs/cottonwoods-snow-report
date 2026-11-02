@@ -126,9 +126,9 @@ describe("preferences", () => {
 
 describe("sections", () => {
   it("maps sections to routes and back", () => {
-    expect(SECTIONS.map((s) => sectionHref(s.id))).toEqual(["/", "/weather", "/plumes", "/traffic", "/alta", "/snowbird", "/solitude", "/brighton"]);
+    expect(SECTIONS.map((s) => sectionHref(s.id))).toEqual(["/", "/daily-snow", "/weather", "/plumes", "/traffic", "/alta", "/snowbird", "/solitude", "/brighton"]);
     for (const [i, s] of SECTIONS.entries()) expect(sectionIndexFromPath(sectionHref(s.id))).toBe(i);
-    expect(sectionIndexFromPath("/alta/")).toBe(4);
+    expect(sectionIndexFromPath("/alta/")).toBe(5);
     expect(sectionIndexFromPath("/nope")).toBe(-1);
   });
 });
@@ -169,8 +169,8 @@ describe("browse mode", () => {
 
   it("renders every section page from real-source fixtures", async () => {
     mockApi(REPORT);
-    const expected = ["Regional snowfall", "Cottonwoods mountain weather", "Utah ensemble snow plumes", "Canyon roads", "Alta", "Snowbird", "Solitude", "Brighton"];
-    expect(SECTIONS).toHaveLength(8);
+    const expected = ["Regional snowfall", "Waiting for the first post", "Cottonwoods mountain weather", "Utah ensemble snow plumes", "Canyon roads", "Alta", "Snowbird", "Solitude", "Brighton"];
+    expect(SECTIONS).toHaveLength(9);
     for (const [i, title] of expected.entries()) {
       const view = renderAt(sectionHref(SECTIONS[i].id));
       expect(await screen.findByRole("heading", { level: 1, name: title })).toBeTruthy();
@@ -269,7 +269,7 @@ describe("slideshow mode", () => {
     vi.useFakeTimers();
     fireEvent.click(screen.getByRole("button", { name: /Slideshow/ }));
     act(() => void vi.advanceTimersByTime(10_000));
-    expect(screen.getByRole("heading", { level: 1, name: "Cottonwoods mountain weather" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "Waiting for the first post" })).toBeTruthy();
     fireEvent.change(screen.getByRole("combobox", { name: "Seconds per slide" }), { target: { value: "45" } });
     expect(JSON.parse(window.localStorage.getItem(PREFS_KEY)!).durationSec).toBe(45);
   });

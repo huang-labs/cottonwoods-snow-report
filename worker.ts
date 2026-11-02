@@ -27,6 +27,7 @@ export default {
             ok: summary.results.length - failed.length,
             skipped: summary.skipped,
             recommendation: summary.recommendation,
+            dailySnow: summary.dailySnow,
             failed: failed.map((f) => ({ id: f.id, error: f.error })),
           }),
         );

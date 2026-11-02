@@ -2,6 +2,7 @@ import type { ApiSource, Metric, ReportResponse, ResortReport, SnowfallSet, Sour
 import { formatAge, formatDenver } from "@/lib/time";
 import { FreshnessBadge, MetricValue } from "../ui";
 import { RecommendationCard } from "../RecommendationCard";
+import { DailySnowTeaser } from "../dailysnow/DailySnow";
 
 const PRIMARY: SourceId[] = ["alta", "snowbird", "solitude", "brighton"];
 
@@ -58,6 +59,7 @@ export function RegionalSlide({ report, now }: { report: ReportResponse; now: Da
         <p className="slide__sub">Resort-reported totals. Measurement windows and sites are source-defined and not strictly comparable — each cell shows the resort’s own label.</p>
       </header>
       <RecommendationCard recommendation={report.recommendation} now={now} />
+      <DailySnowTeaser post={report.dailySnow} now={now} />
       <table className="snow-table">
         <thead>
           <tr>
