@@ -1,33 +1,69 @@
-import type { ApiSource, Metric, ResortReport } from "@/lib/types";
+import type { ApiSource, Metric, ResortReport, SnowfallSet } from "@/lib/types";
 import { formatDenver } from "@/lib/time";
 import {
   FreshnessBadge,
   MetricValue,
+  NoticeList,
   SourceLine,
   StatusDot,
   Unavailable,
 } from "../ui";
 import { ResortCams } from "./ResortCams";
-import { byStatus, SNOW_ORDER } from "./resort-display";
+import { byStatus, newSnowKey, SNOW_LABEL, snowQualifier } from "./resort-display";
 import "./resort-report.css";
 
+/** A snowfall value under our window label, with the resort's wording only where it differs. */
 function SnowMetric({
+  label,
   metric,
+  qualifier = null,
   hero = false,
 }: {
+  label: string;
   metric: Metric;
+  qualifier?: string | null;
   hero?: boolean;
 }) {
   return (
     <div className={`resort-metric ${hero ? "resort-metric--hero" : ""}`}>
-      <div className="resort-metric__label">{metric.label}</div>
+      <div className="resort-metric__label">{label}</div>
       <MetricValue m={metric} size={hero ? "xl" : "lg"} />
-      {metric.note && <p className="resort-metric__note">{metric.note}</p>}
+      {qualifier && <p className="resort-metric__qualifier">{qualifier}</p>}
     </div>
   );
 }
 
-/** Browse report: normal document flow, independent of the TV's viewport budget. */
+/**
+ * Every resort shows the same slots in the same order: new snow, 24 h and base
+ * as tiles, then the other new-snow window, 48 h, 72 h, 7 days, storm and season.
+ * A window the resort doesn't publish keeps its slot as "—".
+ */
+function snowSlots(snowfall: SnowfallSet) {
+  const recent = newSnowKey(snowfall);
+  const other = recent === "overnight" ? "h12" : "overnight";
+  const slot = (key: keyof SnowfallSet) => ({
+    key,
+    label: SNOW_LABEL[key],
+    metric: snowfall[key],
+    qualifier: snowfall[key].state === "unavailable" ? null : snowQualifier(key, snowfall[key].label),
+  });
+  const history = ([other, "h48", "h72", "d7", "storm", "season"] as const).map(slot);
+  // Source notes ("rolling total computed by Snowbird…") apply to several
+  // windows at once, so they're listed once under the section.
+  const notes = new Map<string, string[]>();
+  for (const s of [slot(recent), slot("h24"), ...history]) {
+    if (s.metric.state === "unavailable" || !s.metric.note) continue;
+    notes.set(s.metric.note, [...(notes.get(s.metric.note) ?? []), s.label]);
+  }
+  return {
+    hero: [slot(recent), slot("h24")],
+    history,
+    unsupported: [slot(recent), slot("h24"), ...history].filter((s) => s.metric.state === "unavailable").map((s) => s.label),
+    notes: [...notes].map(([note, labels]) => ({ note, labels })),
+  };
+}
+
+/** One resort's report page: header, snowfall, weather, narrative, lifts and terrain, webcams. */
 export function ResortReportPage({
   source,
   now,
@@ -51,52 +87,31 @@ export function ResortReportPage({
       </section>
     );
 
-  // Keep the resort's own measurement windows; Alta supplies 12h, not overnight.
-  const recentKey =
-    r.snowfall.overnight.state !== "unavailable" ? "overnight" : "h12";
-  const primary = [recentKey, "h24"] as const;
-  const secondary = SNOW_ORDER.filter(
-    (key) =>
-      key !== recentKey &&
-      key !== "h24" &&
-      r.snowfall[key].state !== "unavailable",
-  );
-  const unsupported = SNOW_ORDER.filter(
-    (key) => r.snowfall[key].state === "unavailable",
-  );
+  const snow = snowSlots(r.snowfall);
   const observations = r.observations.filter(
     (observation) =>
       source.id !== "alta" || observation.temperature.state !== "unavailable",
   );
-  const notices = r.notices
-    .filter(
-      (notice) =>
-        !(
-          notice.severity === "info" &&
-          /^road status$/i.test(notice.title.trim())
-        ),
-    )
-    .sort(
-      (a, b) =>
-        ({ critical: 0, warning: 1, info: 2 })[a.severity] -
-        { critical: 0, warning: 1, info: 2 }[b.severity],
-    );
+  // Routine road status lives on the Roads page.
+  const notices = r.notices.filter(
+    (notice) => !(notice.severity === "info" && /^road status$/i.test(notice.title.trim())),
+  );
 
   return (
     <article className="resort-report" aria-label={`${r.resort} resort report`}>
       <header className="resort-report__header">
         <div>
-          <p className="resort-report__eyebrow">Mountain report</p>
+          <p className="eyebrow">Mountain report</p>
           <h1>{r.resort}</h1>
           <p className="resort-report__time">
-            {r.reportTimeLabel}:{" "}
+            Updated{" "}
             <strong>{formatDenver(r.reportTime, now)}</strong>
           </p>
         </div>
         <div className="resort-report__state">
           <FreshnessBadge freshness={source.freshness} />
           {r.operatingStatus && (
-            <span className="pill">{r.operatingStatus}</span>
+            <span>{r.operatingStatus}</span>
           )}
           {r.liftsOpen !== null && r.liftsTotal !== null && (
             <span>
@@ -109,19 +124,17 @@ export function ResortReportPage({
         </div>
       </header>
 
+      <nav className="resort-report__jump" aria-label="In this resort report">
+        <a href="#resort-snow-heading">Snowfall</a>
+        <a href="#resort-weather-heading">Weather</a>
+        {r.narrative && <a href="#resort-narrative-heading">Resort report</a>}
+        <a href="#resort-lifts-heading">Lifts &amp; terrain</a>
+        <a href="#resort-webcams">Webcams</a>
+      </nav>
+
       {notices.length > 0 && (
         <section className="resort-alerts" aria-label="Resort notices">
-          {notices.map((notice, i) => (
-            <div key={i} className={`notice notice--${notice.severity}`}>
-              <strong>{notice.title}</strong>
-              <p>{notice.text}</p>
-              {notice.updatedAt && (
-                <span className="muted small">
-                  Updated {formatDenver(notice.updatedAt, now)}
-                </span>
-              )}
-            </div>
-          ))}
+          <NoticeList notices={notices} now={now} />
         </section>
       )}
       {!!r.missingSections?.length && (
@@ -131,44 +144,38 @@ export function ResortReportPage({
         </p>
       )}
 
-      <nav className="resort-report__jump" aria-label="In this resort report">
-        <a href="#resort-snow-heading">Snowfall</a>
-        <a href="#resort-weather-heading">Weather</a>
-        {r.narrative && <a href="#resort-narrative-heading">Resort report</a>}
-        <a href="#resort-lifts-heading">Lifts &amp; terrain</a>
-        <a href="#resort-webcams">Webcams</a>
-      </nav>
-
       <section className="resort-snow" aria-labelledby="resort-snow-heading">
         <div className="resort-section-heading">
           <h2 id="resort-snow-heading">Snowfall</h2>
           <span>Reported by {r.resort}</span>
         </div>
         <div className="resort-snow__headline">
-          {primary
-            .filter((key) => r.snowfall[key].state !== "unavailable")
-            .map((key) => (
-              <SnowMetric key={key} metric={r.snowfall[key]} hero />
-            ))}
-          <SnowMetric metric={r.base} hero />
+          {snow.hero.map((s) => (
+            <SnowMetric key={s.key} label={s.label} metric={s.metric} qualifier={s.qualifier} hero />
+          ))}
+          <SnowMetric label="Base depth" metric={r.base} hero />
         </div>
-        {secondary.length > 0 && (
-          <div className="resort-snow__history">
-            {secondary.map((key) => (
-              <SnowMetric key={key} metric={r.snowfall[key]} />
+        <div className="resort-snow__history">
+          {snow.history.map((s) => (
+            <SnowMetric key={s.key} label={s.label} metric={s.metric} qualifier={s.qualifier} />
+          ))}
+        </div>
+        {(snow.unsupported.length > 0 || snow.notes.length > 0) && (
+          <div className="resort-snow__notes">
+            {snow.notes.map(({ note, labels }) => (
+              <p key={note}>{labels.join(", ")}: {note}</p>
             ))}
+            {snow.unsupported.length > 0 && (
+              <p className="resort-snow__unavailable">
+                Not provided by {r.resort}: {snow.unsupported.join(", ")}
+              </p>
+            )}
           </div>
-        )}
-        {unsupported.length > 0 && (
-          <p className="resort-snow__unavailable">
-            Not provided by {r.resort}:{" "}
-            {unsupported.map((key) => r.snowfall[key].label).join(", ")}
-          </p>
         )}
       </section>
 
       <section
-        className="panel resort-weather"
+        className="resort-weather"
         aria-labelledby="resort-weather-heading"
       >
         <div className="resort-section-heading">
@@ -186,7 +193,7 @@ export function ResortReportPage({
               <div key={observation.location} className="resort-observation">
                 <div className="resort-observation__heading">
                   <h3>{observation.location}</h3>
-                  <span className="muted small">
+                  <span className="resort-observation__time">
                     Observed {formatDenver(observation.observedAt, now)}
                   </span>
                 </div>
@@ -223,7 +230,7 @@ export function ResortReportPage({
 
       {r.narrative && (
         <section
-          className="panel resort-narrative"
+          className="resort-narrative"
           aria-labelledby="resort-narrative-heading"
         >
           <div className="resort-section-heading">
@@ -252,7 +259,7 @@ export function ResortReportPage({
       )}
 
       <section
-        className="panel resort-operations"
+        className="resort-operations"
         aria-labelledby="resort-lifts-heading"
       >
         <div className="resort-section-heading">
@@ -277,20 +284,20 @@ export function ResortReportPage({
         ) : r.lifts.length === 0 ? (
           <p className="muted">No individual lifts listed in this report.</p>
         ) : (
-          <ul className="resort-lifts">
+          <ul className="status-list">
             {byStatus(r.lifts).map((lift) => (
               <li
                 key={lift.name}
-                className={`resort-lift resort-lift--${lift.status}`}
+                className={`status-item status-item--${lift.status}`}
               >
-                <div className="resort-lift__heading">
+                <div className="status-item__row">
                   <strong>{lift.name}</strong>
                   <span>
                     <StatusDot status={lift.status} /> {lift.rawStatus}
                   </span>
                 </div>
-                {lift.hours && <p className="muted">{lift.hours}</p>}
-                {lift.note && <p className="resort-lift__note">{lift.note}</p>}
+                {lift.hours && <p className="status-item__meta">{lift.hours}</p>}
+                {lift.note && <p className="status-item__note">{lift.note}</p>}
               </li>
             ))}
           </ul>
@@ -303,17 +310,20 @@ export function ResortReportPage({
         ) : r.terrain.length === 0 ? (
           <p className="muted">No named terrain listed in this report.</p>
         ) : (
-          <ul className="resort-terrain">
+          <ul className="status-list">
             {byStatus(r.terrain).map((terrain) => (
-              <li key={`${terrain.kind}-${terrain.name}`}>
-                <div>
+              <li
+                key={`${terrain.kind}-${terrain.name}`}
+                className={`status-item status-item--${terrain.status}`}
+              >
+                <div className="status-item__row">
                   <strong>{terrain.name}</strong>
-                  <span className="muted small">{terrain.kind}</span>
+                  <span>
+                    <StatusDot status={terrain.status} /> {terrain.rawStatus}
+                  </span>
                 </div>
-                <span>
-                  <StatusDot status={terrain.status} /> {terrain.rawStatus}
-                </span>
-                {terrain.note && <p className="muted">{terrain.note}</p>}
+                <p className="status-item__meta">{terrain.kind}</p>
+                {terrain.note && <p className="status-item__note">{terrain.note}</p>}
               </li>
             ))}
           </ul>

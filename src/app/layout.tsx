@@ -13,18 +13,27 @@ export const metadata: Metadata = {
     ...siteOpenGraph,
     images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Live snowfall at Alta, Snowbird, Solitude and Brighton" }],
   },
-  twitter: { card: "summary_large_image", title, description, images: ["/opengraph-image"] },
+  twitter: { card: "summary_large_image", title, images: ["/opengraph-image"] },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0b0f14",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#101c2a" },
+  ],
 };
+
+// Apply the saved appearance before first paint so the theme never flashes.
+const themeScript = `try{var t=localStorage.getItem("cottonwoods-snow-report.appearance");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>
         <AppShell>{children}</AppShell>
       </body>

@@ -20,7 +20,7 @@ export function canyonOf(text: string): RoadNotice["canyon"] {
   return "other";
 }
 
-/** Severity from message text. Closures/avalanche work persist across slides. */
+/** Severity from message text. Closures/avalanche work are critical. */
 export function severityOf(text: string): RoadNotice["severity"] {
   if (/\b(CLOSED|CLOSURE|CLOSES|CLOSING|AVALANCHE|INTERLODGE)\b/i.test(text)) return "critical";
   if (/\b(TRACTION|CHAINS?|4WD|AWD|SNOW TIRES|RESTRICT|DELAYS?|ICY|SLICK)\b/i.test(text)) return "warning";

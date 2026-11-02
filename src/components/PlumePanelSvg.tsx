@@ -3,7 +3,7 @@ import type { PlumePanel } from "@/lib/types";
 
 const HOUR = 3_600_000;
 const AXIS_H = 66;
-/** White margin around each panel, in chart pixels (≈10 px on a 1080p TV). */
+/** White margin around each panel, in chart pixels. */
 const PAD = 20;
 const dowFmt = new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", weekday: "short" });
 const dateFmt = new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", month: "numeric", day: "numeric" });
