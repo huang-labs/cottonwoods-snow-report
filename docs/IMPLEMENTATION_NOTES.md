@@ -166,3 +166,11 @@ The Daily Snow teaser now remains visible on the regional snowfall slide in slid
 Existing files touched: `src/app/globals.css` removes the slideshow-only teaser hiding rule; `src/components/RecommendationCard.tsx` gates the card on a pick; `test/dailysnow-ui.test.tsx` covers absent/no-pick recommendations and preservation of an old pick; `README.md` documents visibility; this file records the decision and validation. No collection, model, API or storage behavior changes.
 
 Validation: 25 tests across Daily Snow UI and navigation/playback pass; `npm run typecheck`, `npm run build` and `git diff --check` pass. Local workerd on port 8791 serves a read-only copy of the live report with all 12 source payloads and the real “Storm On, Better Snow Tonight” teaser; no production writes or live model calls. Browser/responsive visual checks were not run. The existing regional slide permits vertical scrolling when content exceeds the viewport.
+
+## Regional snowfall resort links (2026-11-01)
+
+Each resort name in the regional snowfall table now links to its existing resort page (`/alta`, `/snowbird`, `/solitude`, `/brighton`), including when its report is missing or stale. Native anchors support keyboard activation, opening in another tab and leaving the slideshow for the selected resort page. Scoped underlines, hover color and focus outlines make the links discoverable without changing table dimensions or measurement rendering.
+
+Existing files touched: `src/components/slides/RegionalSlide.tsx` adds links through the existing `sectionHref` helper; `src/app/globals.css` styles only those links; this file records the decision and validation. No routes, storage or setup change.
+
+Validation: 25 tests across playback and Daily Snow UI pass; `npm run typecheck`, `npm run build` and `git diff --check` pass. Local workerd at http://localhost:8794 serves this branch with successfully collected real reports for all four resorts (all current). Browser visual checks at phone, laptop and TV widths were not run; links preserve existing name sizing and table layout. No production writes.

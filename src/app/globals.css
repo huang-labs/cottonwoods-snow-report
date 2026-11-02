@@ -126,6 +126,9 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
 .snow-table th, .snow-table td { text-align: left; padding: 0.45em 0.8em; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .snow-table thead th { color: var(--muted); font-weight: 600; font-size: 1em; text-transform: uppercase; letter-spacing: 0.04em; }
 .row--primary th[scope="row"] .resort-name { font-size: 2.3em; font-weight: 800; }
+.resort-name__link { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
+.resort-name__link:hover { color: var(--accent); }
+.resort-name__link:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 .cell-label { color: var(--muted); font-size: 0.78em; margin-top: 0.25em; }
 .report-time { font-size: 1.05em; }
 .legend { color: var(--muted); font-size: 0.9em; margin: 0; }
