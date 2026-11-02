@@ -123,9 +123,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
         <DataBanners data={data} />
         <main className="editorial-page">{children}</main>
-        <footer className="editorial-footer">
-          Cottonwoods Snow Report · Resort-reported measurements, NWS forecasts, University of Utah ensemble plumes and UDOT roads · All times Mountain
-        </footer>
       </div>
     </DashboardContext.Provider>
   );

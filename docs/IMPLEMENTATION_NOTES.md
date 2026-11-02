@@ -392,3 +392,15 @@ Styles: `globals.css` is rewritten as the production stylesheet — light-first 
 One latent bug surfaced: the working tree's RegionalSlide imported `./resort-columns`, a module that was never created — earlier builds and typechecks passed on stale caches. The inline PRIMARY/COLUMNS definitions (as in main) are restored.
 
 Validation: 185 tests pass (app-shell test replaces the playback test; recommendation and resort-report tests updated to the integrated row and 4-arg `renderSection`), typecheck and build pass. Browser smoke test on the real dev server with seeded local KV below.
+
+## 2026-11-02 — Implementation round 2: review fixes from the worker preview
+
+Owner review of the PR preview (production KV) found five issues, all fixed:
+
+- **Footer removed** from the app shell entirely (it restated the sources and looked filler-like).
+- **Row dividers now span the highlight width.** The hover strips on the resort table's first/last cells carry the row's top and bottom divider lines 16px into the gutters (top/bottom -1px, 1px borders overlapping the collapsed cell borders), so a hovered row's blue box is fully framed instead of leaking past the divider ends. Pixel-verified at 390px and 1366px: the divider in the gutter and in the content sit at the same y, on both edges.
+- **Badges de-tubed:** border-radius 999px → 4px; chips stay boxy with a slight round.
+- **Daily Snow "Posted" time realigned:** the page's eyebrow header uses `.recommendation__heading`, whose flex rule was dropped with the old recommendation card — the time stacked raggedly. Restored: the time right-aligns on the same line as the eyebrow on desktop and wraps to its own row on phones. Verified with a report fixture injected via API interception (local dev has no AI output).
+- **Roads page meta chips:** meta items are inline-flex rows with even gaps, so the "Report time unknown" chip sits centered between "Roads" and "checked X ago" instead of wedged into the text.
+
+Full re-check: 185 tests, typecheck and build pass; all 10 paths at 390px/1366px render with zero overflow and zero console errors; theme behavior re-verified.

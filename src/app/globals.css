@@ -75,7 +75,6 @@ a { color: var(--accent); }
 
 /* ---- page container ---- */
 .editorial-page { max-width: 1180px; width: 100%; margin: auto; padding: 36px 32px 64px; }
-.editorial-footer { max-width: 1116px; margin: 0 auto; padding: 20px 32px 28px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
 
 /* ---- section pages ---- */
 .slide { width: 100%; height: auto; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 28px; overflow: visible; }
@@ -84,6 +83,8 @@ a { color: var(--accent); }
 .slide__sub { font-size: 15px; line-height: 1.55; max-width: 76ch; margin: 12px 0 0; color: var(--muted); }
 .slide__meta { display: flex; gap: 1.6em; align-items: center; color: var(--muted); font-size: 18px; flex-wrap: wrap; }
 .slide__meta strong { color: var(--text); }
+/* Status chips sit between text, so give each meta item even internal spacing. */
+.slide__meta > span { display: inline-flex; align-items: center; gap: 7px; min-width: 0; flex-wrap: wrap; }
 .panel { background: none; border: 0; border-radius: 0; padding: 0; min-height: 0; overflow: visible; }
 .panel h2 { font: 700 22px/1.2 var(--font); letter-spacing: -0.5px; color: var(--text); margin: 0.2em 0 0.6em; }
 .panel h2:not(:first-child) { margin-top: 1em; }
@@ -91,7 +92,7 @@ a { color: var(--accent); }
 
 /* ---- badges & metrics ---- */
 /* Freshness and AI chips carry color: green fresh, amber aging, red stale, blue AI. */
-.badge { display: inline-block; border-radius: 999px; padding: 2px 8px; font-size: 10.5px; font-weight: 650; letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; background: color-mix(in srgb, var(--muted) 12%, transparent); color: var(--muted); }
+.badge { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 10.5px; font-weight: 650; letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; background: color-mix(in srgb, var(--muted) 12%, transparent); color: var(--muted); }
 .badge--current { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
 .badge--old-report, .badge--time-unknown { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
 .badge--stale, .badge--unavailable { background: color-mix(in srgb, var(--bad) 15%, transparent); color: var(--bad); }
@@ -157,6 +158,7 @@ a { color: var(--accent); }
 .dailysnow-teaser__summary { grid-column: 1; max-width: 75ch; font-size: 16px; line-height: 1.6; }
 .dailysnow-teaser__time { grid-column: 2; grid-row: 1; text-align: right; font-size: 12px; }
 .dailysnow-teaser__more { grid-column: 2; grid-row: 3; text-align: right; align-self: end; color: var(--accent); font-weight: 600; font-size: 14px; }
+.recommendation__heading { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5em 1.5em; flex-wrap: wrap; }
 .recommendation__eyebrow { grid-column: 1; color: var(--accent); font-weight: 700; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
 .recommendation__plan { font-weight: 600; }
 
@@ -179,9 +181,10 @@ a { color: var(--accent); }
 }
 .snow-table .row--recommended > th:first-child::before { bottom: -1px; border-radius: 2px 2px 0 0; }
 .snow-table .recommendation-row > td::before { border-radius: 0 0 2px 2px; }
-/* Hover/focus highlights extend 16px past the content, so names sit inside the painted box rather than on its edge. */
-.snow-table .row--primary > th:first-child::after { content: ""; position: absolute; left: -16px; top: 0; bottom: 0; width: 16px; background: transparent; transition: background-color 150ms ease; }
-.snow-table .row--primary > td:last-child::before { content: ""; position: absolute; right: -16px; top: 0; bottom: 0; width: 16px; background: transparent; transition: background-color 150ms ease; }
+/* Hover/focus highlights extend 16px past the content, so names sit inside the painted box rather than on its edge.
+   The strips also carry the row's top/bottom dividers 1px outward, so the divider spans the same width as the highlight. */
+.snow-table .row--primary > th:first-child::after { content: ""; position: absolute; left: -16px; top: -1px; bottom: -1px; width: 16px; border-block: 1px solid var(--line); background: transparent; transition: background-color 150ms ease; }
+.snow-table .row--primary > td:last-child::before { content: ""; position: absolute; right: -16px; top: -1px; bottom: -1px; width: 16px; border-block: 1px solid var(--line); background: transparent; transition: background-color 150ms ease; }
 @media (hover: hover) {
   .snow-table .row--primary:hover > th:first-child::after,
   .snow-table .row--primary:hover > td:last-child::before { background: rgba(124, 196, 255, 0.1); }
