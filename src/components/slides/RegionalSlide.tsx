@@ -58,8 +58,8 @@ export function RegionalSlide({ report, now }: { report: ReportResponse; now: Da
         <h1>Regional snowfall</h1>
         <p className="slide__sub">Resort-reported totals. Measurement windows and sites are source-defined and not strictly comparable — each cell shows the resort’s own label.</p>
       </header>
-      <RecommendationCard recommendation={report.recommendation} now={now} />
       <DailySnowTeaser post={report.dailySnow} now={now} />
+      <RecommendationCard recommendation={report.recommendation} now={now} />
       <table className="snow-table">
         <thead>
           <tr>
