@@ -265,6 +265,43 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
   .slide-wrap { animation: none; }
 }
 
+/* ---- Daily Snow (AI post; shares the recommendation card's look) ---- */
+.slide--dailysnow { overflow-y: auto; }
+/* One reading width for the whole post; children fill it so every edge lines up. */
+.dailysnow { max-width: 50em; width: 100%; margin: 0 auto; }
+.dailysnow__warn { color: var(--warn); }
+.dailysnow__title { font-size: 2.6em; line-height: 1.1; margin: 0.25em 0 0.15em; }
+.dailysnow__summary { font-size: 1.15em; }
+.dailysnow__section h2 { font-size: 1.3em; margin: 0.9em 0 0.3em; color: var(--accent); }
+.dailysnow__section p { margin: 0.45em 0; line-height: 1.5; }
+.dailysnow-figure { margin: 0.6em 0 1em; background: var(--bg); border: 1px solid var(--line); border-radius: 0.5em; padding: 0.6em; }
+.dailysnow-figure img { display: block; width: 100%; height: auto; border-radius: 0.3em; }
+.dailysnow-figure figcaption { color: var(--muted); font-size: 0.8em; margin-top: 0.4em; display: flex; gap: 1em; flex-wrap: wrap; }
+.dailysnow-level__line { fill: none; stroke-width: 4; }
+/* Dashed so it stays readable where the two canyons' snow levels coincide. */
+.dailysnow-level__line--bcc { stroke-dasharray: 10 8; }
+.dailysnow-level__line--lcc, .dailysnow-level__key--lcc::before { stroke: var(--accent); background: var(--accent); }
+.dailysnow-level__line--bcc, .dailysnow-level__key--bcc::before { stroke: var(--hold); background: var(--hold); }
+.dailysnow-level__legend { display: inline-flex; gap: 0.8em; }
+.dailysnow-level__key::before { content: ""; display: inline-block; width: 1em; height: 0.25em; margin-right: 0.3em; vertical-align: middle; }
+.dailysnow-totals { width: 100%; border-collapse: collapse; }
+.dailysnow-totals th, .dailysnow-totals td { text-align: left; padding: 0.25em 0.5em; }
+.dailysnow-totals__cell { position: relative; display: block; padding-left: 0.3em; }
+.dailysnow-totals__bar { position: absolute; left: 0; top: 0.1em; bottom: 0.1em; background: rgba(124, 196, 255, 0.25); border-radius: 0.2em; }
+.dailysnow-totals__cell > span:last-child { position: relative; font-weight: 700; }
+.dailysnow__footer { margin-top: 1.2em; }
+.dailysnow__nav { display: flex; justify-content: space-between; gap: 1em; margin-top: 0.8em; flex-wrap: wrap; }
+.dailysnow__nav button, .dailysnow__back { background: transparent; border: 1px solid var(--line); color: var(--accent); border-radius: 0.45em; padding: 0.4em 0.8em; cursor: pointer; text-align: left; }
+.dailysnow__nav button:hover, .dailysnow__back:hover { border-color: var(--accent); }
+.dailysnow-teaser { display: grid; grid-template-columns: 1fr auto; gap: 0.15em 1em; color: inherit; text-decoration: none; }
+.dailysnow-teaser:hover, .dailysnow-teaser:focus-visible { border-color: var(--accent); }
+.dailysnow-teaser .recommendation__eyebrow { grid-column: 1; }
+.dailysnow-teaser__time { grid-column: 2; grid-row: 1; text-align: right; }
+.dailysnow-teaser__title { font-size: 1.3em; grid-column: 1 / -1; }
+.dailysnow-teaser__summary { grid-column: 1; }
+.dailysnow-teaser__more { grid-column: 2; align-self: end; color: var(--accent); font-weight: 600; }
+.app--slideshow .dailysnow-teaser { display: none; }
+
 /* ---- small screens: stack and scroll ---- */
 @media (max-width: 900px) {
   :root { --fs: 14px; }
@@ -301,4 +338,10 @@ button.nav__tab { font: inherit; border: 0; background: transparent; cursor: poi
 }
 @media (min-width: 901px) {
   .app--browse { height: 100dvh; }
+}
+
+@media (max-width: 900px) {
+  .dailysnow__title { font-size: 1.9em; }
+  .dailysnow-teaser { grid-template-columns: 1fr; }
+  .dailysnow-teaser__time, .dailysnow-teaser__more { grid-column: 1; grid-row: auto; text-align: left; }
 }

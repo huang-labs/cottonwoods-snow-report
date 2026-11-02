@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppShell } from "@/components/AppShell";
@@ -126,9 +126,9 @@ describe("preferences", () => {
 
 describe("sections", () => {
   it("maps sections to routes and back", () => {
-    expect(SECTIONS.map((s) => sectionHref(s.id))).toEqual(["/", "/weather", "/plumes", "/traffic", "/alta", "/snowbird", "/solitude", "/brighton"]);
+    expect(SECTIONS.map((s) => sectionHref(s.id))).toEqual(["/", "/daily-snow", "/weather", "/plumes", "/traffic", "/alta", "/snowbird", "/solitude", "/brighton"]);
     for (const [i, s] of SECTIONS.entries()) expect(sectionIndexFromPath(sectionHref(s.id))).toBe(i);
-    expect(sectionIndexFromPath("/alta/")).toBe(4);
+    expect(sectionIndexFromPath("/alta/")).toBe(5);
     expect(sectionIndexFromPath("/nope")).toBe(-1);
   });
 });
@@ -169,8 +169,8 @@ describe("browse mode", () => {
 
   it("renders every section page from real-source fixtures", async () => {
     mockApi(REPORT);
-    const expected = ["Regional snowfall", "Cottonwoods mountain weather", "Utah ensemble snow plumes", "Canyon roads", "Alta", "Snowbird", "Solitude", "Brighton"];
-    expect(SECTIONS).toHaveLength(8);
+    const expected = ["Regional snowfall", "Waiting for the first post", "Cottonwoods mountain weather", "Utah ensemble snow plumes", "Canyon roads", "Alta", "Snowbird", "Solitude", "Brighton"];
+    expect(SECTIONS).toHaveLength(9);
     for (const [i, title] of expected.entries()) {
       const view = renderAt(sectionHref(SECTIONS[i].id));
       expect(await screen.findByRole("heading", { level: 1, name: title })).toBeTruthy();
@@ -269,9 +269,25 @@ describe("slideshow mode", () => {
     vi.useFakeTimers();
     fireEvent.click(screen.getByRole("button", { name: /Slideshow/ }));
     act(() => void vi.advanceTimersByTime(10_000));
+    // Daily Snow is a page only; the slideshow goes from Snowfall straight to Weather.
     expect(screen.getByRole("heading", { level: 1, name: "Cottonwoods mountain weather" })).toBeTruthy();
     fireEvent.change(screen.getByRole("combobox", { name: "Seconds per slide" }), { target: { value: "45" } });
     expect(JSON.parse(window.localStorage.getItem(PREFS_KEY)!).durationSec).toBe(45);
+  });
+
+  it("leaves Daily Snow out of the slideshow", async () => {
+    mockApi(REPORT);
+    renderAt("/daily-snow");
+    await screen.findByRole("heading", { level: 1, name: "Waiting for the first post" });
+    fireEvent.click(screen.getByRole("button", { name: /Slideshow/ }));
+    // Started from the Daily Snow page: begins at the next slide.
+    expect(screen.getByRole("heading", { level: 1, name: "Cottonwoods mountain weather" })).toBeTruthy();
+    const picker = screen.getByRole("group", { name: "Choose slide" });
+    expect(within(picker).queryByRole("button", { name: "Daily Snow" })).toBeNull();
+    expect(within(picker).getAllByRole("button")).toHaveLength(SECTIONS.length - 1);
+    fireEvent.click(screen.getByRole("button", { name: "Previous slide" }));
+    fireEvent.click(screen.getByRole("button", { name: "Previous slide" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Brighton" })).toBeTruthy();
   });
 
   it("Escape leaves the slideshow", async () => {

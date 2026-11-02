@@ -1,3 +1,4 @@
+import { planDailySnow, type DailySnowPlan } from "./dailysnow";
 import { createFetchContext, type CollectorSecrets } from "./http";
 import { planRecommendation, type RecommendationPlan, type RecommendEnv } from "./recommend";
 import { SOURCES } from "./sources";
@@ -17,6 +18,8 @@ export interface CollectOptions {
   only?: SourceId[];
   /** Ask the model regardless of its schedule (manual runs). */
   forceRecommendation?: boolean;
+  /** Write the Daily Snow post regardless of its schedule (manual runs). */
+  forceDailySnow?: boolean;
 }
 
 export interface CollectSummary {
@@ -27,6 +30,8 @@ export interface CollectSummary {
   skipped: SourceId[];
   /** Recommendation outcome this run, when the AI binding is configured. */
   recommendation?: { generatedAt: string | null; model: string | null; trigger: string | null; error: string | null };
+  /** Daily Snow outcome this run, when the AI binding is configured and a post was due. */
+  dailySnow?: { date: string | null; model: string | null; trigger: string | null; error: string | null; skipped: string | null };
 }
 
 /**
@@ -139,14 +144,26 @@ export async function runCollection(env: CollectorEnv, opts: CollectOptions = {}
   }
   const carried = plan?.state ?? previous?.recommendation;
   if (carried) snapshot.recommendation = carried;
+  // The Daily Snow post (once a morning) follows the same pattern, in parallel with the pick.
+  let daily: DailySnowPlan | undefined;
+  try {
+    daily = planDailySnow(previous?.dailySnow, snapshot, env, now, { force: opts.forceDailySnow, fetchImpl: opts.fetchImpl });
+  } catch (err) {
+    console.error("dailysnow: failed", err);
+  }
+  const carriedDaily = daily?.state ?? previous?.dailySnow;
+  if (carriedDaily) snapshot.dailySnow = carriedDaily;
   snapshot.writtenAt = new Date().toISOString();
   await writeSnapshot(env.SNOW_KV, snapshot);
-  if (plan?.run) {
-    snapshot.recommendation = await plan.run();
+  if (plan?.run || daily?.run) {
+    const [rec, post] = await Promise.all([plan?.run?.(), daily?.run?.()]);
+    if (rec) snapshot.recommendation = rec;
+    if (post) snapshot.dailySnow = post;
     await writeSnapshot(env.SNOW_KV, snapshot);
   }
   const ai = snapshot.recommendation;
   const updatedNow = ai?.current?.generatedAt === now.toISOString();
+  const posted = snapshot.dailySnow?.current?.generatedAt === now.toISOString() ? snapshot.dailySnow.current : null;
   return {
     startedAt: now.toISOString(),
     durationMs: Date.now() - started,
@@ -164,6 +181,17 @@ export async function runCollection(env: CollectorEnv, opts: CollectOptions = {}
             model: updatedNow ? (ai.current?.model ?? null) : null,
             trigger: updatedNow ? (ai.current?.trigger ?? null) : null,
             error: ai.lastAttemptAt === now.toISOString() ? ai.lastError : null,
+          },
+        }
+      : {}),
+    ...(daily && (daily.run || daily.skipped)
+      ? {
+          dailySnow: {
+            date: posted?.date ?? null,
+            model: posted?.model ?? null,
+            trigger: posted?.trigger ?? null,
+            error: daily.run ? (snapshot.dailySnow?.lastError ?? null) : null,
+            skipped: daily.skipped ?? null,
           },
         }
       : {}),

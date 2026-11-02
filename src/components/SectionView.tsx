@@ -2,6 +2,7 @@
 
 import type { ReportResponse, SourceId } from "@/lib/types";
 import { useDashboard } from "./dashboard-context";
+import { DailySnowSlide } from "./dailysnow/DailySnow";
 import { PlumeSlide } from "./slides/PlumeSlide";
 import { RegionalSlide } from "./slides/RegionalSlide";
 import { ResortSlide } from "./slides/ResortSlide";
@@ -12,6 +13,8 @@ export function renderSection(id: string, report: ReportResponse, now: Date, loa
   switch (id) {
     case "regional":
       return <RegionalSlide report={report} now={now} />;
+    case "daily-snow":
+      return <DailySnowSlide report={report} now={now} />;
     case "weather":
       return <WeatherSlide source={report.sources.nws} now={now} />;
     case "plumes":
