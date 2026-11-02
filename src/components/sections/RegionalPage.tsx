@@ -4,24 +4,33 @@ import { sectionHref } from "@/lib/sections";
 import { formatAge, formatDenver } from "@/lib/time";
 import { DailySnowTeaser } from "../dailysnow/DailySnow";
 import { FreshnessBadge, MetricValue } from "../ui";
+import { newSnowKey, SNOW_LABEL, snowQualifier } from "./resort-display";
 
 const PRIMARY: SourceId[] = ["alta", "snowbird", "solitude", "brighton"];
 
 const COLUMNS: Array<{ key: keyof SnowfallSet | "base"; title: string }> = [
   { key: "overnight", title: "Overnight / 12 h" },
-  { key: "h24", title: "24 h" },
-  { key: "h48", title: "48 h" },
-  { key: "storm", title: "Storm" },
+  { key: "h24", title: SNOW_LABEL.h24 },
+  { key: "h48", title: SNOW_LABEL.h48 },
+  { key: "storm", title: SNOW_LABEL.storm },
   { key: "base", title: "Base" },
 ];
 
-/** Overnight column: use the source's overnight field, else its 12-hour field — always labelled. */
-function cell(r: ResortReport, key: (typeof COLUMNS)[number]["key"]): Metric {
-  if (key === "base") return r.base;
-  if (key === "overnight" && r.snowfall.overnight.state === "unavailable" && r.snowfall.h12.state !== "unavailable") {
-    return r.snowfall.h12;
-  }
-  return r.snowfall[key];
+/**
+ * The value for a column and the label under it. The window label shows only on
+ * phones (where the column headers are hidden); a qualifier shows everywhere when
+ * the resort's window differs from the column's, like Alta's 12 h in the overnight
+ * column or Solitude's "since lifts closed".
+ */
+function cell(r: ResortReport, key: (typeof COLUMNS)[number]["key"]): { m: Metric; label: string; qualifier: string | null } {
+  if (key === "base") return { m: r.base, label: "Base", qualifier: null };
+  const used = key === "overnight" ? newSnowKey(r.snowfall) : key;
+  const m = r.snowfall[used];
+  return {
+    m,
+    label: SNOW_LABEL[used],
+    qualifier: used !== key ? SNOW_LABEL[used] : m.state === "unavailable" ? null : snowQualifier(used, m.label),
+  };
 }
 
 function Row({ source, now, recommended }: { source: ApiSource; now: Date; recommended: boolean }) {
@@ -35,11 +44,14 @@ function Row({ source, now, recommended }: { source: ApiSource; now: Date; recom
       </th>
       {COLUMNS.map((c) => {
         if (!r) return <td key={c.key} className="muted">—</td>;
-        const m = cell(r, c.key);
+        const { m, label, qualifier } = cell(r, c.key);
         return (
           <td key={c.key}>
             <MetricValue m={m} size="xl" />
-            <div className="cell-label">{m.label}</div>
+            <div className="cell-label">
+              {label !== qualifier && <span className="cell-label__window">{label}</span>}
+              {qualifier && <span>{qualifier}</span>}
+            </div>
           </td>
         );
       })}
@@ -58,7 +70,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
     <section className="page page--regional">
       <header className="page__header">
         <h1>Regional snowfall</h1>
-        <p className="page__sub">Resort-reported totals. Measurement windows and sites are source-defined and not strictly comparable — each cell shows the resort’s own label.</p>
+        <p className="page__sub">Resort-reported totals in the same windows for every resort. Each resort measures at its own site and time, so totals aren’t strictly comparable; a note under a value marks where a resort’s window differs.</p>
       </header>
       <DailySnowTeaser post={report.dailySnow} now={now} />
       <table className="snow-table">
@@ -95,7 +107,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
         </tbody>
       </table>
       <p className="legend">
-        <span className="metric__value metric__value--zero">0″</span> reported zero · <span className="metric__missing">not reported</span> field empty in source · <span className="metric__na">n/a</span> not provided by source
+        <span className="metric__value metric__value--zero">0″</span> reported zero · <span className="metric__missing">not reported</span> field empty in source · <span className="metric__na">—</span> not provided by source
       </p>
     </section>
   );

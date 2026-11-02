@@ -101,12 +101,11 @@
   font-size: var(--fs-caption);
   margin-bottom: 8px;
 }
-.resort-metric__note {
+.resort-metric__qualifier {
   color: var(--muted);
   font-size: var(--fs-label);
-  line-height: 1.45;
-  margin-top: 8px;
-  max-width: 36ch;
+  line-height: 1.4;
+  margin-top: 6px;
 }
 .resort-snow__headline {
   display: grid;
@@ -120,14 +119,17 @@
 }
 .resort-snow__history {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 20px 16px;
   margin-top: 28px;
 }
-.resort-snow__unavailable {
+.resort-snow__notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 24px;
   color: var(--muted);
   font-size: var(--fs-caption);
-  margin-top: 20px;
 }
 
 /* ---- on the mountain ---- */
@@ -318,29 +320,22 @@
   .resort-report__jump {
     gap: 0 18px;
   }
+  /* Three tiles across and a 3 × 2 grid below: the same slots as on a laptop. */
   .resort-snow__headline {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .resort-snow__headline .resort-metric--hero:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-  }
-  .resort-snow__headline .metric--xl {
-    font-size: 36px;
-  }
-  /* Without source notes the three tiles fit side by side on a phone. */
-  .resort-snow__headline:not(:has(.resort-metric__note)) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
   }
-  .resort-snow__headline:not(:has(.resort-metric__note)) .resort-metric.resort-metric--hero {
-    grid-column: auto;
+  .resort-snow__headline .resort-metric {
     padding: 12px;
   }
-  .resort-snow__headline:not(:has(.resort-metric__note)) .metric--xl {
+  .resort-snow__headline .metric--xl {
     font-size: 30px;
   }
   .resort-snow__history {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px 12px;
+  }
+  .resort-snow__history .metric--lg {
+    font-size: 24px;
   }
   .status-list,
   .resort-cams {

@@ -124,7 +124,7 @@ it("preserves Alta's own snow windows and distinguishes zero, empty and unsuppor
   );
   expect(
     container.querySelector(".resort-snow__headline")?.textContent,
-  ).toContain("Last 12 hrs");
+  ).toContain("12 h");
   expect(
     container.querySelector(".resort-snow__headline .metric--not_reported")
       ?.textContent,
@@ -171,4 +171,68 @@ it("removes routine road status and shows Alta's Base, Mid and Top temperatures 
       (label) => label.textContent,
     ),
   ).toEqual(["Temperature", "Temperature", "Temperature"]);
+});
+
+it("shows the same snowfall slots in the same order for every resort", () => {
+  const slots = (id: string) => {
+    const { container, unmount } = render(renderSection(id, report, FIXTURE_NOW, null));
+    const labels = [...container.querySelectorAll(".resort-snow .resort-metric__label")].map((l) => l.textContent);
+    unmount();
+    return labels;
+  };
+  const tail = ["48 h", "72 h", "7 days", "Storm", "Season"];
+  // Alta publishes 12 h instead of overnight, so its new-snow tile is 12 h and overnight moves to the row.
+  expect(slots("alta")).toEqual(["12 h", "24 h", "Base depth", "Overnight", ...tail]);
+  for (const id of ["snowbird", "solitude", "brighton"]) {
+    expect(slots(id)).toEqual(["Overnight", "24 h", "Base depth", "12 h", ...tail]);
+  }
+});
+
+it("keeps a resort's wording only where its window differs, and lists shared source notes once", () => {
+  const base = report.sources.solitude.payload as ResortReport;
+  const note = "Mid-Mountain measurement location";
+  const source: ApiSource<ResortReport> = {
+    ...report.sources.solitude,
+    payload: {
+      ...base,
+      snowfall: {
+        ...base.snowfall,
+        overnight: { state: "reported", value: 2, unit: "in", label: "Since lifts closed", note },
+        h24: { state: "reported", value: 5, unit: "in", label: "Last 24 hours", note },
+      },
+    },
+  };
+  const { container } = render(<ResortReportPage source={source} now={FIXTURE_NOW} />);
+  const qualifiers = [...container.querySelectorAll(".resort-metric__qualifier")].map((q) => q.textContent);
+  expect(qualifiers).toEqual(["Since lifts closed"]);
+  const notes = container.querySelector(".resort-snow__notes")!.textContent!;
+  expect(notes.split(note)).toHaveLength(2);
+  expect(notes).toContain("Overnight, 24 h");
+});
+
+it("labels snowfall table cells by window, noting only where a resort's window differs", () => {
+  const { container } = render(renderSection("regional", report, FIXTURE_NOW, null));
+  const row = (name: string) =>
+    [...container.querySelectorAll(".snow-table .row--primary")].find((r) => r.querySelector(".resort-name")?.textContent === name)!;
+  const qualifiers = (name: string) =>
+    [...row(name).querySelectorAll(".cell-label > span:not(.cell-label__window)")].map((s) => s.textContent);
+  // Alta's overnight column holds its 12-hour total, and says so.
+  expect(qualifiers("Alta")[0]).toBe("12 h");
+  // "Snow 24 Hrs." is just the 24 h window: no source wording repeated under the value.
+  expect(row("Brighton").textContent).not.toContain("Snow 24 Hrs.");
+  expect([...row("Brighton").querySelectorAll(".cell-label__window")].map((s) => s.textContent)).toEqual([
+    "Overnight", "24 h", "48 h", "Storm", "Base",
+  ]);
+});
+
+it("shows main travel routes per canyon and reveals every segment on request", () => {
+  const { container } = render(renderSection("traffic", report, FIXTURE_NOW, null));
+  const lcc = container.querySelector('[aria-labelledby="canyon-LCC"]') as HTMLElement;
+  const rows = () => lcc.querySelectorAll(".travel-table tbody tr").length;
+  const toggle = lcc.querySelector<HTMLButtonElement>(".travel__toggle");
+  expect(toggle).toBeTruthy();
+  const main = rows();
+  fireEvent.click(toggle!);
+  expect(rows()).toBeGreaterThan(main);
+  expect(toggle!.getAttribute("aria-expanded")).toBe("true");
 });

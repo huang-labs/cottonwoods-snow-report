@@ -1,50 +1,57 @@
 "use client";
 
 import { useState } from "react";
-import type { ApiSource, ReportResponse, ResortReport, RoadNotice, RoadsPayload, TravelTimesPayload, WebcamsPayload } from "@/lib/types";
+import type { ApiSource, ReportResponse, ResortReport, RoadNotice, RoadsPayload, TravelSegment, TravelTimesPayload, WebcamsPayload } from "@/lib/types";
 import { formatAge, formatDenver } from "@/lib/time";
-import { SourceLine } from "../ui";
+import { NoticeList, SourceLine } from "../ui";
 
-function Notices({ notices, canyon }: { notices: RoadNotice[]; canyon: "LCC" | "BCC" }) {
-  const list = notices.filter((n) => n.canyon === canyon || n.canyon === "both");
-  if (!list.length) return <p className="muted">No notices from available feeds.</p>;
-  const order = { critical: 0, warning: 1, info: 2 };
-  return (
-    <ul className="notices">
-      {[...list].sort((a, b) => order[a.severity] - order[b.severity]).map((n, i) => (
-        <li key={i} className={`notice notice--${n.severity}`}>
-          <strong>{n.title}</strong> {n.text}
-          <span className="notice__meta">{n.source}{n.updatedAt ? ` · ${formatDenver(n.updatedAt)}` : ""}</span>
-        </li>
-      ))}
-    </ul>
-  );
+type Canyon = "LCC" | "BCC";
+const RESORTS = ["alta", "snowbird", "solitude", "brighton"] as const;
+const CANYONS: Array<{ id: Canyon; name: string; route: string }> = [
+  { id: "LCC", name: "Little Cottonwood", route: "SR-210 · Alta and Snowbird" },
+  { id: "BCC", name: "Big Cottonwood", route: "SR-190 · Solitude and Brighton" },
+];
+/** A resort's road notice older than this is history, not status. */
+const RESORT_NOTICE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The routes most people check: every downhill segment, and uphill from the first
+ * listed origin to each resort (not to the park-and-ride lots). The rest stay one
+ * click away.
+ */
+function isMainRoute(s: TravelSegment, segs: TravelSegment[]) {
+  if (s.direction !== "Up") return true;
+  const origin = segs.find((x) => x.direction === "Up")?.from;
+  return s.from === origin && !/park/i.test(s.to);
 }
 
-function TravelTimes({ source, canyon, now }: { source: ApiSource; canyon: "LCC" | "BCC"; now: Date }) {
+function TravelTimes({ source, canyon, now }: { source: ApiSource; canyon: Canyon; now: Date }) {
+  const [all, setAll] = useState(false);
   const p = source.payload as TravelTimesPayload | null;
   if (!p) return <p className="muted">Travel times unavailable.</p>;
   const current = source.freshness === "current";
   const segs = p.segments.filter((s) => s.canyon === canyon);
+  const main = segs.filter((s) => isMainRoute(s, segs));
+  const shown = all || main.length === 0 ? segs : main;
   return (
     <div className={`travel ${current ? "" : "travel--stale"}`}>
+      <h3>Travel times</h3>
       {!current && (
         <p className="travel__warning">
-          Not live — UDOT’s latest measurement is from {p.newestMeasurementAt ? formatDenver(p.newestMeasurementAt, now) : "an unknown time"}
-          {p.layerEditedAt ? ` (layer rewritten ${formatAge(p.layerEditedAt, now)}, but its measurement time and weekday fields are unchanged)` : ""}. Values cannot be verified as current.
+          Not live — UDOT’s latest measurement is from {p.newestMeasurementAt ? formatDenver(p.newestMeasurementAt, now) : "an unknown time"}.
         </p>
       )}
       <table className="travel-table">
         <thead>
           <tr>
-            <th>Fixed segment</th>
+            <th>Segment</th>
             <th>Now</th>
             <th>Free flow</th>
             <th>mi</th>
           </tr>
         </thead>
         <tbody>
-          {segs.map((s) => (
+          {shown.map((s) => (
             <tr key={s.name}>
               <th scope="row">
                 {s.from} → {s.to} <span className="travel__dir">{s.direction === "Up" ? "uphill" : "downhill"}</span>
@@ -56,6 +63,11 @@ function TravelTimes({ source, canyon, now }: { source: ApiSource; canyon: "LCC"
           ))}
         </tbody>
       </table>
+      {main.length > 0 && main.length < segs.length && (
+        <button type="button" className="travel__toggle" aria-expanded={all} onClick={() => setAll(!all)}>
+          {all ? "Show main routes" : `Show all ${segs.length} segments`}
+        </button>
+      )}
     </div>
   );
 }
@@ -72,8 +84,7 @@ function Cam({ cam, bust }: { cam: WebcamsPayload["cameras"][number]; bust: numb
         <div className="cam__missing">Camera image unavailable</div>
       )}
       <figcaption>
-        <strong>{cam.title}</strong> — {cam.description}
-        <span className="cam__time"> · image requested {formatDenver(new Date(bust).toISOString())}; UDOT does not publish capture time</span>
+        <strong>{cam.title}</strong> <span className="cam__time">· requested {formatDenver(new Date(bust).toISOString())}</span>
       </figcaption>
     </figure>
   );
@@ -84,22 +95,27 @@ export function RoadsPage({ report, now, loadedAt }: { report: ReportResponse; n
   const travel = report.sources.traveltimes;
   const cams = report.sources.webcams;
   const rp = roads.payload as RoadsPayload | null;
+  const tp = travel.payload as TravelTimesPayload | null;
   const camP = cams.payload as WebcamsPayload | null;
-  const notices = rp?.notices ?? [];
-  // Resort-published road/parking information complements UDOT feeds.
-  const parking = (["alta", "snowbird", "solitude", "brighton"] as const).flatMap((id) => {
-    const r = report.sources[id].payload as ResortReport | null;
-    const resort = report.sources[id].label;
-    // Some feeds already name the resort ("Alta parking"); don't print "Alta Alta parking".
-    return (r?.parking ?? []).map((p) => ({ ...p, name: p.name.toLowerCase().startsWith(resort.toLowerCase()) ? p.name : `${resort} ${p.name}` }));
-  });
-  const resortRoad = (["alta", "snowbird", "solitude", "brighton"] as const).flatMap((id) => {
+  // Resort-published road status complements the UDOT feeds while it's recent.
+  const resortRoad = RESORTS.flatMap((id) => {
     const r = report.sources[id].payload as ResortReport | null;
     return (r?.notices ?? [])
       .filter((n) => /road/i.test(n.title))
+      .filter((n) => !n.updatedAt || now.getTime() - Date.parse(n.updatedAt) < RESORT_NOTICE_MAX_AGE_MS)
       .map((n) => ({ ...n, canyon: id === "alta" || id === "snowbird" ? "LCC" : "BCC", source: report.sources[id].label }) as RoadNotice);
   });
-  const all = [...notices, ...resortRoad];
+  const notices = [...(rp?.notices ?? []), ...resortRoad];
+  // Parking by resort. Drop a repeated resort name ("Alta parking" under Alta).
+  const parking = RESORTS.map((id) => {
+    const label = report.sources[id].label;
+    const r = report.sources[id].payload as ResortReport | null;
+    const lots = (r?.parking ?? []).map((p) => {
+      const name = p.name.toLowerCase().startsWith(label.toLowerCase()) ? p.name.slice(label.length).trim() : p.name;
+      return { ...p, name: name ? name[0].toUpperCase() + name.slice(1) : "Parking" };
+    });
+    return { id, label, lots };
+  }).filter((g) => g.lots.length > 0);
   // Refresh camera images with each report poll (once a minute).
   const bust = Math.floor((loadedAt ?? now.getTime()) / 60_000) * 60_000;
 
@@ -107,37 +123,63 @@ export function RoadsPage({ report, now, loadedAt }: { report: ReportResponse; n
     <section className="page page--roads">
       <header className="page__header">
         <h1>Canyon roads</h1>
-        <p className="page__sub">Road notices, UDOT travel times and highway cameras for Little and Big Cottonwood Canyons.</p>
+        <p className="page__sub">Road status, UDOT travel times and highway cameras for Little and Big Cottonwood Canyons.</p>
       </header>
       <div className="roads">
-        {(["LCC", "BCC"] as const).map((c) => (
-          <section key={c} className="canyon" aria-label={c === "LCC" ? "Little Cottonwood Canyon" : "Big Cottonwood Canyon"}>
-            <div className="canyon__info">
-              <h2>{c === "LCC" ? "Little Cottonwood · SR-210" : "Big Cottonwood · SR-190"}</h2>
-              <Notices notices={all} canyon={c} />
-              <TravelTimes source={travel} canyon={c} now={now} />
-            </div>
-            <div className="canyon__cam">
+        {CANYONS.map((c) => {
+          const list = notices.filter((n) => n.canyon === c.id || n.canyon === "both");
+          return (
+            <section key={c.id} className="canyon" aria-labelledby={`canyon-${c.id}`}>
+              <header>
+                <h2 id={`canyon-${c.id}`}>{c.name}</h2>
+                <p className="canyon__route">{c.route}</p>
+              </header>
               {camP ? (
-                camP.cameras.filter((cam) => cam.canyon === c).map((cam) => <Cam key={cam.id} cam={cam} bust={bust} />)
+                camP.cameras.filter((cam) => cam.canyon === c.id).map((cam) => <Cam key={cam.id} cam={cam} bust={bust} />)
               ) : (
                 <div className="cam__missing">Webcams unavailable ({cams.freshnessNote})</div>
               )}
-            </div>
-          </section>
-        ))}
+              <div className="canyon__status">
+                <p className="eyebrow">Road status</p>
+                {list.length ? <NoticeList notices={list} now={now} /> : <p className="muted">No notices from the available feeds.</p>}
+              </div>
+              <TravelTimes source={travel} canyon={c.id} now={now} />
+            </section>
+          );
+        })}
       </div>
       {parking.length > 0 && (
         <section className="parking" aria-labelledby="parking-heading">
           <h2 id="parking-heading">Parking</h2>
-          <ul>
-            {parking.map((p, i) => (
-              <li key={i}><span>{p.name}</span> <strong>{p.status}</strong></li>
+          <div className="parking__grid">
+            {parking.map((g) => (
+              <div key={g.id} className="parking__resort">
+                <h3>{g.label}</h3>
+                <dl>
+                  {g.lots.map((p, i) => (
+                    <div key={i}>
+                      <dt>{p.name}</dt>
+                      <dd>{p.status}</dd>
+                      {p.note && <dd className="parking__note">{p.note.trim()}</dd>}
+                    </div>
+                  ))}
+                </dl>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
       )}
-      {rp && rp.partialFailures.length > 0 && <p className="page__note">Feeds not included this check: {rp.partialFailures.join(" | ")}</p>}
+      <div className="page__notes">
+        <p className="page__note">
+          Camera images refresh each minute. UDOT doesn’t publish capture times, so the time shown is when the image was requested.
+        </p>
+        {tp && travel.freshness !== "current" && tp.layerEditedAt && (
+          <p className="page__note">
+            UDOT rewrote the travel-time layer {formatAge(tp.layerEditedAt, now)}, but its measurement time and weekday fields are unchanged, so the values can’t be verified as current.
+          </p>
+        )}
+        {rp && rp.partialFailures.length > 0 && <p className="page__note">Feeds not included this check: {rp.partialFailures.join(" | ")}</p>}
+      </div>
       <div className="source-lines">
         <SourceLine source={roads} now={now} reportLabel="Road notices" />
         <SourceLine source={travel} now={now} reportLabel="Travel times measured" />

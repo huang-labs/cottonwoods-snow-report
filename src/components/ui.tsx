@@ -1,4 +1,4 @@
-import type { ApiSource, Freshness, LiftStatus, Metric } from "@/lib/types";
+import type { ApiSource, Freshness, LiftStatus, Metric, Notice } from "@/lib/types";
 import { formatAge, formatDenver } from "@/lib/time";
 
 const FRESHNESS_TEXT: Record<Freshness, string> = {
@@ -27,7 +27,7 @@ export function MetricValue({ m, size = "lg" }: { m: Metric; size?: "xl" | "lg" 
   } else if (m.state === "not_reported") {
     body = <span className="metric__missing" title={m.note}>not reported</span>;
   } else {
-    body = <span className="metric__na" title={m.note}>n/a</span>;
+    body = <span className="metric__na" title={m.note ?? "Not provided by this source"} aria-label="not provided">—</span>;
   }
   return (
     <span className={`metric metric--${size} metric--${m.state}`}>
@@ -71,5 +71,27 @@ export function Unavailable({ source, what }: { source: ApiSource; what: string 
       <p>{source.freshnessNote}</p>
       {source.lastError && <p className="muted">Last error: {source.lastError}</p>}
     </div>
+  );
+}
+
+const SEVERITY = { critical: 0, warning: 1, info: 2 } as const;
+
+/**
+ * Resort alerts and road notices, most severe first: the title and text read as
+ * one sentence, with the source and time on a quiet line below.
+ */
+export function NoticeList({ notices, now, label }: { notices: Array<Notice & { source?: string }>; now: Date; label?: string }) {
+  return (
+    <ul className="notices" aria-label={label}>
+      {[...notices].sort((a, b) => SEVERITY[a.severity] - SEVERITY[b.severity]).map((n, i) => {
+        const meta = [n.source, n.updatedAt ? formatDenver(n.updatedAt, now) : null].filter(Boolean).join(" · ");
+        return (
+          <li key={i} className={`notice notice--${n.severity}`}>
+            <strong>{n.title}</strong> {n.text}
+            {meta && <span className="notice__meta">{meta}</span>}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
