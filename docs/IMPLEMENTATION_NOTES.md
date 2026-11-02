@@ -126,7 +126,7 @@ A morning forecast post modeled on OpenSnow's Utah Daily Snow (five sample posts
 
 What the samples share, and how each maps to the design:
 
-- **Structure:** a 2–5 word title, a 2–3 sentence Summary, then "Update" or "Short Term Forecast", and "Extended Forecast" only when there is something to say. The schema enforces that order; roads and resort choice are left to the resort pick.
+- **Structure:** a 2–5 word title, a 2–3 sentence Summary, then "Update" or "Short Term Forecast", and "Extended Forecast" only when there is something to say. The schema enforces that order; roads and resort choice are left to the resort pick. The page renders these ids as "Today", "Next Few Days" and "Extended Forecast" — the owner asked on 2026-11-02 to drop the literal "Update" heading, which read as if the post had been revised.
 - **Storm-cycle phase:** posts read differently before, during and after a storm and in quiet spells. The phase is computed in code (`phaseOf`: ≥4″ in the next 12 h, or ≥2″ next 12 h with ≥2″ reported in 24 h = storm; ≥4″ reported in 48 h/storm or ≥2″ in 24 h = post-storm; ≥3″ in 72 h = pre-storm; else quiet) and the prompt tells the model what each phase covers.
 - **Forecast verification** ("we got exactly 5.9″"): each post stores its forecast totals; the next five posts' prompts include them so a recap can compare forecast with reported totals.
 - **Water, snow level, elevation and snow-to-liquid ratio:** passed as NWS blocks with derived SLR, six-hour snow with snow levels, and code-computed 24 h / 72 h / 7-day totals.
