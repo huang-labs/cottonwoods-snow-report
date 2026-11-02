@@ -127,7 +127,9 @@ export async function runCollection(env: CollectorEnv, opts: CollectOptions = {}
     sources: {},
   };
   // Carry over records of sources not collected this run (manual `only` runs);
-  // records of sources that no longer exist are dropped.
+  // records of sources that no longer exist are dropped. writeSnapshot merges
+  // this snapshot with whatever a concurrent run wrote since `previous` was
+  // read, keeping the newer attempt per source (see store.ts).
   for (const def of SOURCES) {
     const prev = previous?.sources[def.id];
     if (prev) snapshot.sources[def.id] = prev;
