@@ -1,7 +1,5 @@
-import { dailySnowFigureKey } from "@/lib/dailysnow";
-import { getEnv } from "@/lib/env";
-
-export const dynamic = "force-dynamic";
+import { dailySnowFigureKey } from "../lib/dailysnow";
+import type { CollectorEnv } from "../lib/collect";
 
 /** Content type from the image's magic bytes (stills are PNG plume panels or JPEG cams). */
 function imageType(b: Uint8Array): string | null {
@@ -13,11 +11,9 @@ function imageType(b: Uint8Array): string | null {
 }
 
 /** A Daily Snow figure still, copied when the post was written; never changes. */
-export async function GET(_req: Request, ctx: RouteContext<"/api/daily-snow/figure/[date]/[id]">) {
-  const { date, id } = await ctx.params;
+export async function dailySnowFigure(env: CollectorEnv, date: string, id: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^[a-z0-9-]{1,40}$/.test(id)) return new Response("Not found", { status: 404 });
   try {
-    const env = await getEnv();
     const buf = await env.SNOW_KV.get(dailySnowFigureKey(date, id), "arrayBuffer");
     const type = buf ? imageType(new Uint8Array(buf, 0, Math.min(12, buf.byteLength))) : null;
     if (!buf || !type) return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
