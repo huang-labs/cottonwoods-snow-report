@@ -52,7 +52,7 @@ AI calls always use the remote Workers AI service. To use them under `next dev`,
 | `npm run preview` | OpenNext build, then serves the real Worker bundle locally in workerd |
 | `npm run preview:scheduled` | Same as `preview`, with `wrangler dev --test-scheduled`. Trigger the cron with `curl "http://localhost:8787/__scheduled?cron=*/5+*+*+*+*"` |
 
-To try a prompt against the real model: `npm run -s dailysnow:once > /tmp/body.json`, then `cf ai run @cf/zai-org/glm-5.3-flash --body @/tmp/body.json` (requires `cf auth login`). The same works with `recommend:once`.
+To try a prompt against the real model: `npm run -s recommend:once > /tmp/body.json`, then `cf ai run @cf/zai-org/glm-5.3-flash --body @/tmp/body.json` (requires `cf auth login`). Daily Snow generations take longer than `cf ai run`'s 30 s client timeout, so POST its body to `https://api.cloudflare.com/client/v4/accounts/<account id>/ai/run/@cf/zai-org/glm-5.3-flash` with a longer timeout, then check the response's `result` with `npm run dailysnow:once -- --validate <file>`.
 
 URL options: `?kiosk=1` on any page opens straight into the slideshow, starting at that page (use this as the TV bookmark, e.g. `/?kiosk=1`). `&paused=1` starts it paused. Browsers only allow fullscreen after a click or key press, so a kiosk bookmark starts windowed: press **F** or the Fullscreen control. Old `?slide=<id>` links redirect to that section's page.
 

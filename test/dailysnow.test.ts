@@ -149,6 +149,9 @@ describe("validation", () => {
     expect(ungroundedInches("We got 12″ and 3-6\" lower down, 0.5″ of water.", [12, 3, 6, 0.5])).toEqual([]);
     expect(ungroundedInches("Up to 30″ fell", [12, 17.1])).toEqual([30]);
     expect(ungroundedInches("Totals of 17 inches", [17.1])).toEqual([]);
+    // Plain "in" as the unit (gpt-oss writes "8 in (10 in in 48 h)").
+    expect(ungroundedInches("Snowbird 8 in (25 in in 48 h), 3–40 in by Monday", [8, 10, 3])).toEqual([25, 40]);
+    expect(ungroundedInches("Around 4 in the morning, 2 in a row", [])).toEqual([]);
     expect(groundNumbers(digest)).toContain(2026);
   });
   it("accepts a well-formed post and drops unknown, repeated or misplaced parts", () => {

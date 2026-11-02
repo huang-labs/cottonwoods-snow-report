@@ -134,7 +134,8 @@ export function groundNumbers(digest: DailyDigest): number[] {
  */
 export function ungroundedInches(text: string, allowed: number[]): number[] {
   const bad: number[] = [];
-  const re = /(\d+(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(?:″|"|”|-?inch(?:es)?\b|in\.)/g;
+  // "in" counts as a unit unless it starts a phrase ("4 in the morning", "2 in a row").
+  const re = /(\d+(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(?:″|"|”|-?inch(?:es)?\b|in\.|in\b(?!\s+(?:the|a|an|this|that|which|each|total)\b))/g;
   for (const m of text.matchAll(re)) {
     for (const v of [m[1], m[2]]) {
       if (v === undefined) continue;
