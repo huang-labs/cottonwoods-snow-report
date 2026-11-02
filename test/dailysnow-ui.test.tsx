@@ -80,7 +80,7 @@ it("opens an archived post and returns to the latest", async () => {
   expect(window.location.search).toBe("");
 });
 
-it("shows the recent posts in a left rail beside the article, today first, at most four", () => {
+it("shows the recent posts in a left rail beside the article, today first, at most three", () => {
   const history = [
     { date: "2026-11-01", title: "Storm Underway" },
     { date: "2026-10-31", title: "Storm Arrives" },
@@ -93,10 +93,10 @@ it("shows the recent posts in a left rail beside the article, today first, at mo
   const rail = document.querySelector<HTMLElement>(".dailysnow__history")!;
   expect(rail.getAttribute("aria-label")).toBe("Recent Daily Snow posts");
   const entries = [...rail.querySelectorAll(".dailysnow__history-entry")];
-  expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-date")?.textContent)).toEqual(["Today", "Sat, Oct 31", "Fri, Oct 30", "Thu, Oct 29"]);
-  // The live post is today's entry, marked with the accent bar, and not repeated from the archive.
-  expect(entries[0].getAttribute("data-current")).toBe("true");
-  expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-title")?.textContent)).toEqual(["Storm Underway", "Storm Arrives", "Snow Showers Return", "A Quiet Stretch"]);
+  expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-date")?.textContent)).toEqual(["Today", "Sat, Oct 31", "Fri, Oct 30"]);
+  // The live post is today's entry — marked active at rest — and not repeated from the archive.
+  expect(entries[0].getAttribute("data-active")).toBe("true");
+  expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-title")?.textContent)).toEqual(["Storm Underway", "Storm Arrives", "Snow Showers Return"]);
   expect(entries[0].querySelector(".dailysnow__history-entry-phase")?.textContent).toBe("Storm");
 });
 
@@ -116,6 +116,8 @@ it("highlights the viewed post in the rail and keeps the archive links for phone
   // Re-query: the rail re-renders with the archived post loaded.
   const active = document.querySelector(".dailysnow__history-entry[data-active]");
   expect(active?.querySelector(".dailysnow__history-entry-title")?.textContent).toBe("Storm Arrives");
+  // The bar and fill follow the viewed post: exactly one entry is highlighted.
+  expect(document.querySelectorAll(".dailysnow__history-entry[data-active]").length).toBe(1);
   // The bottom archive links stay on every view: phones navigate with them.
   expect(document.querySelector(".dailysnow__nav")).not.toBeNull();
 });

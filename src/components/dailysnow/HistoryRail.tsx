@@ -4,7 +4,7 @@ import type { ApiDailySnow, DailySnowPhase } from "@/lib/types";
 import { PHASE_LABEL, postDate } from "./labels";
 
 /** How many posts the rail shows: the live post plus the archive before it. */
-const HISTORY_COUNT = 4;
+const HISTORY_COUNT = 3;
 
 type Entry = { date: string; title: string; phase?: DailySnowPhase; live: boolean };
 
@@ -16,13 +16,13 @@ function entriesFor(live: ApiDailySnow): Entry[] {
   ];
 }
 
-/** One clickable past post. `active` marks the post on screen; the live entry is today's. */
+/** One clickable past post. `active` marks the post on screen: it gets the
+    accent bar and the panel fill; "Today" still names the live entry. */
 function HistoryEntry({ entry, active, onPick }: { entry: Entry; active: boolean; onPick: (date: string | null) => void }) {
   return (
     <button
       type="button"
       className="dailysnow__history-entry"
-      data-current={entry.live || undefined}
       data-active={active || undefined}
       onClick={() => onPick(entry.live ? null : entry.date)}
     >
