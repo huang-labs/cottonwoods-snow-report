@@ -1,8 +1,8 @@
+import { clipText } from "../clip";
 import { DAILY_SNOW_DESCRIPTION, SITE_TITLE } from "../metadata";
 import type { DailySnowPost } from "../types";
 
 type PreviewPost = Pick<DailySnowPost, "date" | "title" | "summary">;
-const truncate = (text: string, max: number) => text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 
 /** Bounded copy keeps even unusually long generated posts inside the share card. */
 export function DailySnowShareCard({ post }: { post: PreviewPost | null }) {
@@ -16,8 +16,8 @@ export function DailySnowShareCard({ post }: { post: PreviewPost | null }) {
         <span style={{ fontSize: 22, color: "#8a9bb0", fontWeight: 500 }}>{date}</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "center" }}>
-        <div style={{ fontSize: 58, lineHeight: 1.12, letterSpacing: -1, fontWeight: 700 }}>{truncate(post?.title ?? "Your Cottonwoods snow forecast", 115)}</div>
-        <div style={{ marginTop: 24, fontSize: 28, lineHeight: 1.35, color: "#b8c9dc" }}>{truncate(post?.summary ?? DAILY_SNOW_DESCRIPTION, 220)}</div>
+        <div style={{ fontSize: 58, lineHeight: 1.12, letterSpacing: -1, fontWeight: 700 }}>{clipText(post?.title ?? "Your Cottonwoods snow forecast", 115)}</div>
+        <div style={{ marginTop: 24, fontSize: 28, lineHeight: 1.35, color: "#b8c9dc" }}>{clipText(post?.summary ?? DAILY_SNOW_DESCRIPTION, 220)}</div>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #34485e", paddingTop: 22, fontSize: 22, color: "#8a9bb0" }}>
         <span>{SITE_TITLE}</span>
