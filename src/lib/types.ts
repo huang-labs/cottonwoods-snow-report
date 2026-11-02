@@ -458,6 +458,12 @@ export type DailySnowFigure = { id: string; caption: string } & (
       originUrl: string;
       width: number | null;
       height: number | null;
+      /**
+       * Plume panels only: where the time axis sits in the still, so it is drawn
+       * like the plumes page (Mountain Time labels replace the cropped UTC ones).
+       * Optional for compatibility with posts written before axis metadata was stored.
+       */
+      axis?: { plot: PlumePanel["plot"]; initTime: string; forecastHours: number };
     }
 );
 

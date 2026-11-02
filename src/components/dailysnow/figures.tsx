@@ -1,4 +1,5 @@
 import type { DailySnowFigure, SixHourSnow } from "@/lib/types";
+import { PlumePanelSvg } from "../PlumePanelSvg";
 
 const dayFmt = new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", weekday: "short" });
 const dayKeyFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Denver", year: "numeric", month: "2-digit", day: "2-digit" });
@@ -93,8 +94,9 @@ function Totals({ rows, label }: { rows: Extract<DailySnowFigure, { kind: "total
   );
 }
 
-export function Figure({ figure: f }: { figure: DailySnowFigure }) {
+export function Figure({ figure: f, postedAt }: { figure: DailySnowFigure; postedAt: string }) {
   let body;
+  let plume = false;
   switch (f.kind) {
     case "snow-bars":
       body = <SnowBars bars={f.bars} label={f.caption} />;
@@ -106,11 +108,27 @@ export function Figure({ figure: f }: { figure: DailySnowFigure }) {
       body = <Totals rows={f.rows} label={f.caption} />;
       break;
     case "image":
-      body = <img src={f.url} alt={f.caption} width={f.width ?? undefined} height={f.height ?? undefined} loading="lazy" />;
+      plume = f.id.startsWith("plume-");
+      // Plume panels are drawn exactly as on the plumes page; posts written
+      // before the axis was stored fall back to the padded bare crop.
+      body = f.axis && f.width && f.height ? (
+        <PlumePanelSvg
+          src={f.url}
+          width={f.width}
+          height={f.height}
+          plot={f.axis.plot}
+          initTime={f.axis.initTime}
+          forecastHours={f.axis.forecastHours}
+          marker={{ time: new Date(postedAt), label: "posted" }}
+          label={`${f.caption}, times in Mountain Time`}
+        />
+      ) : (
+        <img src={f.url} alt={f.caption} width={f.width ?? undefined} height={f.height ?? undefined} loading="lazy" />
+      );
       break;
   }
   return (
-    <figure className={`dailysnow-figure dailysnow-figure--${f.kind}`}>
+    <figure className={`dailysnow-figure dailysnow-figure--${f.kind}${plume ? " dailysnow-figure--plume" : ""}`}>
       {body}
       <figcaption>
         {f.caption}

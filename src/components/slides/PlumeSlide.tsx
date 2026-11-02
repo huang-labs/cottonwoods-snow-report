@@ -1,72 +1,29 @@
 import type { ApiSource, PlumeChart, PlumePanel, PlumePayload } from "@/lib/types";
-import { denverMidnightsBetween, formatDenver } from "@/lib/time";
+import { formatDenver } from "@/lib/time";
+import { PlumePanelSvg } from "../PlumePanelSvg";
 import { SourceLine, Unavailable } from "../ui";
 
-const HOUR = 3_600_000;
-const AXIS_H = 66;
-/** White margin around each panel, in chart pixels (≈10 px on a 1080p TV). */
-const PAD = 20;
-const dowFmt = new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", weekday: "short" });
-const dateFmt = new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", month: "numeric", day: "numeric" });
 const utcFmt = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric", hour: "2-digit", hourCycle: "h23" });
 
 function initLabel(iso: string) {
   return `${utcFmt.format(new Date(iso)).replace(/, (\d{2})$/, " $1")}Z`;
 }
 
-/**
- * One cropped University of Utah panel with a Mountain Time axis drawn in
- * place of the original UTC labels. The panel's plot frame spans the model
- * init time to init + forecastHours, so any instant maps linearly to x.
- */
+/** One cropped panel with a Mountain Time axis and a "now" line. */
 function Panel({ chart, panel, now }: { chart: PlumeChart; panel: PlumePanel; now: Date }) {
-  const { plot, width, height } = panel;
-  const start = new Date(chart.initTime);
-  const end = new Date(start.getTime() + chart.forecastHours * HOUR);
-  const x = (t: Date) => plot.left + ((t.getTime() - start.getTime()) / (end.getTime() - start.getTime())) * (plot.right - plot.left);
-  const midnights = denverMidnightsBetween(start, end);
-  // Day labels centred in each Mountain Time day (partial days at the edges included when wide enough).
-  const bounds = [start, ...midnights, end];
-  const days = bounds.slice(0, -1).map((d, i) => ({ from: d, to: bounds[i + 1] }));
-  const nowVisible = now > start && now < end;
   return (
     <figure className="plume">
       <figcaption className="plume__title">{chart.stationName.replace(/, UT$/, "")}</figcaption>
-      <svg
-        className="plume__svg"
-        viewBox={`${-PAD} ${-PAD} ${width + 2 * PAD} ${height + AXIS_H + 2 * PAD}`}
-        role="img"
-        aria-label={`${panel.title} plume for ${chart.stationName}, run ${chart.runCode}, times in Mountain Time`}
-      >
-        <rect x={-PAD} y={-PAD} width={width + 2 * PAD} height={height + AXIS_H + 2 * PAD} fill="#fff" />
-        <image href={panel.url} x={0} y={0} width={width} height={height} />
-        {midnights.map((m) => (
-          <g key={m.getTime()}>
-            <line x1={x(m)} x2={x(m)} y1={plot.top} y2={plot.bottom} className="plume__midnight" />
-            <line x1={x(m)} x2={x(m)} y1={plot.bottom} y2={plot.bottom + 14} className="plume__tick" />
-          </g>
-        ))}
-        {days.map(({ from, to }) => {
-          const w = x(to) - x(from);
-          if (w < 50) return null;
-          const mid = new Date((from.getTime() + to.getTime()) / 2);
-          return (
-            <g key={from.getTime()}>
-              <text x={(x(from) + x(to)) / 2} y={plot.bottom + 34} className="plume__day">{dowFmt.format(mid)}</text>
-              {w >= 70 && (
-                <text x={(x(from) + x(to)) / 2} y={plot.bottom + 58} className="plume__date">{dateFmt.format(mid)}</text>
-              )}
-            </g>
-          );
-        })}
-        {nowVisible && (
-          <g>
-            <line x1={x(now)} x2={x(now)} y1={plot.top} y2={plot.bottom} className="plume__now" />
-            {/* Above the frame, clear of the legend; runs are recent, so "now" sits left of the centred title. */}
-            <text x={x(now)} y={plot.top - 6} className="plume__nowlabel">now</text>
-          </g>
-        )}
-      </svg>
+      <PlumePanelSvg
+        src={panel.url}
+        width={panel.width}
+        height={panel.height}
+        plot={panel.plot}
+        initTime={chart.initTime}
+        forecastHours={chart.forecastHours}
+        marker={{ time: now, label: "now" }}
+        label={`${panel.title} plume for ${chart.stationName}, run ${chart.runCode}, times in Mountain Time`}
+      />
     </figure>
   );
 }

@@ -104,3 +104,37 @@ it("keeps a previous resort pick visible with its update warnings", () => {
   expect(screen.getByText(/Outdated · Updates failing/)).toBeTruthy();
   expect(screen.queryByText("AI pick")).toBeNull();
 });
+
+it("draws plume figures like the plumes page: padded, Mountain Time axis, posting-time marker", () => {
+  const plume = {
+    id: "plume-snow-cln",
+    kind: "image" as const,
+    caption: "University of Utah ensemble plume · Accumulated Snow · Alta-Collins, UT · 00Z run",
+    url: "/api/daily-snow/figure/2026-11-01/plume-snow-cln",
+    originUrl: "/api/plume/CLN/2026110100/snow",
+    width: 922,
+    height: 533,
+    axis: { plot: { left: 66, right: 920, top: 30, bottom: 525 }, initTime: "2026-11-01T00:00:00Z", forecastHours: 240 },
+  };
+  const withPlume: ApiDailySnow = {
+    ...post,
+    sections: [{ id: "update", paragraphs: [{ text: "The plume:", figure: "plume-snow-cln" }] }],
+    figures: { "plume-snow-cln": plume },
+  };
+  const { unmount } = render(<DailySnowSlide report={report(withPlume)} now={now} />);
+  const svg = screen.getByRole("img", { name: /Accumulated Snow.*times in Mountain Time/ });
+  // White margin around the crop (the shared plumes-page drawing).
+  expect(svg.getAttribute("viewBox")).toBe("-20 -20 962 639");
+  expect(svg.querySelector("image")?.getAttribute("href")).toBe(plume.url);
+  // Mountain Time day labels in place of the cropped UTC ones; init is Sat 6 PM MDT.
+  expect([...svg.querySelectorAll(".plume__day")].map((t) => t.textContent).slice(0, 3)).toEqual(["Sun", "Mon", "Tue"]);
+  expect(svg.querySelector(".plume__nowlabel")?.textContent).toBe("posted");
+  unmount();
+
+  // Posts written before the axis was stored keep the bare still, padded.
+  const { axis: _axis, ...legacy } = plume;
+  render(<DailySnowSlide report={report({ ...withPlume, figures: { "plume-snow-cln": legacy } })} now={now} />);
+  const img = screen.getByRole("img", { name: plume.caption });
+  expect(img.tagName).toBe("IMG");
+  expect(img.closest("figure")?.className).toContain("dailysnow-figure--plume");
+});
