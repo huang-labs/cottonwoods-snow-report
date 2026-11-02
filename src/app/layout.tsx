@@ -3,14 +3,17 @@ import { AppShell } from "@/components/AppShell";
 import { SITE_TITLE as title, SITE_DESCRIPTION as description, siteOpenGraph, metadataBase } from "@/lib/metadata";
 import "./globals.css";
 
-// The share image comes from app/opengraph-image.tsx (live numbers); Next adds it to openGraph.
+// Static HTML points to the live share image rendered by the Worker.
 export const metadata: Metadata = {
   metadataBase,
   title: { default: title, template: `%s · ${title}` },
   description,
   robots: { index: false, follow: false },
-  openGraph: siteOpenGraph,
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    ...siteOpenGraph,
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Live snowfall at Alta, Snowbird, Solitude and Brighton" }],
+  },
+  twitter: { card: "summary_large_image", title, description, images: ["/opengraph-image"] },
 };
 
 export const viewport: Viewport = {

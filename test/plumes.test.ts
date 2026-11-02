@@ -80,11 +80,8 @@ describe("plume collection", () => {
 
 describe("GET /api/plume/[station]/[run]/[panel]", () => {
   const call = async (kv: MemoryKV, station: string, run: string, panel: string) => {
-    vi.resetModules();
-    vi.doMock("@opennextjs/cloudflare", () => ({ getCloudflareContext: async () => ({ env: { SNOW_KV: kv } }) }));
-    const { GET } = await import("@/app/api/plume/[station]/[run]/[panel]/route");
-    const res = await GET(new Request("http://x"), { params: Promise.resolve({ station, run, panel }) });
-    vi.doUnmock("@opennextjs/cloudflare");
+    const { plumePanel } = await import("@/worker/plume");
+    const res = await plumePanel({ SNOW_KV: kv }, station, run, panel);
     return res;
   };
 

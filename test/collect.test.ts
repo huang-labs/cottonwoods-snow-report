@@ -133,11 +133,9 @@ describe("GET /api/report", () => {
     const kv = new MemoryKV();
     const { fetchImpl } = createFixtureFetch();
     await runCollection({ SNOW_KV: kv }, { now: FIXTURE_NOW, fetchImpl });
-    vi.resetModules();
-    vi.doMock("@opennextjs/cloudflare", () => ({ getCloudflareContext: async () => ({ env: { SNOW_KV: kv } }) }));
     const spy = vi.spyOn(globalThis, "fetch");
-    const { GET } = await import("@/app/api/report/route");
-    const res = await GET();
+    const { report } = await import("@/worker/report");
+    const res = await report({ SNOW_KV: kv });
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("no-store");
     const body = (await res.json()) as { sources: { alta: { payload: { resort: string } }; plumes: { payload: { runCode: string } } } };
@@ -145,18 +143,16 @@ describe("GET /api/report", () => {
     expect(body.sources.plumes.payload.runCode).toBe("2026103012");
     expect(spy).not.toHaveBeenCalled(); // API reads never trigger upstream collection
     spy.mockRestore();
-    vi.doUnmock("@opennextjs/cloudflare");
   });
 
-  it("returns 503 when KV is not bound", async () => {
-    vi.resetModules();
-    vi.doMock("@opennextjs/cloudflare", () => ({ getCloudflareContext: async () => ({ env: {} }) }));
-    const { GET } = await import("@/app/api/report/route");
+  it("returns 503 when KV reads fail", async () => {
+    const { report } = await import("@/worker/report");
     const err = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const res = await GET();
+    const kv = new MemoryKV();
+    vi.spyOn(kv, "get").mockRejectedValue(new Error("KV unavailable"));
+    const res = await report({ SNOW_KV: kv });
     expect(res.status).toBe(503);
     err.mockRestore();
-    vi.doUnmock("@opennextjs/cloudflare");
   });
 });
 

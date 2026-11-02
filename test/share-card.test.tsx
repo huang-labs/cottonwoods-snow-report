@@ -1,4 +1,4 @@
-import { ImageResponse } from "next/og";
+import { ImageResponse } from "@cf-wasm/og";
 import { decode } from "fast-png";
 import { describe, expect, it } from "vitest";
 import { ShareCard, SHARE_CARD_FONTS } from "@/lib/og/card-image";
