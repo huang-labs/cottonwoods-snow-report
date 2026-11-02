@@ -1,16 +1,13 @@
-import { getEnv } from "@/lib/env";
-import { buildReport } from "@/lib/report";
-import { readSnapshot } from "@/lib/store";
-
-export const dynamic = "force-dynamic";
+import type { CollectorEnv } from "../lib/collect";
+import { buildReport } from "../lib/report";
+import { readSnapshot } from "../lib/store";
 
 /**
  * Serves the latest stored snapshot. Never triggers upstream collection;
  * that only happens in the scheduled handler (worker.ts).
  */
-export async function GET() {
+export async function report(env: CollectorEnv) {
   try {
-    const env = await getEnv();
     const snapshot = await readSnapshot(env.SNOW_KV);
     return Response.json(buildReport(snapshot), {
       headers: { "Cache-Control": "no-store" },

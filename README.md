@@ -6,16 +6,24 @@ Product requirements: [docs/IMPLEMENTATION_BRIEF.md](docs/IMPLEMENTATION_BRIEF.m
 
 ## Architecture
 
-One Next.js 16 app, deployed as **one Cloudflare Worker** through `@opennextjs/cloudflare`.
+Next.js 16 builds a **static export** (`output: "export"`) into `out/`. One Cloudflare deployment contains those files as **Workers Static Assets** plus a **plain Worker** for APIs and background jobs. No Next.js server or OpenNext adapter runs in production.
 
-- **Worker entry:** `worker.ts` ([OpenNext custom worker](https://opennext.js.org/cloudflare/howtos/custom-worker)) re-exports the generated `fetch` handler and adds `scheduled()`.
+```text
+Browser → Cloudflare Static Assets → prerendered HTML / JS / CSS
+Browser → /api/* → Worker → SNOW_KV
+Cron (5 min) → Worker → upstream sources / Workers AI → SNOW_KV
+Link crawler → /opengraph-image or /daily-snow/opengraph-image → Worker → PNG
+```
+
+- **Worker entry:** `worker.ts` exports the direct router (`src/worker/fetch.ts`) and `scheduled()` handler. Asset-first routing serves matching static files without invoking Worker code. `/api/*` and both share-image URLs use Worker-first routing. Unknown pages serve the exported 404; unknown APIs return 404 rather than an app shell.
 - **Collection:** the cron `*/5 * * * *` runs `runCollection()` (`src/lib/collect.ts`). It fetches every *due* source concurrently, isolating each source's failure, and writes one snapshot to KV (`SNOW_KV`, key `snapshot:v1`). A failed source keeps its last successful payload.
 - **Per-source cadence** (`intervalMs` on each source): resorts, roads, UDOT webcams and resort webcams every 5 min; NWS and travel times every 15 min; plumes, numerical ensemble guidance and the NWS forecast discussion every 30 min. A failed attempt is retried on the next run; manual `only` runs ignore intervals. The cron log line lists the `skipped` sources.
-- **API:** `GET /api/report` (`src/app/api/report/route.ts`) reads the snapshot and adds the freshness classification. It never contacts upstream sources or the AI models.
+- **API:** `GET /api/report` (`src/worker/report.ts`) reads the snapshot and adds the freshness classification. It never contacts upstream sources or the AI models.
 - **Plume panels:** when a new model run appears, the collector downloads each station's chart once, crops the Accumulated Snow and Snow-to-Liquid Ratio panels (`src/lib/plumeCrop.ts`, located from the chart's axes frames), and stores the PNGs in KV (`plume-panel:v1:<station>:<run>:<panel>`, 4-day TTL). `GET /api/plume/<station>/<run>/<panel>` serves them with long-lived caching. If cropping fails, the page shows the full original chart.
 - **Numerical ensemble:** optional `ensemble` source fetches the [published Utah Snow Ensemble CLN tables](https://weather.utah.edu/text/ensgefsdslccforecast.html) independently of chart collection. Both AI features receive P10/P50/P90 snow, liquid and SLR for wholly future six-hour periods, through the ten-day horizon. Scope is the 9,416 ft nearest grid point to Alta-Collins (LCC), not BCC-specific or observed snow. Marginal percentiles cannot be summed into storm totals or subtracted from cumulative curves. Runs older than 18 h, collections older than 47 min and failed latest attempts provide no usable model amounts; the last good payload stays in KV. Exact published −0.01″ six-hour liquid traces are normalized to zero and counted; other negatives fail validation. New runs and availability changes use the existing recommendation schedule and caps. Images remain text-only figure references; no vision inference is used.
 - **Frontend:** each section is its own page: `/` (regional snowfall), `/daily-snow`, `/weather`, `/plumes`, `/traffic`, `/alta`, `/snowbird`, `/solitude`, `/brighton`. The section list is `src/lib/sections.ts`; routes are `src/app/page.tsx` and `src/app/[section]/page.tsx`, prerendered static. `src/components/AppShell.tsx` sits in the root layout and polls `/api/report` on load and every 60 s, once for the whole app. Browse mode has a sticky navbar (`NavBar.tsx`); on phones the section tabs scroll sideways.
 - **Slideshow (TV) mode:** the navbar's **▶ Slideshow** button goes full screen and rotates through the sections except Daily Snow, starting from the current page (`Slideshow.tsx`). Controls: previous/next, pause, slide picker, seconds per slide (saved in the browser), fullscreen, exit. Exit, Escape or leaving fullscreen returns to the page of the slide that was showing.
+- **Share images:** `/opengraph-image` and `/daily-snow/opengraph-image` render the existing cards with `@cf-wasm/og`, bundled fonts, and precompiled WebAssembly. Static HTML has explicit deployment-specific Open Graph and Twitter URLs. PNGs are cached for 10 min (1 min before collection). Pinned Satori/fflate overrides apply security fixes; the HarfBuzz adapter avoids runtime WASM compilation.
 - **Manual collection:** `POST /api/admin/collect` is disabled (404) unless the `ADMIN_TOKEN` secret is set, and then requires `Authorization: Bearer <token>`. Options: `?source=<id>` (repeatable) collects only those sources; `?recommend=force` asks for a new resort pick; `?dailysnow=force` writes a new Daily Snow post.
 
 Source adapters live in `src/lib/sources/*`. Each has a pure parser, tested against captured responses in `test/fixtures/`, and a `collect()` that fetches.
@@ -36,12 +44,12 @@ Requires Node 20+ (tested with Node 24.12).
 ```sh
 npm install
 cp .dev.vars.example .dev.vars        # local-only vars; never commit
-npm run dev                           # http://localhost:3000 (next dev + local KV via Miniflare)
-# Seed local KV from the real sources (no cron runs under next dev):
-curl -X POST -H "Authorization: Bearer change-me-local-only" http://localhost:3000/api/admin/collect
+npm run dev                           # build static frontend, then workerd at http://localhost:8787
+# Seed local KV from the real sources (local cron does not run automatically):
+curl -X POST -H "Authorization: Bearer change-me-local-only" http://localhost:8787/api/admin/collect
 ```
 
-AI calls always use the remote Workers AI service. To use them under `next dev`, log in with Wrangler and run `SNOW_AI_REMOTE=1 npm run dev`; routine builds and type generation don't need Cloudflare credentials.
+`dev`, `start`, and `preview` use `wrangler dev --local`: KV is persisted in `.wrangler/state` and remote bindings (including paid AI) are disabled. Worker edits reload automatically. Frontend edits require `npm run build` in another terminal or restarting `npm run dev`; this workflow uses the exported frontend rather than Next.js HMR. `npm start` serves an existing export. To use paid remote AI locally, build, authenticate with Wrangler, and run `npx wrangler dev` without `--local`; KV stays local unless configured remote. Builds and type generation need no credentials.
 
 | Command | What it does |
 | --- | --- |
@@ -50,8 +58,11 @@ AI calls always use the remote Workers AI service. To use them under `next dev`,
 | `npm run collect:once` | Runs one real collection in Node with in-memory KV and prints per-source status (`-- --json` prints the full API shape) |
 | `npm run recommend:once` | Prints the resort-pick model request built from production data (`-- --digest` prints the facts instead) |
 | `npm run dailysnow:once` | Prints the Daily Snow model request built from production data (`-- --digest` prints the facts; `-- --validate <response.json>` checks a saved model response) |
-| `npm run preview` | OpenNext build, then serves the real Worker bundle locally in workerd |
-| `npm run preview:scheduled` | Same as `preview`, with `wrangler dev --test-scheduled`. Trigger the cron with `curl "http://localhost:8787/__scheduled?cron=*/5+*+*+*+*"` |
+| `npm run build` | Next.js static export into `out/` |
+| `npm run cf:build` | Static export plus Wrangler dry-run of the Worker bundle |
+| `npm run smoke` | Credential-free workerd checks of all pages, navigation payloads, API routing, KV, and both share PNGs (run after build) |
+| `npm run preview` | Static build, then serve assets and APIs locally in workerd |
+| `npm run preview:scheduled` | Same as `preview`, with `wrangler dev --local --test-scheduled`. Trigger the cron with `curl "http://localhost:8787/__scheduled?cron=*/5+*+*+*+*"` |
 
 To try a prompt against the real model: `npm run -s recommend:once > /tmp/body.json`, then `cf ai run @cf/zai-org/glm-5.3-flash --body @/tmp/body.json` (requires `cf auth login`). Daily Snow generations take longer than `cf ai run`'s 30 s client timeout, so POST its body to `https://api.cloudflare.com/client/v4/accounts/<account id>/ai/run/@cf/zai-org/glm-5.3-flash` with a longer timeout, then check the response's `result` with `npm run dailysnow:once -- --validate <file>`.
 
@@ -59,7 +70,7 @@ Both prompt scripts accept `--live-ensemble` to collect the new numerical source
 
 URL options: `?kiosk=1` on any page opens straight into the slideshow, starting at that page (use this as the TV bookmark, e.g. `/?kiosk=1`). `&paused=1` starts it paused. Browsers only allow fullscreen after a click or key press, so a kiosk bookmark starts windowed: press **F** or the Fullscreen control. Old `?slide=<id>` links redirect to that section's page.
 
-> **Local dev caveat (macOS 27 / wrangler 4.156):** the local `workerd` runtime sometimes opens tens of thousands of loopback connections to itself. Once the ephemeral ports run out, any local request can briefly fail with `EADDRNOTAVAIL`. This reproduces with a minimal KV-only `getPlatformProxy()` config and no app code, so it is upstream tooling, not this app. It clears on its own; restart `npm run dev` if it persists.
+> **Local dev caveat (macOS 27 / wrangler 4.156):** the local `workerd` runtime sometimes opens tens of thousands of loopback connections to itself. Once the ephemeral ports run out, any local request can briefly fail with `EADDRNOTAVAIL`. This was observed with the former OpenNext development setup and a minimal KV-only `getPlatformProxy()` config; development now uses Wrangler directly. It clears on its own; restart `npm run dev` if it persists.
 
 ## Production
 
@@ -76,8 +87,8 @@ Live at **https://cottonwoods-snow-report.huang.mx**. It runs as the Worker `cot
 
 **Deploys are automatic** (`.github/workflows/deploy.yml`):
 
-- Every push to `main` typechecks and tests, then runs `npm run deploy` (OpenNext build + `wrangler deploy`).
-- Every pull request from this repository is tested, then uploaded as a non-deployed Worker version with a stable preview URL (`pr-<number>-cottonwoods-snow-report.huang-inc.workers.dev`), linked in a PR comment. Previews share production bindings, so they read the live KV snapshot; crons stay on the deployed version.
+- Every push to `main` typechecks, tests, builds, and smoke-checks the local Worker, then runs `npm run deploy` (static export + `wrangler deploy`).
+- Every pull request from this repository passes the same checks, then is uploaded with `wrangler versions upload` as a non-deployed Worker version with a stable preview URL (`pr-<number>-cottonwoods-snow-report.huang-inc.workers.dev`), linked in a PR comment. Previews share production bindings, so they read the live KV snapshot; crons stay on the deployed version.
 
 The workflow uses two repository secrets:
 
@@ -91,7 +102,7 @@ Optional secrets (`npx wrangler secret put …`):
 
 To deploy by hand, set `CLOUDFLARE_API_TOKEN` (or run `npx wrangler login`), then run `npm run deploy`.
 
-**Plan and usage:** Workers **Paid** is required. Cropping a new plume run costs roughly 100–130 ms CPU per station (PNG decode and encode), a few times a day, and an ordinary collection is close to the free plan's 10 ms CPU limit for cron invocations. KV: one snapshot write per run (288/day), plus one more after each AI attempt, four panel writes per new plume run, one archive write and up to six figure writes per Daily Snow post, and one read per dashboard poll (1,440/day per open screen). Workers AI requests are capped in code (resort pick: 40/day reserved; Daily Snow: 12/day reserved) and by the gateway limit.
+**Plan and usage:** Workers **Paid** is required. Cropping a new plume run costs roughly 100–130 ms CPU per station (PNG decode and encode), a few times a day, and an ordinary collection is close to the free plan's 10 ms CPU limit for cron invocations. Static frontend requests and asset storage are free with asset-first routing. KV: one snapshot write per run (288/day), plus one more after each AI attempt, four panel writes per new plume run, one archive write and up to six figure writes per Daily Snow post, and one read per dashboard poll (1,440/day per open screen). Workers AI requests are capped in code (resort pick: 40/day reserved; Daily Snow: 12/day reserved) and by the gateway limit.
 
 ## Freshness semantics (what the badges mean)
 

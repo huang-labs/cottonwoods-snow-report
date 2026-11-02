@@ -1,8 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "cottonwoods-snow-report",
-  // Custom entrypoint: re-exports the OpenNext fetch handler and adds scheduled().
+  // Direct Worker API and cron; static page requests bypass Worker code.
   "main": "./worker.ts",
+  // Satori's font shaper needs a precompiled WASM module in workerd.
+  "alias": { "harfbuzzjs": "./src/worker/harfbuzz.ts" },
+  "define": { "__filename": "\"/worker.js\"", "__dirname": "\"/\"" },
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   // Served only on the custom domain (Cloudflare manages its DNS record and certificate).
@@ -16,15 +19,12 @@
     "COLLECTOR_CONTACT": "https://cottonwoods-snow-report.huang.mx"
   },
   "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
+    "directory": "./out",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*", "/opengraph-image", "/daily-snow/opengraph-image"]
   },
-  "services": [
-    {
-      "binding": "WORKER_SELF_REFERENCE",
-      "service": "cottonwoods-snow-report"
-    }
-  ],
   "kv_namespaces": [
     {
       "binding": "SNOW_KV",

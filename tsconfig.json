@@ -44,11 +44,9 @@
     ".next/types/**/*.ts",
     "vitest.config.ts",
     "next.config.ts",
-    "open-next.config.ts",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    ".open-next"
+    "node_modules"
   ]
 }
