@@ -76,6 +76,8 @@ jobs:
       - run: npm ci
       - name: Build (OpenNext)
         run: npx opennextjs-cloudflare build
+        env:
+          SITE_URL: https://pr-${{ github.event.pull_request.number }}-cottonwoods-snow-report.huang-inc.workers.dev
       # Uploads a version without deploying it: production traffic and cron
       # triggers stay on the deployed version. The preview shares production
       # bindings, so it reads the live KV snapshot.
@@ -95,6 +97,10 @@ jobs:
             exit 1
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Verify deployed share previews
+        run: npx tsx scripts/check-share-preview.ts "$PREVIEW_URL"
+        env:
+          PREVIEW_URL: ${{ steps.upload.outputs.url }}
       - name: Comment preview link on PR
         env:
           GH_TOKEN: ${{ github.token }}
