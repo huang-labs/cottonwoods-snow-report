@@ -33,7 +33,7 @@ const MORNING_ANCHORS: Array<[number, number]> = [
 
 export function fingerprintOf(d: Digest): string {
   const s = d.signals;
-  return [d.target.date, d.mode, ...s.canyonKeys, ...s.resortKeys, ...s.snowKeys, ...s.nwsUpdated, ...s.travelKeys].join("|");
+  return [d.target.date, d.mode, ...s.canyonKeys, ...s.resortKeys, ...s.snowKeys, ...s.nwsUpdated, ...s.travelKeys, s.ensembleKey ?? "unavailable"].join("|");
 }
 
 export function criticalKeyOf(d: Digest): string {

@@ -1,3 +1,4 @@
+import { ensembleGuidance } from "../ensemble";
 import { classify } from "../report";
 import { SOURCE_BY_ID } from "../sources";
 import { denverParts, denverToUtc } from "../time";
@@ -82,6 +83,7 @@ export interface ForecastDigest {
 }
 
 export interface Digest {
+  ensemble?: ReturnType<typeof ensembleGuidance>;
   nowLocal: string;
   target: { date: string; day: "today" | "tomorrow"; weekday: string };
   mode: "storm" | "fair";
@@ -100,6 +102,7 @@ export interface Digest {
     snowKeys: string[];
     nwsUpdated: string[];
     travelKeys: string[];
+    ensembleKey?: string;
   };
 }
 
@@ -305,8 +308,10 @@ export function buildDigest(
     text: p.periods.slice(0, 3).map((x) => ({ period: x.name, forecast: clip(x.detailedForecast, 320) })),
   }));
 
+  const ensemble = ensembleGuidance(snapshot, now);
   const segMin = (id: PrimaryResortId) => travel?.segments.find((s) => s.name === TRAVEL_SEGMENT[id])?.currentMin ?? null;
   return {
+    ensemble,
     nowLocal: localFmt.format(now),
     target,
     mode: storm ? "storm" : "fair",
@@ -324,6 +329,7 @@ export function buildDigest(
     roadsFreshness: classify(SOURCE_BY_ID.roads, snapshot.sources.roads, now).freshness,
     eligible: resorts.filter((r) => r.inSeason && (target.day === "tomorrow" || canyonStatus.find((c) => c.canyon === r.canyon)?.state !== "interlodge")).map((r) => r.id),
     signals: {
+      ensembleKey: ensemble.status === "current" ? `current:${ensemble.initializedAt}` : "unavailable",
       canyonKeys: canyonStatus.map((c) => `${c.canyon}:${c.state}:${c.expectedOpenAt ?? ""}:${c.closureAnnounced?.text ?? ""}:${c.restrictions.join(",")}`),
       resortKeys: resorts.map((r) => `${r.id}:${r.inSeason}:${r.operatingNow}`),
       snowKeys: resorts.map((r) => `${r.id}:${r.snowfall.overnight}:${r.snowfall["24h"]}:${r.lifts}:${r.parking.join(",")}:${r.terrain.join(",")}:${r.dataFreshness.split(":")[0]}`),

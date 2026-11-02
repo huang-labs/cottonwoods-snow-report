@@ -1,3 +1,4 @@
+import { addLiveEnsemble } from "./live-ensemble";
 /**
  * Builds the recommendation prompt from the live production report and prints
  * the Workers AI request body, for prompt tuning with the `cf` CLI:
@@ -9,6 +10,7 @@
  *   --assume-in-season     treat every resort as in season (test outside the season)
  *   --scenario <name>      synthetic powder-wait or bcc-now inputs for smoke testing
  *   --model <id>           request body for this model (default: primary)
+ *   --live-ensemble         fetch numerical CLN guidance directly (read-only)
  *   --digest               print the digest instead of the request body
  */
 import { buildDigest } from "../src/lib/recommend/digest";
@@ -23,6 +25,7 @@ const url = arg("--url") ?? "https://cottonwoods-snow-report.huang.mx/api/report
 const now = arg("--now") ? new Date(arg("--now")!) : new Date();
 const report = (await (await fetch(url)).json()) as ReportResponse;
 const snapshot: Snapshot = { schemaVersion: 1, writtenAt: report.snapshotWrittenAt ?? now.toISOString(), sources: report.sources };
+await addLiveEnsemble(snapshot, now);
 const digest = buildDigest(snapshot, {}, now);
 if (process.argv.includes("--assume-in-season")) {
   for (const r of digest.resorts) r.inSeason = true;

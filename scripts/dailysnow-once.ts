@@ -1,3 +1,4 @@
+import { addLiveEnsemble } from "./live-ensemble";
 /**
  * Builds the Daily Snow prompt from the live production report and prints the
  * Workers AI request body, for prompt tuning with the `cf` CLI:
@@ -7,6 +8,7 @@
  *   --url <report url>     default: production /api/report
  *   --now <ISO time>       evaluate as of this time
  *   --model <id>           request body for this model (default: primary)
+ *   --live-ensemble         fetch numerical CLN guidance directly (read-only)
  *   --digest               print the digest instead of the request body
  *   --validate <file>      validate a saved model response against the digest
  */
@@ -26,6 +28,7 @@ const url = arg("--url") ?? "https://cottonwoods-snow-report.huang.mx/api/report
 const now = arg("--now") ? new Date(arg("--now")!) : new Date();
 const report = (await (await fetch(url)).json()) as ReportResponse;
 const snapshot: Snapshot = { schemaVersion: 1, writtenAt: report.snapshotWrittenAt ?? now.toISOString(), sources: report.sources };
+await addLiveEnsemble(snapshot, now);
 // Until the forecast discussion source is deployed, fetch it directly.
 if (!snapshot.sources.nwsafd?.payload) {
   const { payload, sourceUpdatedAt } = await nwsAfdSource.collect(createFetchContext({ COLLECTOR_CONTACT: "dailysnow-once" }, now));

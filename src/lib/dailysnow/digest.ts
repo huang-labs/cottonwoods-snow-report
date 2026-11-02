@@ -1,3 +1,4 @@
+import type { ensembleGuidance } from "../ensemble";
 import { classify } from "../report";
 import { buildDigest, denverDate, localTime, slrOf, RESORTS, type ResortDigest } from "../recommend/digest";
 import { SOURCE_BY_ID } from "../sources";
@@ -43,6 +44,7 @@ export interface FigureCandidate {
 }
 
 export interface DailyDigest {
+  ensemble?: ReturnType<typeof ensembleGuidance>;
   nowLocal: string;
   date: string;
   weekday: string;
@@ -199,6 +201,7 @@ export function buildDailyDigest(snapshot: Snapshot, previous: DailySnowPost | n
   const figures = figureCandidates(snapshot, nws, numbers, now);
   const t = now.getTime();
   const digest: DailyDigest = {
+    ensemble: base.ensemble,
     nowLocal: nowFmt.format(now),
     date,
     weekday: weekdayFmt.format(now),
