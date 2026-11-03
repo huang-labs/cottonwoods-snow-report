@@ -19,13 +19,14 @@ function entriesFor(live: ApiDailySnow): Entry[] {
 
 /** One clickable past post. `active` marks the post on screen: it gets the
     accent bar and the panel fill; "Latest" names the live entry regardless of its date. */
-function HistoryEntry({ entry, active, onPick, onIntent }: { entry: Entry; active: boolean; onPick: Pick; onIntent?: Pick }) {
+function RecentPost({ entry, active, onPick, onIntent }: { entry: Entry; active: boolean; onPick: Pick; onIntent?: Pick }) {
   const date = entry.live ? null : entry.date;
   return (
     <button
       type="button"
       className="dailysnow__history-entry"
       data-active={active || undefined}
+      aria-current={active || undefined}
       onClick={() => onPick(date)}
       onPointerEnter={() => onIntent?.(date)}
       onFocus={() => onIntent?.(date)}
@@ -44,7 +45,7 @@ function HistoryEntry({ entry, active, onPick, onIntent }: { entry: Entry; activ
  * nothing here: they navigate with the archive links below the post. Hidden
  * while the live post is the only one there is.
  */
-export function HistoryRail({ live, viewed, onPick, onIntent }: { live: ApiDailySnow | null; viewed: string | null; onPick: Pick; onIntent?: Pick }) {
+export function RecentPosts({ live, viewed, onPick, onIntent }: { live: ApiDailySnow | null; viewed: string | null; onPick: Pick; onIntent?: Pick }) {
   if (!live) return null;
   const entries = entriesFor(live);
   if (entries.length < 2) return null;
@@ -53,7 +54,7 @@ export function HistoryRail({ live, viewed, onPick, onIntent }: { live: ApiDaily
       <p className="dailysnow__history-heading">Recent posts</p>
       <div className="dailysnow__history-list">
         {entries.map((e) => (
-          <HistoryEntry key={e.date} entry={e} active={viewed ? e.date === viewed : e.live} onPick={onPick} onIntent={onIntent} />
+          <RecentPost key={e.date} entry={e} active={viewed ? e.date === viewed : e.live} onPick={onPick} onIntent={onIntent} />
         ))}
       </div>
     </aside>

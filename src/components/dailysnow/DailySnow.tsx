@@ -8,7 +8,7 @@ import { readerWording } from "@/lib/dailysnow/wording";
 import type { ApiDailySnow, DailySnowSectionId, ReportResponse } from "@/lib/types";
 import { prefetchArchivedPost, useArchivedPost } from "./archive";
 import { Figure } from "./figures";
-import { HistoryRail } from "./HistoryRail";
+import { RecentPosts } from "./RecentPosts";
 import { PHASE_LABEL, postDate } from "./labels";
 import { StatusBadge } from "../ui";
 
@@ -133,7 +133,7 @@ export function DailySnowPage({ report, now }: { report: ReportResponse; now: Da
   return (
     <section className="page page--dailysnow">
       <div className="dailysnow-layout">
-        <HistoryRail live={current} viewed={viewed} onPick={pick} onIntent={prefetchArchivedPost} />
+        <RecentPosts live={current} viewed={viewed} onPick={pick} onIntent={prefetchArchivedPost} />
         <article className="dailysnow" aria-label="Daily Snow" aria-busy={loading || undefined}>
           <header className="dailysnow__header">
             <Eyebrow post={post} now={now} archived={post.date !== current?.date} />
