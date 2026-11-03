@@ -7,34 +7,34 @@ import { SHARE_CARD_FONTS } from "@/lib/og/image-fonts";
 import { BrandedShareCard } from "@/lib/og/branded-image";
 import { DailySnowShareCard } from "@/lib/og/daily-snow-image";
 
-function expectLightImage(png: ReturnType<typeof decode>) {
+function expectDarkImage(png: ReturnType<typeof decode>) {
   expect([png.width, png.height]).toEqual([1200, 630]);
-  expect(Array.from(png.data.slice(0, 3))).toEqual([248, 250, 252]);
+  expect(Array.from(png.data.slice(0, 3))).toEqual([16, 28, 42]);
   let dark = 0;
   let light = 0;
   let headerInk = 0;
   let footerInk = 0;
   for (let i = 0; i < png.data.length; i += png.channels) {
-    if (png.data[i] < 100 && png.data[i + 1] < 130 && png.data[i + 2] < 160) {
-      dark++;
+    if (png.data[i] > 130 && png.data[i + 1] > 150 && png.data[i + 2] > 170) {
+      light++;
       const y = Math.floor(i / png.channels / png.width);
       if (y >= 48 && y < 95) headerInk++;
       if (y >= 540 && y < 590) footerInk++;
     }
-    if (png.data[i] > 230 && png.data[i + 1] > 230 && png.data[i + 2] > 230) light++;
+    if (png.data[i] < 60 && png.data[i + 1] < 80 && png.data[i + 2] < 100) dark++;
   }
-  expect(dark).toBeGreaterThan(5000);
+  expect(light).toBeGreaterThan(5000);
   expect(footerInk).toBeGreaterThan(500);
-  expect(light).toBeGreaterThan(png.width * png.height * 0.7);
+  expect(dark).toBeGreaterThan(png.width * png.height * 0.7);
   return headerInk;
 }
 
 describe("share preview", () => {
-  it("ships the same light branded PNG that its source renders", async () => {
+  it("ships the same dark branded PNG that its source renders", async () => {
     const response = new ImageResponse(<BrandedShareCard />, { width: 1200, height: 630, fonts: SHARE_CARD_FONTS });
     const rendered = new Uint8Array(await response.arrayBuffer());
-    const bundled = await readFile("public/share-brand-v1.png");
-    expectLightImage(decode(bundled));
+    const bundled = await readFile("public/share-brand-v2.png");
+    expectDarkImage(decode(bundled));
     expect(bundled.equals(Buffer.from(rendered))).toBe(true);
   });
 
@@ -57,6 +57,6 @@ describe("share preview", () => {
     });
     const png = decode(new Uint8Array(await response.arrayBuffer()));
     expect([png.width, png.height]).toEqual([1200, 630]);
-    expect(expectLightImage(png)).toBeGreaterThan(1000);
+    expect(expectDarkImage(png)).toBeGreaterThan(1000);
   });
 });

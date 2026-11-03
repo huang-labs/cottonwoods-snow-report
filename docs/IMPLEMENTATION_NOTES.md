@@ -448,17 +448,17 @@ A tighter Snowfall header-to-table gap (15 px desktop, 10 px phones) was tried s
 - The Snowfall page header reads "Resort snowfall" (was "Regional snowfall"); the section id, route and nav label are unchanged.
 - The Daily Snow NWS snowfall figure is titled with its caption ("NWS 6-hour snowfall forecast · Alta / Snowbird (LCC)") in the chart's heading slot, replacing "6-hour snowfall · inches", and no longer repeats it below. The caption dropped the "· updated …" NWS grid time. That time was frozen into the post at generation (not live), but it named the NWS grid's issue time, which read like a page refresh time. Posts already stored with the suffix have it stripped at render. The chart's footer note is unchanged.
 
-## 2026-11-03 — Light share previews by page role
+## 2026-11-03 — Dark share previews by page role
 
-Every page except `/daily-snow`, including the homepage, shares the static branded `public/share-brand-v1.png`. Daily Snow alone has a dynamic preview of the latest stored post (also for archive query links), with its date, bounded headline/summary, AI badge and stored model attribution. Before a post exists it shows a neutral introductory fallback. Page titles/descriptions remain specific to the linked page. Both images use the editorial light palette, navy/blue wordmark, open spacing and fine rules at 1200 × 630; browser appearance settings do not change them.
+Every page except `/daily-snow`, including the homepage, shares the static branded `public/share-brand-v2.png`. Daily Snow alone has a dynamic preview of the latest stored post (also for archive query links), with its date, bounded headline/summary, AI badge and stored model attribution. Before a post exists it shows a neutral introductory fallback. Page titles/descriptions remain specific to the linked page. Both images use the site’s dark palette, pale text and blue wordmark accent, open spacing and fine rules at 1200 × 630; browser appearance settings do not change them.
 
-The branded PNG is regenerated with `npm run share:render`; its source and palette are shared with Daily Snow. A rendering test compares the committed asset with its source. The Daily Snow handler bumps its internal cache version, retaining host-scoped caches and existing 600/60-second TTLs. Messaging services can retain their own cached previews after deployment; replacing the branded asset requires a new filename and metadata URL. The site does not control messaging-service cache expiry.
+The branded PNG is regenerated with `npm run share:render`; its source and palette are shared with Daily Snow. A rendering test compares the committed asset with its source. The dark branded asset replaces the light version at a new versioned URL. The Daily Snow handler bumps its internal cache version, retaining host-scoped caches and existing 600/60-second TTLs. Messaging services can retain their own cached previews after deployment; replacing the branded asset requires a new filename and metadata URL. The site does not control messaging-service cache expiry.
 
 The unused dynamic snowfall renderer, data helper and `/opengraph-image` Worker route are removed. Its old URL now follows the normal static 404 path. Shared font configuration lives in `image-fonts.ts` for the branded asset generator and Daily Snow handler. No source, data freshness, storage, collection or AI inference changes.
 
-Satori mutates style objects during rendering: passing the same frame object directly caused later renders to lose header/footer content. Each image passes a fresh copy, and image tests check visible header/footer ink on repeated Daily Snow renders, light background, dimensions, model labels and long copy. The static branded image intentionally places its large wordmark in the middle.
+Satori mutates style objects during rendering: passing the same frame object directly caused later renders to lose header/footer content. Each image passes a fresh copy, and image tests check visible header/footer ink on repeated Daily Snow renders, dark background, dimensions, model labels and long copy. The static branded image intentionally places its large wordmark in the middle.
 
-Validation: 23 relevant tests across share images, metadata and Worker routing passed; `npm run typecheck`, `npm run build`, `npm run smoke` and `git diff --check` passed. Smoke uses a local workerd instance with empty KV: all nine exported pages reference the intended image, both static and Daily Snow PNGs decode at 1200 × 630, the retired snowfall endpoint returns 404, and navigation payloads, API methods and HEAD work. Actual PNG inspection of normal/long Daily Snow copy and the branded image was completed in the initial implementation; these image layouts are unchanged by the homepage switch. Not run: native iMessage/WhatsApp clients, a deployed preview or new live AI generation. No production KV writes.
+Validation: 23 relevant tests across share images, metadata and Worker routing passed; `npm run typecheck`, `npm run build`, `npm run smoke` and `git diff --check` passed. Smoke uses a local workerd instance with empty KV: all nine exported pages reference the intended image, both static and Daily Snow PNGs decode at 1200 × 630, the retired snowfall endpoint returns 404, and navigation payloads, API methods and HEAD work. Inspected the regenerated dark branded PNG and a dark Daily Snow PNG with long copy. Not run: native iMessage/WhatsApp clients, a deployed preview or new live AI generation. No production KV writes.
 
 Existing files touched (relative to main):
 - `src/app/layout.tsx` and `src/lib/metadata.ts`: shared static image metadata with the Daily Snow override.
@@ -466,7 +466,7 @@ Existing files touched (relative to main):
 - `src/lib/og/card-image.tsx`, `src/lib/og/shareCard.ts` and `src/worker/share-image.tsx`: removed unused live snowfall preview code.
 - `src/worker/daily-snow-share-image.tsx`: shared font import and cache version bump.
 - `src/worker/fetch.ts` and `wrangler.jsonc`: remove obsolete Worker route and Worker-first entry.
-- `test/share-card.test.tsx`: light/repeated Daily Snow renders, branded asset consistency and model attribution; obsolete snowfall tests removed.
+- `test/share-card.test.tsx`: dark/repeated Daily Snow renders, branded asset consistency and model attribution; obsolete snowfall tests removed.
 - `test/metadata.test.ts`: homepage static image and section-specific image routing.
 - `test/worker.test.ts`: remove obsolete route from the method-enforcement checks.
 - `scripts/check-share-preview.ts`: fetch and decode the intended image for every page.
@@ -475,4 +475,4 @@ Existing files touched (relative to main):
 - `README.md`: image routing, regeneration and cache operations.
 - `docs/IMPLEMENTATION_NOTES.md`: decisions, validation, limitations and file scope.
 
-New files: `src/lib/og/style.tsx`, `src/lib/og/image-fonts.ts`, `src/lib/og/branded-image.tsx`, `scripts/render-share-image.ts`, `public/share-brand-v1.png`.
+New files: `src/lib/og/style.tsx`, `src/lib/og/image-fonts.ts`, `src/lib/og/branded-image.tsx`, `scripts/render-share-image.ts`, `public/share-brand-v2.png`.

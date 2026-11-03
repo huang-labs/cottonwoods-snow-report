@@ -22,7 +22,7 @@ export function sectionMetadata(section: SectionDef): Metadata {
   const description = section.id === "daily-snow" ? DAILY_SNOW_DESCRIPTION : SITE_DESCRIPTION;
   // Nested openGraph objects replace the parent's object, including its image.
   const images = [{
-    url: section.id === "daily-snow" ? "/daily-snow/opengraph-image" : "/share-brand-v1.png",
+    url: section.id === "daily-snow" ? "/daily-snow/opengraph-image" : "/share-brand-v2.png",
     width: 1200,
     height: 630,
     alt: section.id === "daily-snow"

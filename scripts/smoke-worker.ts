@@ -40,7 +40,7 @@ try {
     assert.equal(res.status, 200, path);
     const html = await res.text();
     assert.match(html, /Loading report/);
-    const expectedImage = path === "/daily-snow" ? "/daily-snow/opengraph-image" : "/share-brand-v1.png";
+    const expectedImage = path === "/daily-snow" ? "/daily-snow/opengraph-image" : "/share-brand-v2.png";
     assert.ok(html.includes(`${expectedImage}\"`), `share image for ${path}`);
     const script = /src="([^\"]*\/_next\/static\/[^\"]+\.js)"/.exec(html)?.[1];
     assert.ok(script, `static script for ${path}`);
@@ -49,7 +49,7 @@ try {
     assert.match(js.headers.get("cache-control")!, /immutable/);
     await js.arrayBuffer();
   }
-  const brand = await get("/share-brand-v1.png");
+  const brand = await get("/share-brand-v2.png");
   assert.equal(brand.status, 200);
   assert.match(brand.headers.get("content-type")!, /^image\/png/);
   const brandedPng = decode(new Uint8Array(await brand.arrayBuffer()));
@@ -83,11 +83,11 @@ try {
     assert.equal(image.headers.get("cache-control"), "public, max-age=60");
     const png = decode(new Uint8Array(await image.arrayBuffer()));
     assert.deepEqual([png.width, png.height], [1200, 630]);
-    let bright = 0;
+    let dark = 0;
     for (let i = 0; i < png.data.length; i += png.channels) {
-      if (png.data[i] > 180 && png.data[i + 1] > 180 && png.data[i + 2] > 180) bright++;
+      if (png.data[i] < 60 && png.data[i + 1] < 80 && png.data[i + 2] < 100) dark++;
     }
-    assert.ok(bright > 1200 * 630 * 0.7, "share image has a light background");
+    assert.ok(dark > 1200 * 630 * 0.7, "share image has a dark background");
     const head = await get(path, "HEAD");
     assert.equal(head.status, 200);
     assert.equal((await head.arrayBuffer()).byteLength, 0);

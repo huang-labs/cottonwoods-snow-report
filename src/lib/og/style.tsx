@@ -1,9 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
 
-/** Explicit light palette: link crawlers have no reliable appearance preference. */
+/** Explicit dark palette: link crawlers have no reliable appearance preference. */
 export const SHARE_COLORS = {
-  bg: "#f8fafc", panel: "#edf3f9", line: "#dbe3ec",
-  text: "#172b42", muted: "#586b7d", accent: "#1266a3",
+  bg: "#101c2a", panel: "#192b3f", line: "#304257",
+  text: "#edf4fb", muted: "#a7b9cc", accent: "#82c5f5",
 };
 
 /** Spread into a fresh object per render: Satori mutates style objects. */
