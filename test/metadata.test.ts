@@ -27,9 +27,9 @@ describe("deployment metadata base", () => {
 });
 
 describe("section share metadata", () => {
-  it("keeps the live snowfall preview on the homepage", () => {
-    expect(rootMetadata.openGraph).toHaveProperty("images", [expect.objectContaining({ url: "/opengraph-image" })]);
-    expect(rootMetadata.twitter).toHaveProperty("images", ["/opengraph-image"]);
+  it("uses the shared static brand image on the homepage", () => {
+    expect(rootMetadata.openGraph).toHaveProperty("images", [expect.objectContaining({ url: "/share-brand-v1.png" })]);
+    expect(rootMetadata.twitter).toHaveProperty("images", ["/share-brand-v1.png"]);
   });
   it.each(SECTIONS.slice(1))("matches the document title and URL for $id", (section) => {
     const metadata = sectionMetadata(section);

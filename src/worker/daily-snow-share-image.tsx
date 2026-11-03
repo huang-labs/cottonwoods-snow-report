@@ -1,6 +1,6 @@
 import { ImageResponse, cache as imageCache } from "@cf-wasm/og";
 import type { CollectorEnv } from "../lib/collect";
-import { SHARE_CARD_FONTS } from "../lib/og/card-image";
+import { SHARE_CARD_FONTS } from "../lib/og/image-fonts";
 import { DailySnowShareCard } from "../lib/og/daily-snow-image";
 import { readSnapshot } from "../lib/store";
 

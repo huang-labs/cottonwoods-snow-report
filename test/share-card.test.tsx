@@ -3,14 +3,9 @@ import { readFile } from "node:fs/promises";
 import { renderToStaticMarkup } from "react-dom/server";
 import { decode } from "fast-png";
 import { describe, expect, it } from "vitest";
-import { ShareCard, SHARE_CARD_FONTS } from "@/lib/og/card-image";
+import { SHARE_CARD_FONTS } from "@/lib/og/image-fonts";
 import { BrandedShareCard } from "@/lib/og/branded-image";
 import { DailySnowShareCard } from "@/lib/og/daily-snow-image";
-import { shareCardData } from "@/lib/og/shareCard";
-import { runCollection } from "@/lib/collect";
-import { buildReport } from "@/lib/report";
-import { MemoryKV, readSnapshot } from "@/lib/store";
-import { createFixtureFetch, FIXTURE_NOW } from "./fixtureFetch";
 
 function expectLightImage(png: ReturnType<typeof decode>) {
   expect([png.width, png.height]).toEqual([1200, 630]);
@@ -52,19 +47,6 @@ describe("share preview", () => {
     expect(renderToStaticMarkup(<DailySnowShareCard post={null} />)).not.toContain("AI-generated");
   });
 
-  it("renders zero, unavailable, large totals and a forecast together", async () => {
-    const data = {
-      updated: "Nov 3, 2026, 6:00 AM",
-      resorts: [0, null, 12.5, 100].map((snow24, i) => ({ name: ["Alta", "Snowbird", "Solitude", "Brighton"][i], snow24, detail: null, status: null })),
-      storm: { inches: 12.5, where: "Little Cottonwood Canyon", when: "Tomorrow 6 AM → Friday 6 PM" },
-    };
-    const html = renderToStaticMarkup(<ShareCard data={data} />);
-    expect(html).toContain("Not reported");
-    expect(html).toContain(">0</span>");
-    expect(html).toContain("NWS forecast");
-    const response = new ImageResponse(<ShareCard data={data} />, { width: 1200, height: 630, fonts: SHARE_CARD_FONTS });
-    expectLightImage(decode(new Uint8Array(await response.arrayBuffer())));
-  });
   it.each([
     null,
     { date: "2026-11-01", title: "Snow returns to the Cottonwoods", summary: "A cold front brings fresh snow to both canyons.", model: "@cf/zai-org/glm-5.3-flash" },
@@ -76,35 +58,5 @@ describe("share preview", () => {
     const png = decode(new Uint8Array(await response.arrayBuffer()));
     expect([png.width, png.height]).toEqual([1200, 630]);
     expect(expectLightImage(png)).toBeGreaterThan(1000);
-  });
-
-  it("renders a nonblank 1200×630 PNG even before collection", async () => {
-    const data = shareCardData(buildReport(null, FIXTURE_NOW), FIXTURE_NOW);
-    expect(data.resorts).toHaveLength(4);
-    expect(data.resorts.every((r) => r.snow24 === null)).toBe(true);
-    expect(data.storm).toBeNull();
-    const response = new ImageResponse(<ShareCard data={data} />, {
-      width: 1200, height: 630, fonts: SHARE_CARD_FONTS,
-    });
-    const png = decode(new Uint8Array(await response.arrayBuffer()));
-    expect([png.width, png.height]).toEqual([1200, 630]);
-    expect(expectLightImage(png)).toBeGreaterThan(1000);
-  });
-
-  it("uses current reports and hides stale or old upstream snowfall", async () => {
-    const kv = new MemoryKV();
-    const { fetchImpl } = createFixtureFetch();
-    await runCollection({ SNOW_KV: kv }, { now: FIXTURE_NOW, fetchImpl });
-    const report = buildReport(await readSnapshot(kv), FIXTURE_NOW);
-    report.sources.alta.freshness = "current";
-    const data = shareCardData(report, FIXTURE_NOW);
-    expect(data.resorts[0].snow24).not.toBeNull();
-    expect(data.updated).toContain("2026");
-    report.sources.alta.freshness = "stale";
-    report.sources.snowbird.freshness = "old-report";
-    report.sources.nws.freshness = "stale";
-    const stale = shareCardData(report, FIXTURE_NOW);
-    expect(stale.resorts.slice(0, 2).map((r) => r.snow24)).toEqual([null, null]);
-    expect(stale.storm).toBeNull();
   });
 });

@@ -5,7 +5,6 @@ import { dailySnowShareImage } from "./daily-snow-share-image";
 import type { WorkerEnv } from "./env";
 import { plumePanel } from "./plume";
 import { report } from "./report";
-import { shareImage } from "./share-image";
 
 function methodNotAllowed(allow: string) {
   return new Response("Method not allowed", {
@@ -27,7 +26,6 @@ export async function handleFetch(request: Request, env: WorkerEnv, ctx: Executi
   let route: (() => Promise<Response>) | undefined;
   if (path === "/api/report") route = () => report(env);
   else if (path === "/api/daily-snow") route = () => dailySnow(request, env);
-  else if (path === "/opengraph-image") route = () => shareImage(request, env, ctx);
   else if (path === "/daily-snow/opengraph-image") route = () => dailySnowShareImage(request, env, ctx);
   else if (panel) route = () => plumePanel(env, panel[1], panel[2], panel[3]);
   else if (figure) route = () => dailySnowFigure(env, figure[1], figure[2]);

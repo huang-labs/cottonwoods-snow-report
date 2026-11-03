@@ -40,7 +40,7 @@ try {
     assert.equal(res.status, 200, path);
     const html = await res.text();
     assert.match(html, /Loading report/);
-    const expectedImage = path === "/" ? "/opengraph-image" : path === "/daily-snow" ? "/daily-snow/opengraph-image" : "/share-brand-v1.png";
+    const expectedImage = path === "/daily-snow" ? "/daily-snow/opengraph-image" : "/share-brand-v1.png";
     assert.ok(html.includes(`${expectedImage}\"`), `share image for ${path}`);
     const script = /src="([^\"]*\/_next\/static\/[^\"]+\.js)"/.exec(html)?.[1];
     assert.ok(script, `static script for ${path}`);
@@ -58,6 +58,9 @@ try {
   const navigation = await get("/weather.txt");
   assert.equal(navigation.status, 200);
   assert.match(await navigation.text(), /weather/);
+  const retiredPreview = await get("/opengraph-image");
+  assert.equal(retiredPreview.status, 404);
+  await retiredPreview.arrayBuffer();
   const missing = await get("/not-a-section");
   assert.equal(missing.status, 404);
   await missing.arrayBuffer();
@@ -73,7 +76,7 @@ try {
   const method = await get("/api/report", "POST");
   assert.equal(method.status, 405);
   await method.arrayBuffer();
-  for (const path of ["/opengraph-image", "/daily-snow/opengraph-image"]) {
+  for (const path of ["/daily-snow/opengraph-image"]) {
     const image = await get(path);
     assert.equal(image.status, 200);
     assert.equal(image.headers.get("content-type"), "image/png");
@@ -98,7 +101,7 @@ try {
   const shareCheck = spawn(process.execPath, ["node_modules/tsx/dist/cli.mjs", "scripts/check-share-preview.ts", base, process.env.SITE_URL || "https://cottonwoods-snow-report.huang.mx"], { stdio: "inherit" });
   const [code] = await once(shareCheck, "exit");
   assert.equal(code, 0, "share metadata matches each section and deployment");
-  console.log("Worker smoke passed: 9 static pages, navigation payload, immutable JS, 404s, API methods, KV, both PNGs, share metadata and HEAD.");
+  console.log("Worker smoke passed: 9 static pages, navigation payload, immutable JS, 404s, API methods, KV, static and Daily Snow PNGs, share metadata and HEAD.");
 } finally {
   child.kill("SIGTERM");
   await exited;

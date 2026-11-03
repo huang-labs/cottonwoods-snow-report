@@ -23,7 +23,7 @@
     "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*", "/opengraph-image", "/daily-snow/opengraph-image"]
+    "run_worker_first": ["/api/*", "/daily-snow/opengraph-image"]
   },
   "kv_namespaces": [
     {

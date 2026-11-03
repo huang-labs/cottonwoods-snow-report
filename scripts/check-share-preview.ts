@@ -22,7 +22,7 @@ for (const section of SECTIONS) {
     assert.ok(tags.has(key), `${url}: missing ${key}`);
     assert.equal(new URL(tags.get(key)!).origin, expectedOrigin, `${url}: ${key} points outside this deployment`);
   }
-  const expectedPath = section.id === "regional" ? "/opengraph-image" : section.id === "daily-snow" ? "/daily-snow/opengraph-image" : "/share-brand-v1.png";
+  const expectedPath = section.id === "daily-snow" ? "/daily-snow/opengraph-image" : "/share-brand-v1.png";
   for (const key of ["og:image", "twitter:image"]) {
     const image = new URL(tags.get(key)!);
     assert.equal(image.pathname, expectedPath);
