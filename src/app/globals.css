@@ -119,7 +119,6 @@ a { color: var(--accent); }
 .section-nav__resorts { gap: 8px; border: 0; background: none; font-family: inherit; }
 .section-nav__chevron { width: 6px; height: 6px; margin: -3px 2px 0 0; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform 150ms ease; }
 .section-nav__resorts[aria-expanded="true"] .section-nav__chevron { transform: translateY(3px) rotate(225deg); }
-.section-nav__resorts[aria-disabled="true"] { cursor: default; }
 .section-nav__subnav { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows 200ms ease, opacity 200ms ease, visibility 200ms; }
 .section-nav__subnav[data-expanded] { grid-template-rows: 1fr; opacity: 1; visibility: visible; }
 .section-nav__reveal { min-height: 0; overflow: hidden; }

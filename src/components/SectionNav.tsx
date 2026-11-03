@@ -78,18 +78,18 @@ function NavRow({ label, pathname, children }: { label: string; pathname: string
   );
 }
 
-/** Resort pages pin the second row open; elsewhere Resorts discloses it in place. */
+/** Every page discloses the resort row on demand; resort pages name the current resort. */
 export function SectionNav({ pathname }: { pathname: string | null }) {
   const toggle = useRef<HTMLButtonElement>(null);
   const [disclosure, setDisclosure] = useState({ pathname, open: false });
   // Reset before rendering a new route, including browser back/forward navigation.
   if (disclosure.pathname !== pathname) setDisclosure({ pathname, open: false });
   const resort = SECTIONS.find((s) => s.group && sectionHref(s.id) === pathname);
-  const expanded = Boolean(resort) || (disclosure.pathname === pathname && disclosure.open);
+  const expanded = disclosure.pathname === pathname && disclosure.open;
 
   return (
     <div className="section-nav" onKeyDown={(event) => {
-      if (event.key === "Escape" && expanded && !resort) {
+      if (event.key === "Escape" && expanded) {
         setDisclosure({ pathname, open: false });
         toggle.current?.focus();
       }
@@ -99,10 +99,10 @@ export function SectionNav({ pathname }: { pathname: string | null }) {
           <Link key={s.id} href={sectionHref(s.id)} aria-current={sectionHref(s.id) === pathname ? "page" : undefined}>{s.label}</Link>
         ))}
         <button ref={toggle} type="button" className="section-nav__resorts"
-          aria-expanded={expanded} aria-controls="resort-navigation" aria-disabled={resort ? true : undefined}
+          aria-expanded={expanded} aria-controls="resort-navigation"
           data-current={resort ? "" : undefined}
-          onClick={() => { if (!resort) setDisclosure({ pathname, open: !expanded }); }}>
-          Resorts <span className="section-nav__chevron" aria-hidden="true" />
+          onClick={() => setDisclosure({ pathname, open: !expanded })}>
+          {resort?.label ?? "Resorts"} <span className="section-nav__chevron" aria-hidden="true" />
         </button>
       </NavRow>
       <div id="resort-navigation" className="section-nav__subnav" data-expanded={expanded ? "" : undefined}

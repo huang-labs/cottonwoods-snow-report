@@ -155,17 +155,16 @@ describe("app shell", () => {
     for (const [i, title] of expected.entries()) {
       const view = renderAt(sectionHref(SECTIONS[i].id));
       expect(await screen.findByRole("heading", { level: 1, name: title })).toBeTruthy();
-      const toggle = screen.getByRole("button", { name: "Resorts" });
+      const toggle = screen.getByRole("button", { name: SECTIONS[i].group ? SECTIONS[i].label : "Resorts" });
       expect(toggle.hasAttribute("data-current")).toBe(Boolean(SECTIONS[i].group));
-      expect(toggle.getAttribute("aria-expanded")).toBe(String(Boolean(SECTIONS[i].group)));
-      if (SECTIONS[i].group) {
-        const resorts = screen.getByRole("navigation", { name: "Resorts" });
-        const links = within(resorts).getAllByRole("link");
-        expect(links.map((a) => a.getAttribute("href"))).toEqual(["/alta", "/snowbird", "/solitude", "/brighton"]);
-        expect(links.filter((a) => a.getAttribute("aria-current") === "page").map((a) => a.textContent)).toEqual([SECTIONS[i].label]);
-      } else {
-        expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
-      }
+      expect(toggle.getAttribute("aria-expanded")).toBe("false");
+      expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
+      fireEvent.click(toggle);
+      const resorts = screen.getByRole("navigation", { name: "Resorts" });
+      const links = within(resorts).getAllByRole("link");
+      expect(links.map((a) => a.getAttribute("href"))).toEqual(["/alta", "/snowbird", "/solitude", "/brighton"]);
+      expect(links.filter((a) => a.getAttribute("aria-current") === "page").map((a) => a.textContent))
+        .toEqual(SECTIONS[i].group ? [SECTIONS[i].label] : []);
       if (SECTIONS[i].id === "plumes") {
         // Four cropped panels, each with a Mountain Time axis.
         expect(await screen.findAllByRole("img", { name: /times in Mountain Time/ })).toHaveLength(4);
@@ -231,20 +230,44 @@ describe("resort navigation", () => {
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
   });
 
-  it("keeps the row open between resorts and resets disclosure across other routes and back", () => {
+  it.each(["Alta", "Snowbird", "Solitude", "Brighton"])("toggles and closes with Escape on %s", (name) => {
+    render(<SectionNav pathname={`/${name.toLowerCase()}`} />);
+    const toggle = screen.getByRole("button", { name });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.hasAttribute("data-current")).toBe(true);
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    const resorts = screen.getByRole("navigation", { name: "Resorts" });
+    const link = within(resorts).getByRole("link", { name });
+    expect(link.getAttribute("aria-current")).toBe("page");
+    link.focus();
+    fireEvent.keyDown(link, { key: "Escape" });
+    expect(document.activeElement).toBe(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(document.getElementById("resort-navigation")!.hasAttribute("inert")).toBe(true);
+    fireEvent.click(toggle);
+    fireEvent.click(toggle);
+    expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
+  });
+
+  it("resets disclosure and updates the toggle and current resort across navigation and back", () => {
     const view = render(<SectionNav pathname="/" />);
     fireEvent.click(screen.getByRole("button", { name: "Resorts" }));
     view.rerender(<SectionNav pathname="/alta" />);
-    const toggle = screen.getByRole("button", { name: "Resorts" });
-    fireEvent.click(toggle);
-    fireEvent.keyDown(toggle, { key: "Escape" });
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    view.rerender(<SectionNav pathname="/brighton" />);
-    expect(screen.getByRole("button", { name: "Resorts" }).hasAttribute("data-current")).toBe(true);
+    expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Alta" }));
+    expect(screen.getByRole("link", { name: "Alta" }).getAttribute("aria-current")).toBe("page");
+    // Follow a resort link through the router and confirm the row closes on arrival.
+    fireEvent.click(screen.getByRole("link", { name: "Brighton" }));
+    expect(nav.pathname).toBe("/brighton");
+    view.rerender(<SectionNav pathname={nav.pathname} />);
+    expect(screen.getByRole("button", { name: "Brighton" }).getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: "Brighton" }));
     expect(screen.getByRole("link", { name: "Brighton" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("link", { name: "Alta" }).hasAttribute("aria-current")).toBe(false);
     view.rerender(<SectionNav pathname="/weather" />);
-    expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
-    view.rerender(<SectionNav pathname="/" />);
-    expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Resorts" }).getAttribute("aria-expanded")).toBe("false");
+    view.rerender(<SectionNav pathname="/alta" />);
+    expect(screen.getByRole("button", { name: "Alta" }).getAttribute("aria-expanded")).toBe("false");
   });
 });
