@@ -324,3 +324,5 @@ The section nav stays in one horizontally scrollable flex row below the 900px br
 Existing files touched: `src/app/globals.css` (narrow-screen nav rules only), `docs/IMPLEMENTATION_NOTES.md` (this decision and validation). No setup, routes, storage, or operations changed.
 
 Validation: 7 app-shell tests pass, `npm run typecheck`, `npm run build`. Browser checks on the exported app served by local Wrangler, with all 12 sources collected successfully into local KV: single row and no page overflow at 320px and 390px, working horizontal scrolling, Resorts dropdown visible and clickable below the row, successful navigation to Alta, and desktop layout at 1366px. Reapplying the old grid in-browser reproduced two rows at 390px. Not run: real-device Safari or production deployment.
+
+Follow-up: hide the mobile nav's native scrollbar with `scrollbar-width: none` and the WebKit scrollbar pseudo-element while retaining `overflow-x: auto`. At 390px, browser verification confirms both scrollbar styles are hidden and the row still scrolls 158px without page overflow. The 7 app-shell tests, typecheck, build, and diff whitespace check pass again.
