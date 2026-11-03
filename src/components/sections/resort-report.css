@@ -61,18 +61,40 @@
   flex-direction: column;
   gap: 12px;
 }
+/* In-page jump links, styled like the section tabs: each whole item is the
+   target, muted until hovered. They are anchors, so none is marked current.
+   Unlike the tabs they wrap on narrow screens, so every section stays visible. */
 .resort-report__jump {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 24px;
+  gap: 0 20px;
   margin-top: calc(16px - var(--page-gap));
-  padding-bottom: 8px;
   border-bottom: 1px solid var(--line);
-  font-size: var(--fs-meta);
-  font-weight: 600;
 }
 .resort-report__jump a {
-  padding-block: 8px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 44px;
+  white-space: nowrap;
+  text-decoration: none;
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  color: var(--muted);
+  transition: color 150ms ease;
+}
+.resort-report__jump a:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+.resort-report__jump a:focus-visible {
+  outline-offset: -4px;
+  border-radius: 4px;
+}
+@media (min-width: 901px) {
+  .resort-report__jump {
+    gap: 0 32px;
+  }
 }
 
 /* ---- section heading: h2 with a quiet note or link on the right ---- */
@@ -316,9 +338,6 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 12px;
-  }
-  .resort-report__jump {
-    gap: 0 18px;
   }
   /* Three tiles across and a 3 × 2 grid below: the same slots as on a laptop. */
   .resort-snow__headline {
