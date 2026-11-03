@@ -293,7 +293,7 @@ export interface WebcamsPayload {
 
 export type PrimaryResortId = "alta" | "snowbird" | "solitude" | "brighton";
 
-/** A resort-operated camera shown on that resort's slide. */
+/** A resort-operated camera shown on that resort's page. */
 export type ResortCam = {
   resort: PrimaryResortId;
   /** Camera name as the resort publishes it. */

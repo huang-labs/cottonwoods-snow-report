@@ -120,7 +120,7 @@ Every section shows the source report time (America/Denver) and the last success
 
 ## Design
 
-Mobile-first and light by default, with a full dark theme chosen by the masthead’s sun/moon buttons (the system preference applies when no choice is saved). The former TV slideshow mode is gone.
+Mobile-first and light by default, with a full dark theme chosen by the masthead’s sun/moon buttons (the system preference applies when no choice is saved).
 
 - **One type scale.** `src/app/globals.css` defines size tokens (display, h2, title, h3, prose, body, meta, caption, label) and every page uses them: page titles are the display size, section headings h2, item names (resort names, the Daily Snow teaser title) the title size, timestamps and notes caption. Add a token rather than a new pixel size.
 - **One page pattern.** Each page is a title with a muted subtitle, its sections, and its source line(s) at the foot (freshness chip, source time, last check, attribution). Freshness chips live in source lines and resort headers, not mid-sentence.

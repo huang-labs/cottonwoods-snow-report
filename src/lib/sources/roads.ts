@@ -44,8 +44,8 @@ export function parseUdotSite(html: string): {
     notices.push({
       title,
       text,
-      // Seasonal gate closures (e.g. Guardsman Pass) are shown on the traffic
-      // slide but do not trigger the global closure banner.
+      // Seasonal gate closures (e.g. Guardsman Pass) are shown on the Roads
+      // page but do not trigger the global closure banner.
       severity: seasonal ? "warning" : severityOf(text),
       canyon: canyonOf(text),
       source: "UDOT Cottonwood Canyons",

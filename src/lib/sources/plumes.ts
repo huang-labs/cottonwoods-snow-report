@@ -116,7 +116,7 @@ export const plumesSource: SourceDefinition<PlumePayload> = {
           try {
             panels = await cropAndStore(ctx, s.code, parsed.runCode, imageUrl);
           } catch (err) {
-            // The original chart is still valid; the slide falls back to it.
+            // The original chart is still valid; the Plumes page falls back to it.
             cropError = err instanceof Error ? err.message : String(err);
           }
         }
