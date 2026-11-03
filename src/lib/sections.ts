@@ -5,7 +5,7 @@ export interface SectionDef {
   title: string;
   /** Short label for the navbar tabs. */
   label: string;
-  /** Sections sharing a group collapse into one dropdown in the navbar. */
+  /** Sections sharing a group appear in a secondary navbar row. */
   group?: SectionGroup;
 }
 

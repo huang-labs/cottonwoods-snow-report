@@ -1,37 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { SECTIONS, sectionHref } from "@/lib/sections";
 
 // useLayoutEffect warns during server rendering; measuring only happens in the browser.
 const useBrowserLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
-/** Width of the resorts menu, kept in sync with `.section-nav__menu` in globals.css. */
-const MENU_WIDTH = 200;
-const MENU_MARGIN = 8;
-
 interface Bar { left: number; width: number }
 
-/** The current tab: a section link, or the resorts tab while on a resort page. */
+/** The current page link, or its parent section's disclosure button. */
 function activeTab(tabs: HTMLElement | null): HTMLElement | null {
-  return tabs?.querySelector<HTMLElement>(":scope > a[aria-current='page'], :scope > details > summary[data-current]") ?? null;
+  return tabs?.querySelector<HTMLElement>(":scope > a[aria-current='page'], :scope > button[data-current]") ?? null;
 }
 
-/**
- * Section tabs: one row that scrolls sideways on phones, with a blue bar
- * under the current tab that slides between tabs. The resorts share one tab whose
- * menu is fixed-positioned so the scrolling row can't clip it.
- */
-export function SectionNav({ pathname }: { pathname: string | null }) {
+/** Both rows share scrolling hints, active-tab placement and underline motion. */
+function NavRow({ label, pathname, children }: { label: string; pathname: string | null; children: ReactNode }) {
   const tabs = useRef<HTMLDivElement>(null);
-  const resortMenu = useRef<HTMLDetailsElement>(null);
   const [bar, setBar] = useState<Bar | null>(null);
   const [animate, setAnimate] = useState(false);
   const [fade, setFade] = useState({ start: false, end: false });
-  const [menuPos, setMenuPos] = useState<CSSProperties>();
-
-  const resort = SECTIONS.find((s) => s.group && sectionHref(s.id) === pathname);
 
   const updateFade = useCallback(() => {
     const el = tabs.current;
@@ -76,56 +64,56 @@ export function SectionNav({ pathname }: { pathname: string | null }) {
     return () => observer.disconnect();
   }, [measure]);
 
-  const placeMenu = useCallback(() => {
-    const summary = resortMenu.current?.querySelector("summary");
-    if (!summary || !resortMenu.current?.open) return;
-    const rect = summary.getBoundingClientRect();
-    const maxLeft = window.innerWidth - MENU_WIDTH - MENU_MARGIN;
-    setMenuPos({ top: rect.bottom + 4, left: Math.max(MENU_MARGIN, Math.min(rect.right - MENU_WIDTH, maxLeft)) });
-  }, []);
+  return (
+    <nav aria-label={label} className="section-nav__inner"
+      data-fade-start={fade.start ? "" : undefined} data-fade-end={fade.end ? "" : undefined}>
+      <div ref={tabs} className="section-nav__tabs" data-bar={bar ? "" : undefined} data-animate={animate ? "" : undefined}
+        onScroll={updateFade}>
+        {children}
+        <span className="section-nav__bar" aria-hidden="true"
+          style={bar ? { transform: `translateX(${bar.left}px)`, width: bar.width } : undefined} />
+      </div>
+    </nav>
+  );
+}
 
-  // Keep the open menu under its tab; close it on outside clicks and Escape.
-  useEffect(() => {
-    const outside = (event: PointerEvent) => {
-      if (resortMenu.current && !resortMenu.current.contains(event.target as Node)) resortMenu.current.open = false;
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && resortMenu.current?.open) {
-        resortMenu.current.open = false;
-        resortMenu.current.querySelector("summary")?.focus();
-      }
-    };
-    document.addEventListener("pointerdown", outside);
-    document.addEventListener("keydown", escape);
-    window.addEventListener("scroll", placeMenu, { passive: true });
-    window.addEventListener("resize", placeMenu);
-    return () => {
-      document.removeEventListener("pointerdown", outside);
-      document.removeEventListener("keydown", escape);
-      window.removeEventListener("scroll", placeMenu);
-      window.removeEventListener("resize", placeMenu);
-    };
-  }, [placeMenu]);
+/** Resort pages pin the second row open; elsewhere Resorts discloses it in place. */
+export function SectionNav({ pathname }: { pathname: string | null }) {
+  const toggle = useRef<HTMLButtonElement>(null);
+  const [disclosure, setDisclosure] = useState({ pathname, open: false });
+  // Reset before rendering a new route, including browser back/forward navigation.
+  if (disclosure.pathname !== pathname) setDisclosure({ pathname, open: false });
+  const resort = SECTIONS.find((s) => s.group && sectionHref(s.id) === pathname);
+  const expanded = Boolean(resort) || (disclosure.pathname === pathname && disclosure.open);
 
   return (
-    <div className="section-nav">
-      <nav aria-label="Sections" className="section-nav__inner"
-        data-fade-start={fade.start ? "" : undefined} data-fade-end={fade.end ? "" : undefined}>
-        <div ref={tabs} className="section-nav__tabs" data-bar={bar ? "" : undefined} data-animate={animate ? "" : undefined}
-          onScroll={() => { updateFade(); placeMenu(); }}>
-          {SECTIONS.filter((s) => !s.group).map((s) => (
-            <Link key={s.id} href={sectionHref(s.id)} aria-current={sectionHref(s.id) === pathname ? "page" : undefined}>{s.label}</Link>
-          ))}
-          <details ref={resortMenu} key={pathname} className="section-nav__resorts" onToggle={placeMenu}>
-            <summary data-current={resort ? "" : undefined}>{resort?.label ?? "Resorts"} <span className="section-nav__chevron" aria-hidden="true" /></summary>
-            <div className="section-nav__menu" style={menuPos}>{SECTIONS.filter((s) => s.group).map((s) => (
+    <div className="section-nav" onKeyDown={(event) => {
+      if (event.key === "Escape" && expanded && !resort) {
+        setDisclosure({ pathname, open: false });
+        toggle.current?.focus();
+      }
+    }}>
+      <NavRow label="Sections" pathname={pathname}>
+        {SECTIONS.filter((s) => !s.group).map((s) => (
+          <Link key={s.id} href={sectionHref(s.id)} aria-current={sectionHref(s.id) === pathname ? "page" : undefined}>{s.label}</Link>
+        ))}
+        <button ref={toggle} type="button" className="section-nav__resorts"
+          aria-expanded={expanded} aria-controls="resort-navigation" aria-disabled={resort ? true : undefined}
+          data-current={resort ? "" : undefined}
+          onClick={() => { if (!resort) setDisclosure({ pathname, open: !expanded }); }}>
+          Resorts <span className="section-nav__chevron" aria-hidden="true" />
+        </button>
+      </NavRow>
+      <div id="resort-navigation" className="section-nav__subnav" data-expanded={expanded ? "" : undefined}
+        inert={!expanded} aria-hidden={!expanded}>
+        <div className="section-nav__reveal">
+          <NavRow label="Resorts" pathname={pathname}>
+            {SECTIONS.filter((s) => s.group).map((s) => (
               <Link key={s.id} href={sectionHref(s.id)} aria-current={sectionHref(s.id) === pathname ? "page" : undefined}>{s.label}</Link>
-            ))}</div>
-          </details>
-          <span className="section-nav__bar" aria-hidden="true"
-            style={bar ? { transform: `translateX(${bar.left}px)`, width: bar.width } : undefined} />
+            ))}
+          </NavRow>
         </div>
-      </nav>
+      </div>
     </div>
   );
 }
