@@ -176,7 +176,7 @@ export async function runCollection(env: CollectorEnv, opts: CollectOptions = {}
   snapshot.sources = stored.sources;
   snapshot.stormTracking = stored.stormTracking;
   try {
-    await archiveStorms(env.SNOW_KV, stored);
+    await archiveStorms(env.SNOW_KV, stored, now);
   } catch (err) {
     // Working records remain in the snapshot; the next run retries the archive.
     console.error("dailysnow: storm archive failed", err);

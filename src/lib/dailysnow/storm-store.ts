@@ -29,13 +29,24 @@ export async function trackStorms(kv: KVLike, previous: Snapshot | null, snapsho
 }
 
 /** Archive only material event changes. Re-read/merge narrows KV's existing concurrent-write window.
-    Each record expires DAILY_SNOW_RETENTION_DAYS after its last change. */
-export async function archiveStorms(kv: KVLike, snapshot: Snapshot): Promise<void> {
+    Each record expires DAILY_SNOW_RETENTION_DAYS after its last material change (`updatedAt`, which
+    only moves when the event changes). An event past retention that lingers in the snapshot's working
+    set is not re-archived, and a missing key is recreated only for its remaining lifetime. */
+export async function archiveStorms(kv: KVLike, snapshot: Snapshot, now: Date): Promise<void> {
   for (const event of snapshot.stormTracking?.events ?? []) {
+    if (remainingTtlS(event.updatedAt, now) === null) continue;
     const key = stormKey(event.id);
     const raw = await kv.get(key, "text");
     const merged = raw ? mergeStormRecord(JSON.parse(raw), event) : event;
     const body = JSON.stringify(merged);
-    if (raw !== body) await kv.put(key, body, { expirationTtl: DAILY_SNOW_RETENTION_DAYS * 24 * 3600 });
+    if (raw === body) continue;
+    const ttl = remainingTtlS(merged.updatedAt, now);
+    if (ttl !== null) await kv.put(key, body, { expirationTtl: ttl });
   }
+}
+
+/** Seconds left in a record's retention (KV's minimum TTL is 60 s), or null once it has lapsed. */
+function remainingTtlS(updatedAt: string, now: Date): number | null {
+  const left = Date.parse(updatedAt) + DAILY_SNOW_RETENTION_DAYS * 24 * 3_600_000 - now.getTime();
+  return Number.isFinite(left) && left > 0 ? Math.max(60, Math.ceil(left / 1000)) : null;
 }
