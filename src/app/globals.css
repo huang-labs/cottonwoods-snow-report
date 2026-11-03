@@ -308,9 +308,7 @@ a { color: var(--accent); }
 .dailysnow-storm td { width: auto; }
 .dailysnow-storm__note { display: block; font-size: var(--fs-caption); }
 .dailysnow__footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--fs-caption); line-height: 1.6; }
-.dailysnow__nav { display: flex; justify-content: space-between; gap: 12px; }
-.dailysnow__nav--top { margin-bottom: 8px; }
-.dailysnow__nav--bottom { margin-top: 20px; }
+.dailysnow__nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 20px; }
 .dailysnow__nav button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 10px 0; border: 0; border-radius: 0; background: transparent; color: var(--accent); font-size: var(--fs-caption); font-weight: 600; line-height: 1.4; white-space: nowrap; cursor: pointer; }
 .dailysnow__nav button > span { color: var(--muted); }
 .dailysnow__nav-next { margin-left: auto; }

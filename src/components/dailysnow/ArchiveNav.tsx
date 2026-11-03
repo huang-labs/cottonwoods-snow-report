@@ -4,10 +4,9 @@ import { postDate } from "./labels";
 
 /** Each post links its neighbors so navigation reaches beyond the recent-posts
  * rail. The index is a fallback for posts written before neighbor links existed. */
-export function ArchiveNav({ post, onPick, position }: {
+export function ArchiveNav({ post, onPick }: {
   post: ApiDailySnow;
   onPick: (date: string | null) => void;
-  position: "top" | "bottom";
 }) {
   const i = post.archive.findIndex((a) => a.date === post.date);
   const older = post.older ?? (i >= 0 ? post.archive[i + 1] : post.archive.find((a) => a.date < post.date));
@@ -18,7 +17,7 @@ export function ArchiveNav({ post, onPick, position }: {
     onFocus: () => prefetchArchivedPost(date),
   });
   return (
-    <nav className={`dailysnow__nav dailysnow__nav--${position}`} aria-label={position === "top" ? "Daily Snow archive" : "Daily Snow archive (end of article)"}>
+    <nav className="dailysnow__nav" aria-label="Daily Snow archive (end of article)">
       {older && (
         <button
           type="button"
