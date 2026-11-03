@@ -43,6 +43,60 @@ The shared pieces live in `src/lib/ai/`: `model.ts` builds the request body, run
   - **Storm memory** (`src/lib/dailysnow/storms.ts`): collection tracks observed storms across days, even without AI. Reported storm totals survive upstream zero resets; earlier rolling observations retain their original window and times, never become full-storm totals, and are never added together. A source counter restarting within an event is kept as a separate segment with the full-event amount marked unknown. The recap and figure use the same record frozen with the edition. The tracker wraps up after 12 hours without an increase when the next 18 forecast hours are dry (<0.5″ in each canyon), closes after 24 such hours, and leaves the article's recap context 36 hours after closure. Snow in the near-term forecast bridges lulls; 48 hours without new evidence closes tracking with an explicit unconfirmed-end reason. Repeated old totals cannot reopen a storm. These are editorial grouping rules, not measured meteorological onset/end times.
   - Storage: the current post is in the snapshot; each post is archived at `dailysnow:v1:<date>` with its image stills at `dailysnow-fig:v1:<date>:<figure>`, with no expiry. Optional `stormTracking` in the snapshot holds source cursors and the three most recent events; each event is also archived without expiry at `dailysnow-storm:v1:<id>`, written only on material changes. New posts embed optional `stormRecap` data; their recap figures also freeze that data, so later observations do not alter an earlier edition. Initial collection bootstraps from at most five editions within 72 hours, using their structured observations rather than AI prose; existing posts need no migration. KV keeps every post as the business archive (roughly 10–20 KB per post plus about 100 KB per image still, up to six). `GET /api/daily-snow?date=YYYY-MM-DD` serves any stored post. Each post stores links to its neighbors (`older` when it is written, `newer` added when the next post is written), so the previous/next buttons walk back through every post ever made. The desktop history rail stays visible; phones use the date buttons without a history list or disclosure. Each response's `archive` lists only the 10 most recent posts (`DAILY_SNOW_ARCHIVE_POSTS`, the snapshot index), which the history rail draws from. To list the whole archive, use `cf kv keys list --prefix dailysnow:v1:`. `GET /api/daily-snow/figure/<date>/<figure>` serves a post's stills.
 
+## AI code review
+
+The official [PR-Agent Action](https://github.com/marketplace/actions/the-pr-agent)
+runs **one advisory review per eligible PR event** through OpenRouter. A short
+routing step selects a model; PR-Agent owns inference, review formatting,
+persistent comments, inline findings, coverage and failure reporting.
+
+Apply exactly one author label. PR-number parity keeps the selected reviewer
+stable across pushes while distributing reviews between the other two families:
+
+| Author label | Even PR number | Odd PR number |
+| --- | --- | --- |
+| `author:codex` | Claude Opus 5.5 | GLM 5.3 |
+| `author:claude` | GPT-6.1 Sol | GLM 5.3 |
+| `author:glm` | Claude Opus 5.5 | GPT-6.1 Sol |
+
+Setup: store a dedicated OpenRouter key as Actions secret `OPENROUTER_API_KEY`;
+set its spending cap/reset period in OpenRouter. Defaults are
+`anthropic/claude-opus-5.5`, `openai/gpt-6.1-sol`, and `z-ai/glm-5.3`. Optional
+repository variables `AI_REVIEW_CLAUDE_MODEL`, `AI_REVIEW_GPT_MODEL`, and
+`AI_REVIEW_GLM_MODEL` accept explicit same-vendor model IDs, without the
+`openrouter/` prefix. Model fallbacks and auto routers are disabled. OpenRouter
+may switch hosting providers serving the same model. Review content is sent to
+OpenRouter and the selected provider under your account privacy settings.
+
+Reviews run on open, reopen, ready-for-review, pushes and author-label changes.
+Drafts, forks, Dependabot and bot events are skipped. Missing/conflicting author
+labels produce an Actions notice without inference. A collaborator with current
+write/maintain/admin permission can post exactly `/review` to rerun; other
+commands and arguments are ignored. Automatic description rewriting and code
+suggestion generation are disabled. Review findings are advisory: keep this
+workflow optional in branch protection. Model/run details identify the reviewer;
+GitHub tests and preview deployment remain independent.
+
+The `pull_request_target` workflow and review configuration come from trusted
+base/default branches, with no checkout or execution of PR code. PR-Agent reads
+PR data and default-branch AGENTS.md through GitHub's API. Repeated requests for
+the same head cancel each other; different heads have separate concurrency groups
+so delayed older jobs cannot cancel newer heads. Native PR-Agent owns how
+in-progress/full-diff reviews and their persistent findings are updated.
+
+Policy is in `.pr_agent.toml`: **high reasoning for all three models**, a 131,072-token
+context budget and a 32,768-token completion allowance shared by reasoning and
+the final review. Each model call has up to 20 minutes; the job allows 45 minutes
+for startup and one transient-error retry. Large-PR chunking stays disabled.
+An exhausted budget fails the review rather than lowering reasoning effort.
+These limits are not dollar caps. The official Action wrapper is pinned
+to v0.49.0's commit; its Dockerfile uses upstream's rolling `github_action` image.
+Update deliberately and check live model compatibility after upgrades.
+
+Automatic reviews activate after merging this workflow/config into main. Existing
+PRs need a new eligible event. Provider/auth/credit failures appear in PR-Agent's
+native output and Actions logs; fix the configuration and post `/review` to retry.
+
 ## Local development
 
 Requires Node 20+ (tested with Node 24.12).

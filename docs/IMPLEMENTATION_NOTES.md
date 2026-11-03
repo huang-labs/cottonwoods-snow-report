@@ -578,3 +578,91 @@ This supersedes this PR's earlier mobile tabs, stacked list and collapsible hist
 **Plain-text follow-up:** 22 Daily Snow UI tests, typecheck, static build and diff checks pass. Chromium at 390px and 1366px confirms borderless text controls; 320px with a temporary cloned second control has no overflow. Dark mode checked at 390px. Touch areas remain 44px tall. This follow-up changes only scoped navigation styles and these notes; README navigation placement remains accurate.
 
 **Rebase validation:** rebased onto `origin/main` at `4cbea56` (storm observation memory), preserving its README/storage/lifecycle notes, recap rendering and source-wording changes. All 285 tests across 21 files, typecheck, static build and diff checks passed after resolution. No new browser or live model run was needed for the documentation conflicts.
+
+## 2026-11-03 — Official PR-Agent Action through OpenRouter
+
+**Decision.** Use the official Marketplace Action directly, pinned to v0.49.0's
+wrapper commit `efdde4afe14aa401a3889012c7f3e9ef3081a430`. Its Dockerfile still
+uses upstream's rolling `github_action` image; the runtime is not digest-pinned.
+PR-Agent owns inference, comments, inline findings, persistent state, coverage,
+model attribution and errors. The only custom logic is a short workflow routing
+step: an author label excludes that family; PR-number parity selects one of the
+other two. Defaults are Opus 5.5, GPT-6.1 Sol and GLM 5.3. There is exactly one
+reviewer per eligible event and no cross-model fallback.
+
+The trusted-base `pull_request_target` workflow checks current PR state and manual
+request permissions before selecting a model. No PR code is checked out or run.
+Policy and AGENTS.md come from the default branch via API. Forks, drafts, bot
+events and Dependabot are skipped; missing/conflicting author labels spend no
+credits and produce an Actions notice. Exact `/review` is the only accepted
+comment command. Same-head concurrency avoids an old head cancelling a new one.
+PR-Agent's native behavior owns in-flight updates; there is no custom publisher,
+Docker launcher, output validator or post-inference state manager.
+
+**Limits and operations.** A dedicated `OPENROUTER_API_KEY` repository secret and
+three author labels are installed. The owner controls the key's credit cap in
+OpenRouter. Policy uses high reasoning for all three models, a 131,072-token
+context budget, 32,768 completion tokens (reasoning plus final review), a 20-minute
+call timeout, one transient retry, no chunking and a 45-minute job limit.
+Findings are advisory; no automatic approval, merging, description
+rewriting or code edits. Activation and actual bot publication require merging
+the workflow/config, then triggering a labeled PR or `/review`.
+
+**Initial live provider validation (before the high-reasoning follow-up below).** PR-Agent code and locked dependencies from the
+published CLI image were run locally against PR #57 through OpenRouter (Docker
+is unavailable here). Opus produced a valid review in 58 s (24,019 input / 4,206
+output tokens), GPT in 79 s (15,121 / 2,126), and GLM with low reasoning in 32 s
+(15,147 / 2,133). All reported full diff coverage. GLM's initial high-effort call
+failed after 264 s: it exhausted all 8,192 completion tokens on reasoning, with
+empty content and `finish_reason: length`. Lowering effort fixed it. These were
+explicit provider-validation calls; normal operation selects one model.
+
+**Validation.** All 285 application tests across 21 files and typecheck pass;
+the Deploy workflow also passed build and preview on the preceding head. Final
+workflow routing passes 16 scenarios, including every author/parity combination,
+permission and eligibility skips, stale events and invalid model overrides.
+actionlint 1.7.12 passes on both workflows; TOML/Action configuration assertions
+and diff checks pass. The official Action's native runner was also exercised
+locally with a real `pull_request_target` payload and GLM through OpenRouter:
+it exited successfully in 43 s and emitted exactly one review to `GITHUB_OUTPUT`.
+Publication was disabled for this local check; GitHub bot identity and actual
+comment publication require merge.
+No browser checks were needed for this CI-only change. Bot publication and the
+trusted-base trigger cannot be exercised before this setup merges. Scratch
+model responses, environments and validation harnesses are outside the repo.
+
+**Existing files touched:** `AGENTS.md` adds the author-label rule; `README.md`
+documents setup/operations; `.github/workflows/deploy.yml` updates only the bot's
+Preview comment rather than its latest comment, preventing reviews from being
+overwritten; these notes record decisions and evidence. New files are
+`.github/workflows/review.yml` and `.pr_agent.toml`. A revert removes reviews and
+restores preview publication; already-spent inference credits are not refunded.
+
+### High-reasoning defaults follow-up
+
+The owner prefers high reasoning for code review. All three models now receive
+`high` through PR-Agent's global and explicit OpenRouter policy. Removed the
+per-model low/medium workflow override. The completion cap is 32,768 tokens,
+four times the original cap; it covers both internal reasoning and the visible
+review. OpenRouter's catalog confirms that all three models support high and
+these limits. The context budget is 131,072 tokens, with PR-Agent reserving
+completion space. Calls have 1,200 seconds and jobs have 45 minutes to accommodate
+one transient retry plus startup. Failure never lowers effort or changes models.
+
+The earlier GLM result established that the 8,192-token cap was too small for its
+high reasoning run; the new defaults address the budget rather than reducing
+effort. Request-construction checks against PR-Agent confirm all three models
+receive `reasoning.effort=high`, a 32,768-token completion cap and a 1,200-second
+timeout, and reserve 32,768 tokens inside the 131,072-token context budget.
+All 16 routing scenarios, actionlint on both workflows, policy assertions and
+`git diff --check` pass. The native Action runner then completed one live GLM
+high-effort review in 99 s with the enlarged budget (publication disabled).
+The regenerated key was installed as the repository's `OPENROUTER_API_KEY` and
+used successfully for that run. No application tests or browser checks were
+rerun for this configuration-only follow-up.
+The live review also prompted explicit `pull-requests: read` permission for the
+routing job's PR API reads; the review job retains its scoped write permission.
+
+**Files touched in this follow-up:** `.pr_agent.toml` sets reasoning and budgets;
+`.github/workflows/review.yml` removes per-model effort selection and increases
+the job timeout; `README.md` and these notes document the resulting behavior.
