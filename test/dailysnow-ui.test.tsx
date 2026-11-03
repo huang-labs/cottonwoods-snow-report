@@ -168,6 +168,23 @@ it("shows the recent posts above or beside the article, today first, at most thr
   expect(entries[0].querySelector(".dailysnow__history-entry-phase")?.textContent).toBe("Storm");
 });
 
+it("expands recent posts and collapses them after choosing a post", async () => {
+  const older: ApiDailySnow = { ...post, date: "2026-10-31", title: "Storm Arrives", outdated: true };
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(older), { headers: { "content-type": "application/json" } })));
+  render(<DailySnowPage report={report(post)} now={now} />);
+  const toggle = screen.getByRole("button", { name: "Recent posts" });
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  expect(document.getElementById(toggle.getAttribute("aria-controls")!)?.className).toBe("dailysnow__history-list");
+  fireEvent.click(toggle);
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  fireEvent.click(toggle);
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  fireEvent.click(toggle);
+  fireEvent.click(document.querySelectorAll<HTMLElement>(".dailysnow__history-entry")[1]!);
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  expect(await screen.findByRole("heading", { level: 1, name: "Storm Arrives" })).toBeTruthy();
+});
+
 it("hides the recent posts while the live post is the only one, but keeps the archive links", () => {
   render(<DailySnowPage report={report({ ...post, archive: [{ date: "2026-11-01", title: "Storm Underway" }] })} now={now} />);
   expect(document.querySelector(".dailysnow__history")).toBeNull();

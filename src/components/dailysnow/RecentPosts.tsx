@@ -1,8 +1,9 @@
 
+import { useId, useRef, useState } from "react";
 import type { ApiDailySnow, DailySnowPhase } from "@/lib/types";
 import { PHASE_LABEL, postDate } from "./labels";
 
-/** How many posts the rail shows: the live post plus the archive before it. */
+/** How many posts the list shows: the live post plus the archive before it. */
 const HISTORY_COUNT = 3;
 
 type Entry = { date: string; title: string; phase?: DailySnowPhase; live: boolean };
@@ -18,7 +19,7 @@ function entriesFor(live: ApiDailySnow): Entry[] {
 }
 
 /** One clickable past post. `active` marks the post on screen: it gets the
-    accent bar and the panel fill; "Latest" names the live entry regardless of its date. */
+    accent bar and the panel fill; "Today" still names the live entry. */
 function RecentPost({ entry, active, onPick, onIntent }: { entry: Entry; active: boolean; onPick: Pick; onIntent?: Pick }) {
   const date = entry.live ? null : entry.date;
   return (
@@ -41,20 +42,41 @@ function RecentPost({ entry, active, onPick, onIntent }: { entry: Entry; active:
 }
 
 /**
- * Recent posts in a left rail beside the article on wide screens. Phones render
- * nothing here: they navigate with the archive links below the post. Hidden
- * while the live post is the only one there is.
+ * A collapsed disclosure above the article on phones; a visible sticky left
+ * rail on wide screens. Both layouts share at most three date/title entries.
+ * Hidden while the live post is the only one there is.
  */
 export function RecentPosts({ live, viewed, onPick, onIntent }: { live: ApiDailySnow | null; viewed: string | null; onPick: Pick; onIntent?: Pick }) {
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
+  const toggle = useRef<HTMLButtonElement>(null);
+  function pick(date: string | null) {
+    setExpanded(false);
+    if (toggle.current?.getClientRects().length) toggle.current.focus();
+    onPick(date);
+  }
   if (!live) return null;
   const entries = entriesFor(live);
   if (entries.length < 2) return null;
   return (
-    <aside className="dailysnow__history" aria-label="Recent Daily Snow posts">
+    <aside className="dailysnow__history" aria-label="Recent Daily Snow posts" data-expanded={expanded || undefined}>
       <p className="dailysnow__history-heading">Recent posts</p>
-      <div className="dailysnow__history-list">
+      <button
+        ref={toggle}
+        type="button"
+        className="dailysnow__history-toggle"
+        aria-expanded={expanded}
+        aria-controls={listId}
+        onClick={() => setExpanded(!expanded)}
+      >
+        <span>Recent posts</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="m4 6 4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <div id={listId} className="dailysnow__history-list">
         {entries.map((e) => (
-          <RecentPost key={e.date} entry={e} active={viewed ? e.date === viewed : e.live} onPick={onPick} onIntent={onIntent} />
+          <RecentPost key={e.date} entry={e} active={viewed ? e.date === viewed : e.live} onPick={pick} onIntent={onIntent} />
         ))}
       </div>
     </aside>
