@@ -45,7 +45,7 @@ export function HistoryRail({ live, viewed, onPick }: { live: ApiDailySnow | nul
   if (entries.length < 2) return null;
   return (
     <aside className="dailysnow__history" aria-label="Recent Daily Snow posts">
-      <p className="dailysnow__history-heading">Past {HISTORY_COUNT} days</p>
+      <p className="dailysnow__history-heading">Recent posts</p>
       <div className="dailysnow__history-list">
         {entries.map((e) => (
           <HistoryEntry key={e.date} entry={e} active={viewed ? e.date === viewed : e.live} onPick={onPick} />

@@ -92,6 +92,8 @@ it("shows the recent posts in a left rail beside the article, today first, at mo
   render(<DailySnowPage report={report({ ...post, archive: history })} now={now} />);
   const rail = document.querySelector<HTMLElement>(".dailysnow__history")!;
   expect(rail.getAttribute("aria-label")).toBe("Recent Daily Snow posts");
+  // Counts posts, not days: a day without a post must not make the heading wrong.
+  expect(rail.querySelector(".dailysnow__history-heading")?.textContent).toBe("Recent posts");
   const entries = [...rail.querySelectorAll(".dailysnow__history-entry")];
   expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-date")?.textContent)).toEqual(["Today", "Sat, Oct 31", "Fri, Oct 30"]);
   // The live post is today's entry — marked active at rest — and not repeated from the archive.
