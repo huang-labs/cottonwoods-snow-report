@@ -24,7 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       model: ${{ steps.route.outputs.model }}
-      effort: ${{ steps.route.outputs.effort }}
       head: ${{ steps.route.outputs.head }}
     steps:
       - uses: actions/github-script@v8
@@ -59,7 +58,6 @@ jobs:
             const vendor = { claude: 'anthropic', codex: 'openai', glm: 'z-ai' }[family];
             if (!new RegExp(`^${vendor}/[a-zA-Z0-9._-]+$`).test(model)) throw new Error('Invalid reviewer model variable; use an explicit same-vendor OpenRouter model ID without the openrouter/ prefix.');
             core.setOutput('model', `openrouter/${model}`);
-            core.setOutput('effort', family === 'glm' ? 'low' : 'medium');
             core.setOutput('head', pr.head.sha);
             await core.summary.addRaw(`Reviewer: ${model}; author: ${authors[0]}; commit: ${pr.head.sha}`).write();
 
@@ -67,7 +65,8 @@ jobs:
     needs: select
     if: needs.select.outputs.model != ''
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Allow two 20-minute attempts plus startup/backoff for a transient retry.
+    timeout-minutes: 45
     permissions:
       contents: read
       pull-requests: write
@@ -85,8 +84,6 @@ jobs:
           CONFIG__MODEL_WEAK: ${{ needs.select.outputs.model }}
           CONFIG__MODEL_REASONING: ${{ needs.select.outputs.model }}
           CONFIG__FALLBACK_MODELS: '[]'
-          CONFIG__REASONING_EFFORT: ${{ needs.select.outputs.effort }}
-          OPENROUTER__REASONING_EFFORT: ${{ needs.select.outputs.effort }}
           # Read review policy from the trusted default branch, never the PR branch.
           PR_AGENT_CONFIG_BRANCH: ${{ github.event.repository.default_branch }}
           CONFIG__USE_GLOBAL_SETTINGS_FILE: 'false'

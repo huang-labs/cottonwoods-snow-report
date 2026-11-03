@@ -84,10 +84,12 @@ the same head cancel each other; different heads have separate concurrency group
 so delayed older jobs cannot cancel newer heads. Native PR-Agent owns how
 in-progress/full-diff reviews and their persistent findings are updated.
 
-Policy is in `.pr_agent.toml`: 32k context budget, 8,192 output-token cap, one
-transient-error retry, no large-PR chunking, and a 15-minute job timeout. GLM uses
-low reasoning (high exhausted the completion budget in validation); GPT/Opus use
-medium. These limits are not dollar caps. The official Action wrapper is pinned
+Policy is in `.pr_agent.toml`: **high reasoning for all three models**, a 131,072-token
+context budget and a 32,768-token completion allowance shared by reasoning and
+the final review. Each model call has up to 20 minutes; the job allows 45 minutes
+for startup and one transient-error retry. Large-PR chunking stays disabled.
+An exhausted budget fails the review rather than lowering reasoning effort.
+These limits are not dollar caps. The official Action wrapper is pinned
 to v0.49.0's commit; its Dockerfile uses upstream's rolling `github_action` image.
 Update deliberately and check live model compatibility after upgrades.
 

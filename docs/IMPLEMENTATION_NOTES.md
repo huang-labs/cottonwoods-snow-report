@@ -601,13 +601,14 @@ Docker launcher, output validator or post-inference state manager.
 
 **Limits and operations.** A dedicated `OPENROUTER_API_KEY` repository secret and
 three author labels are installed. The owner controls the key's credit cap in
-OpenRouter. Policy uses a 32k context budget, 8,192-token output cap, one transient
-retry, no chunking and a 15-minute job limit. GLM uses low reasoning; GPT/Opus use
-medium. Findings are advisory; no automatic approval, merging, description
+OpenRouter. Policy uses high reasoning for all three models, a 131,072-token
+context budget, 32,768 completion tokens (reasoning plus final review), a 20-minute
+call timeout, one transient retry, no chunking and a 45-minute job limit.
+Findings are advisory; no automatic approval, merging, description
 rewriting or code edits. Activation and actual bot publication require merging
 the workflow/config, then triggering a labeled PR or `/review`.
 
-**Live provider validation.** PR-Agent code and locked dependencies from the
+**Initial live provider validation (before the high-reasoning follow-up below).** PR-Agent code and locked dependencies from the
 published CLI image were run locally against PR #57 through OpenRouter (Docker
 is unavailable here). Opus produced a valid review in 58 s (24,019 input / 4,206
 output tokens), GPT in 79 s (15,121 / 2,126), and GLM with low reasoning in 32 s
@@ -636,3 +637,30 @@ Preview comment rather than its latest comment, preventing reviews from being
 overwritten; these notes record decisions and evidence. New files are
 `.github/workflows/review.yml` and `.pr_agent.toml`. A revert removes reviews and
 restores preview publication; already-spent inference credits are not refunded.
+
+### High-reasoning defaults follow-up
+
+The owner prefers high reasoning for code review. All three models now receive
+`high` through PR-Agent's global and explicit OpenRouter policy. Removed the
+per-model low/medium workflow override. The completion cap is 32,768 tokens,
+four times the original cap; it covers both internal reasoning and the visible
+review. OpenRouter's catalog confirms that all three models support high and
+these limits. The context budget is 131,072 tokens, with PR-Agent reserving
+completion space. Calls have 1,200 seconds and jobs have 45 minutes to accommodate
+one transient retry plus startup. Failure never lowers effort or changes models.
+
+The earlier GLM result established that the 8,192-token cap was too small for its
+high reasoning run; the new defaults address the budget rather than reducing
+effort. Request-construction checks against PR-Agent confirm all three models
+receive `reasoning.effort=high`, a 32,768-token completion cap and a 1,200-second
+timeout, and reserve 32,768 tokens inside the 131,072-token context budget.
+All 16 routing scenarios, actionlint on both workflows, policy assertions and
+`git diff --check` pass. The native Action runner then completed one live GLM
+high-effort review in 99 s with the enlarged budget (publication disabled).
+The regenerated key was installed as the repository's `OPENROUTER_API_KEY` and
+used successfully for that run. No application tests or browser checks were
+rerun for this configuration-only follow-up.
+
+**Files touched in this follow-up:** `.pr_agent.toml` sets reasoning and budgets;
+`.github/workflows/review.yml` removes per-model effort selection and increases
+the job timeout; `README.md` and these notes document the resulting behavior.

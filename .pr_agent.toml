@@ -1,11 +1,12 @@
 # The official Action reads this policy from the trusted default branch.
 [config]
 fallback_models = []
-custom_model_max_tokens = 32000
-max_model_tokens = 32000
-max_output_tokens = 8192
+custom_model_max_tokens = 131072
+max_model_tokens = 131072
+# Completion allowance includes reasoning as well as the final review.
+max_output_tokens = 32768
 num_retries = 1
-ai_timeout = 180
+ai_timeout = 1200
 retry_same_model_on_timeout = false
 propagate_tool_errors = true
 publish_output = true
@@ -13,7 +14,11 @@ use_global_settings_file = false
 repo_context_files = ["AGENTS.md"]
 repo_context_from_default_branch = true
 output_run_details = true
-reasoning_effort = "medium"
+reasoning_effort = "high"
+
+[openrouter]
+# Forward high effort even when a model ID is absent from LiteLLM's metadata.
+reasoning_effort = "high"
 
 [pr_reviewer]
 enable_large_pr_chunking = false
