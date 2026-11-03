@@ -783,3 +783,14 @@ load tests, browser checks, build or smoke run were performed for this audit.
 
 **Existing file touched:** `docs/IMPLEMENTATION_NOTES.md` records the audit,
 reproduction evidence, storm-tracking reassessment and proposed follow-ups.
+
+## 2026-11-03 — Snowfall legend restored; resort freshness in its own source line
+
+Supersedes the footer layout in "Snowfall freshness in the table footer" above. Folding the resort freshness into the legend row made the legend do two jobs, and it took one-off overrides to work: `.snow-foot` stripped the source line's rule and padding, the legend was pushed right, and the report-time column was right-aligned to match it. The owner wanted the original legend back and a separate footer that looks like the Weather and Plumes source lines.
+
+- **Legend:** `<p className="legend">` under the table again, with its original `.legend` rules (16px under the table, muted caption, left-aligned). The `.snow-foot*` rules are gone.
+- **Report times:** left-aligned again, as before #41; the `.snow-table .report-time` right-align rule and the header's `report-time` class were removed.
+- **Source line:** new `ResortsSourceLine` (`src/components/sections/ResortsSourceLine.tsx`) renders the stock `.source-line` with no overrides, one page gap below the legend: the worst resort's badge, then the resorts in each state, worst first, when not all are current; "Last successful check" (the oldest of the four, from `summarizeFreshness`); "Latest check failed: …" naming any resort whose latest check errored; and "Alta, Snowbird, Solitude and Brighton snow reports (resort websites)" as attribution on the right. Per-resort report times stay in the table, so the line carries no single source time.
+- Unchanged from #41: no chips in rows, no notes under values, 24px row padding.
+
+Validation: 287 tests across 21 files pass, and `npm run typecheck` and `npm run build` pass. On a local server seeded with a real collection (Chromium): at 1366px the legend sits 16px under the table. The source line starts one page gap below it with its own rule, its left edge at the page's (125px) and its right at the page edge (1241px). At 390px it wraps the attribution under the status. Neither width overflows horizontally. Not run: dark mode (no new colors), a live mixed-freshness state in the browser (covered by unit tests) and real-device Safari.

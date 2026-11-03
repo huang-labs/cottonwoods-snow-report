@@ -4,8 +4,8 @@ import type { ApiSource, Metric, ReportResponse, ResortReport, SnowfallSet, Sour
 import { sectionHref } from "@/lib/sections";
 import { formatAge, formatDenver } from "@/lib/time";
 import { DailySnowTeaser } from "../dailysnow/DailySnow";
-import { FRESHNESS_TEXT, FreshnessBadge, MetricValue, StatusBadge } from "../ui";
-import { summarizeFreshness } from "./freshness-summary";
+import { MetricValue, StatusBadge } from "../ui";
+import { ResortsSourceLine } from "./ResortsSourceLine";
 import { newSnowKey, SNOW_LABEL } from "./resort-display";
 
 const PRIMARY: SourceId[] = ["alta", "snowbird", "solitude", "brighton"];
@@ -62,37 +62,6 @@ function PhoneSummary({ r }: { r: ResortReport }) {
   );
 }
 
-/**
- * The table's footer: freshness on the left, the value legend on the right, like
- * the other pages' source lines. Each resort is classified separately, so the badge
- * shows the worst state and labels the resorts in it; any other states follow, each
- * with its own label. When every resort is current, the line gives the oldest of
- * their last successful checks, as other pages' source lines give theirs.
- */
-function SnowTableFoot({ sources, now }: { sources: ApiSource[]; now: Date }) {
-  const { worst, groups, oldestCheck } = summarizeFreshness(sources);
-  return (
-    <div className="source-line snow-foot">
-      <FreshnessBadge freshness={worst} />
-      {worst === "current" ? (
-        <span>
-          Last successful check: <strong>{formatAge(oldestCheck, now)}</strong>
-        </span>
-      ) : (
-        groups.map(({ freshness, labels }, i) => (
-          <span key={freshness}>
-            {i > 0 && `${FRESHNESS_TEXT[freshness]}: `}
-            <strong>{labels.join(", ")}</strong>
-          </span>
-        ))
-      )}
-      <span className="snow-foot__legend">
-        <span className="metric__value metric__value--zero">0″</span> reported zero · <span className="metric__missing">not reported</span> field empty in source · <span className="metric__na">—</span> not provided by source
-      </span>
-    </div>
-  );
-}
-
 function Row({ source, now, recommended }: { source: ApiSource; now: Date; recommended: boolean }) {
   const r = source.payload as ResortReport | null;
   return (
@@ -135,7 +104,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
             {COLUMNS.map((c) => (
               <th scope="col" key={c.key}>{c.title}</th>
             ))}
-            <th scope="col" className="report-time">Report time (MT)</th>
+            <th scope="col">Report time (MT)</th>
           </tr>
         </thead>
         <tbody>
@@ -163,7 +132,10 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
           ))}
         </tbody>
       </table>
-      <SnowTableFoot sources={PRIMARY.map((id) => report.sources[id])} now={now} />
+      <p className="legend">
+        <span className="metric__value metric__value--zero">0″</span> reported zero · <span className="metric__missing">not reported</span> field empty in source · <span className="metric__na">—</span> not provided by source
+      </p>
+      <ResortsSourceLine sources={PRIMARY.map((id) => report.sources[id])} now={now} />
     </section>
   );
 }
