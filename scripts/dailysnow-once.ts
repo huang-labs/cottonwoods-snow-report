@@ -18,6 +18,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { PRIMARY_MODEL, responseJson } from "../src/lib/ai/model";
 import { historyEntry } from "../src/lib/dailysnow/continuity";
 import { buildDailyDigest } from "../src/lib/dailysnow/digest";
+import { advanceStormTracking, seedStormTracking } from "../src/lib/dailysnow/storms";
 import { buildModelInput, validateDailySnow } from "../src/lib/dailysnow/llm";
 import { createFetchContext } from "../src/lib/http";
 import { nwsAfdSource } from "../src/lib/sources/nwsafd";
@@ -48,6 +49,7 @@ const posts = await Promise.all(
   }),
 );
 const history = posts.filter((p): p is ApiDailySnow => !!p).map(historyEntry);
+snapshot.stormTracking = advanceStormTracking(seedStormTracking(posts.filter((p): p is ApiDailySnow => !!p), now), snapshot, now);
 
 const { digest } = buildDailyDigest(snapshot, current, history, now);
 const saveTo = arg("--save-digest");

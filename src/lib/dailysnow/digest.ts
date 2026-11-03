@@ -19,6 +19,8 @@ import type {
   Snapshot,
 } from "../types";
 import { buildContinuity, type ContinuityDigest } from "./continuity";
+import { stormDigest, stormForPost } from "./storms";
+import type { StormRecord } from "./storm-types";
 
 /**
  * Facts for the Daily Snow post. Everything the model would otherwise have to
@@ -43,6 +45,8 @@ export interface FigureCandidate {
 }
 
 export interface DailyDigest extends ContinuityDigest {
+  /** Historical observations for the same event; valid data even after live fields reset. */
+  stormRecap?: ReturnType<typeof stormDigest> | null;
   ensemble?: ReturnType<typeof ensembleGuidance>;
   nowLocal: string;
   date: string;
@@ -72,6 +76,7 @@ export interface DailyBuild {
   figures: FigureCandidate[];
   /** Any resort in season, or snow in the 7-day forecast. False = off-season, no post. */
   worthPosting: boolean;
+  stormRecap: StormRecord | null;
 }
 
 const weekdayFmt = new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", weekday: "long" });
@@ -96,7 +101,7 @@ export function phaseOf(recentIn: number, recent48In: number, next12In: number, 
   return { phase: "quiet", reason: `Quiet weather: ${facts}` };
 }
 
-function figureCandidates(snapshot: Snapshot, nws: NwsPayload | null, numbers: DailySnowNumbers, now: Date): FigureCandidate[] {
+function figureCandidates(snapshot: Snapshot, nws: NwsPayload | null, numbers: DailySnowNumbers, now: Date, storm: StormRecord | null): FigureCandidate[] {
   const out: FigureCandidate[] = [];
   const t = now.getTime();
   for (const p of nws?.points ?? []) {
@@ -122,7 +127,12 @@ function figureCandidates(snapshot: Snapshot, nws: NwsPayload | null, numbers: D
     const rep = snapshot.sources[r.id]?.payload as ResortReport | null;
     return { name: r.name, h24: r.h24, h48: rep ? reported(rep.snowfall.h48) : null, storm: r.storm };
   });
-  if (rows.some((r) => r.h24 !== null || r.h48 !== null || r.storm !== null)) {
+  if (storm) {
+    out.push({
+      figure: { id: "storm-recap", kind: "storm-recap", storm, caption: `Storm recap · tracked since ${localTime(storm.firstObservedAt, now)}` },
+      describe: "Retained observations for this storm, with source report times. Reported storm totals and rolling-window observations are explicitly distinguished. Missing means unavailable, never zero. Not a live 24/48-hour table.",
+    });
+  } else if (rows.some((r) => r.h24 !== null || r.h48 !== null || r.storm !== null)) {
     out.push({
       figure: { id: "resort-totals", kind: "totals", rows, caption: "Resort-reported snowfall" },
       describe: "Bar chart of resort-reported 24 h, 48 h and storm totals",
@@ -202,7 +212,14 @@ export function buildDailyDigest(snapshot: Snapshot, previous: DailySnowPost | n
     })),
     resorts: RESORTS.map((r) => {
       const rep = snapshot.sources[r.id]?.payload as ResortReport | null;
-      return { id: r.id, name: r.name, h24: rep ? (reported(rep.snowfall.h24) ?? reported(rep.snowfall.overnight)) : null, storm: rep ? reported(rep.snowfall.storm) : null, reportTime: rep?.reportTime ?? null };
+      return {
+        id: r.id, name: r.name,
+        h24: rep ? (reported(rep.snowfall.h24) ?? reported(rep.snowfall.overnight)) : null,
+        h48: rep ? reported(rep.snowfall.h48) : null,
+        seasonIn: rep ? reported(rep.snowfall.season) : null,
+        storm: rep ? reported(rep.snowfall.storm) : null,
+        reportTime: rep?.reportTime ?? null,
+      };
     }),
   };
 
@@ -210,11 +227,16 @@ export function buildDailyDigest(snapshot: Snapshot, previous: DailySnowPost | n
   const { recent, recent48, worthPosting } = dailySnowActivity(snapshot, now, base);
   const next12 = maxOf((nws?.points ?? []).map((p) => snowNext(p, now, 12)));
   const next72 = maxOf(numbers.canyons.map((c) => c.next72In));
-  const { phase, reason } = phaseOf(recent, recent48, next12, next72);
+  const stormRecap = stormForPost(snapshot.stormTracking, now);
+  // Expired event memory must not keep sunny-day editions in post-storm mode
+  // merely because a source continues publishing yesterday's rolling totals.
+  const expired = !!snapshot.stormTracking?.events.length && !stormRecap;
+  const { phase, reason } = phaseOf(expired ? 0 : recent, expired ? 0 : recent48, next12, next72);
 
-  const figures = figureCandidates(snapshot, nws, numbers, now);
+  const figures = figureCandidates(snapshot, nws, numbers, now, stormRecap);
   const t = now.getTime();
   const digest: DailyDigest = {
+    stormRecap: stormRecap ? stormDigest(stormRecap, now) : null,
     ensemble: base.ensemble,
     nowLocal: nowFmt.format(now),
     date,
@@ -263,5 +285,5 @@ export function buildDailyDigest(snapshot: Snapshot, previous: DailySnowPost | n
     ...buildContinuity(previous, history, numbers, phase, date, now),
     figures: figures.map((f) => ({ id: f.figure.id, caption: f.figure.caption, shows: f.describe })),
   };
-  return { digest, numbers, figures, worthPosting };
+  return { digest, numbers, figures, worthPosting, stormRecap };
 }

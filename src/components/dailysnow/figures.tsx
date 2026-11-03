@@ -2,6 +2,7 @@ import type { DailySnowFigure } from "@/lib/types";
 import { SnowLevel } from "../charts";
 import { SnowfallChart } from "../snowfall/SnowfallChart";
 import { PlumePanelSvg } from "../PlumePanelSvg";
+import { StormRecap } from "./StormRecap";
 
 /** Resort-reported totals as horizontal bars. */
 function Totals({ rows, label }: { rows: Extract<DailySnowFigure, { kind: "totals" }>["rows"]; label: string }) {
@@ -41,6 +42,9 @@ function Totals({ rows, label }: { rows: Extract<DailySnowFigure, { kind: "total
 export function Figure({ figure: f, postedAt }: { figure: DailySnowFigure; postedAt: string }) {
   let body;
   switch (f.kind) {
+    case "storm-recap":
+      body = <StormRecap storm={f.storm} postedAt={postedAt} />;
+      break;
     case "snow-bars": {
       // Posts written before 2026-11-03 stored the NWS grid time in the caption.
       const title = f.caption.replace(/ · updated .*$/, "");

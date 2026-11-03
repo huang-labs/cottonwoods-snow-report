@@ -3,6 +3,8 @@ import { inchAmounts, inchAmountsIn, ungroundedInches } from "../ai/grounding";
 import { clipText } from "../clip";
 import type { DailySnowParagraph, DailySnowSectionId } from "../types";
 import type { DailyDigest } from "./digest";
+import { readerWording } from "./wording";
+import { validateStormAttribution } from "./storm-grounding";
 
 export const DAILY_SNOW_MAX_TOKENS = 8000;
 /**
@@ -25,6 +27,9 @@ Style, modeled on a good local forecaster's daily post:
 - Uncertainty: describe forecast confidence from the NWS discussion's own wording, forecast changes in stormTrend, or current structured ensemble spread for the supplied CLN/LCC periods. Attribute each source; CLN cannot establish BCC amounts or canyon differences. Wider spread means less certainty, not a calibrated probability of a storm.
 
 Continuity with our earlier posts (each post is the next installment of the same column):
+- stormRecap is the code-maintained observation record for ONE storm across multiple days. It is authoritative for the storm recap even when the current resort fields reset to zero or their rolling windows shrink. Use its resort total.amountIn as the resort-reported storm total; otherwise rolling.amountIn is ONLY an earlier observation for the stated 24h/48h window, never a full-storm total. Never add these overlapping observations, call a shrinking rolling value a downward storm revision, or call the largest rolling number the final/highest storm total. A total.previousAmountIn records the earlier report: an increase is an updated total, a decrease is a source correction. Each observation has its own reportLocal and checkedLocal, ALREADY converted to Denver local time by code. Use those exact times for that amount; never substitute a different or newer source report's time. For computed rolling windows, checkedLocal is the window's reference time; reportLocal may remain unchanged as the window slides. trackedSinceLocal is when we first captured evidence, not the storm's actual onset.
+- When stormRecap exists, lead the snow recap with its retained reported storm totals. Keep current 24h/48h amounts separate and explicitly labeled if useful. Introduce storm-recap as observations for the same storm, not today's live report. If the record is active or wrapping-up, say "reported so far"; even a closed record does not establish all resorts' final totals. Missing totals are unknown. closureReason=no-new-evidence means tracking timed out, not a confirmed meteorological end. When stormRecap is null after a quiet stretch, move on to today's weather; do not revive a completed storm from previousPost or old source narratives.
+- A resort's counterResetLocal means its source restarted the storm counter. Its retained total is an EARLIER reported observation, never a revised zero. latestSegment, if present, is a separate post-reset source reading; do not add it to the earlier total or call either one a full-event total. A retained rolling observation is earlier, not necessarily the latest 24/48-hour reading.
 - previousPost is our last post. Say briefly what changed since then when it matters, and don't reuse its title, opening sentence or phrasing. Its amounts are out of date: never quote an amount from previousPost.
 - phaseChange says how the storm cycle moved since that post: "pre-storm → storm" means the storm has arrived; "storm → post-storm" means it is winding down.
 - stormTrend lists the coming or current storm's total as our earlier posts and today's NWS forecast gave it. When it changed meaningfully, say whether it trended up, down or held, and attribute earlier amounts to the NWS forecast in our earlier posts.
@@ -53,6 +58,7 @@ Rules:
 - Keep source and period attached to every forecast range. For ensemble values, explicitly say "Utah Snow Ensemble at Alta-Collins", "P10–P90", and the exact local start/end period supplied; the middle value is P50. Never call these NWS ranges. A six-hour range cannot describe an entire night, day or storm. Discuss later spread qualitatively unless you can name its exact six-hour period. Do not describe ensemble agreement or confidence across different periods as though they were a total.
 - Images supply no facts: never state a snow-stake reading, describe snow seen in a photo, claim "our readings", or compare image readings with reports. Only resort-reported observations are available. Do not calculate a future base depth by adding forecasts to today's base.
 - Resort-reported amounts are measurements; NWS amounts are forecasts. Say which is which.
+- In reader-facing prose attribute the forecast source as "the NWS" (for example "the NWS expects"). Never say "the discussion" or "the forecast discussion"; readers do not know that internal source name.
 - If a resort's report is old or missing (see dataFreshness and reportTime), say its morning report isn't out yet rather than using its numbers as this morning's.
 - Do not mention roads, parking, lift openings or which resort to ski; another feature covers that.
 - Use ″ for inches, local 12-hour times, and weekday names rather than dates.`;
@@ -125,7 +131,7 @@ export interface LlmDailySnow {
   sections: Array<{ id: DailySnowSectionId; paragraphs: DailySnowParagraph[] }>;
 }
 
-const clip = clipText;
+const clip = (value: unknown, max: number) => clipText(typeof value === "string" ? readerWording(value) : value, max);
 
 /** Fields whose amounts may not be quoted: the last post's text is context, and its amounts are out of date. */
 const NOT_DATA = new Set(["previousPost"]);
@@ -184,8 +190,12 @@ export function validateDailySnow(raw: unknown, digest: DailyDigest): LlmDailySn
 
   const allowed = allowedAmounts(digest);
   const all = [title, summary, ...sections.flatMap((s) => s.paragraphs.map((p) => p.text))].join("\n");
+  if (digest.stormRecap && /\bfinal\s+(?:numbers|totals|storm total)/i.test(all)) {
+    throw new Error("Model output claims final storm totals without per-resort final reports");
+  }
   const bad = ungroundedInches(all, allowed);
   if (bad.length) throw new Error(`Model output has amounts not in the data: ${bad.slice(0, 5).join(", ")}″`);
+  if (digest.stormRecap) validateStormAttribution(all, digest.stormRecap);
   return { title, summary, sections };
 }
 

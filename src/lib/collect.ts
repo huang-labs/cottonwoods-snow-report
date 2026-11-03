@@ -1,4 +1,5 @@
 import { planDailySnow, type DailySnowPlan } from "./dailysnow";
+import { archiveStorms, trackStorms } from "./dailysnow/storm-store";
 import { createFetchContext, type CollectorSecrets } from "./http";
 import { planRecommendation, type RecommendationPlan, type RecommendEnv } from "./recommend";
 import { SOURCES } from "./sources";
@@ -143,6 +144,13 @@ export async function runCollection(env: CollectorEnv, opts: CollectOptions = {}
     if (prev) snapshot.sources[def.id] = prev;
   }
   for (const { rec } of records) snapshot.sources[rec.id] = rec;
+  try {
+    await trackStorms(env.SNOW_KV, previous, snapshot, now);
+  } catch (err) {
+    // Source collection and publication remain available if archive bootstrap fails.
+    snapshot.stormTracking = previous?.stormTracking;
+    console.error("dailysnow: storm tracking failed", err);
+  }
   // The recommendation is derived from the fresh sources. Its bookkeeping goes
   // into the same KV put; a model call (a few times an hour at most) waits until
   // the source data is stored, then costs one more put.
@@ -164,7 +172,15 @@ export async function runCollection(env: CollectorEnv, opts: CollectOptions = {}
   const carriedDaily = daily?.state ?? previous?.dailySnow;
   if (carriedDaily) snapshot.dailySnow = carriedDaily;
   snapshot.writtenAt = new Date().toISOString();
-  await writeSnapshot(env.SNOW_KV, snapshot);
+  const stored = await writeSnapshot(env.SNOW_KV, snapshot);
+  snapshot.sources = stored.sources;
+  snapshot.stormTracking = stored.stormTracking;
+  try {
+    await archiveStorms(env.SNOW_KV, stored);
+  } catch (err) {
+    // Working records remain in the snapshot; the next run retries the archive.
+    console.error("dailysnow: storm archive failed", err);
+  }
   if (plan?.run || daily?.run) {
     const [rec, post] = await Promise.all([plan?.run?.(), daily?.run?.()]);
     if (rec) snapshot.recommendation = rec;
