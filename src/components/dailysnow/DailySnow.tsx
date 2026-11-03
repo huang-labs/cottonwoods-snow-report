@@ -8,6 +8,7 @@ import { readerWording } from "@/lib/dailysnow/wording";
 import type { ApiDailySnow, DailySnowSectionId, ReportResponse } from "@/lib/types";
 import { prefetchArchivedPost, useArchivedPost } from "./archive";
 import { Figure } from "./figures";
+import { ArchiveNav } from "./ArchiveNav";
 import { HistoryRail } from "./HistoryRail";
 import { PHASE_LABEL, postDate } from "./labels";
 import { StatusBadge } from "../ui";
@@ -68,22 +69,6 @@ function Footer({ post }: { post: ApiDailySnow }) {
   );
 }
 
-/** Previous/next post links. Uses ?date= so the static section page needs no extra routes. Each post
-    links its neighbors, so these walk the whole archive; the recent-posts list covers older posts
-    written before the links existed. */
-function ArchiveNav({ post, onPick }: { post: ApiDailySnow; onPick: (date: string | null) => void }) {
-  const i = post.archive.findIndex((a) => a.date === post.date);
-  const older = post.older ?? (i >= 0 ? post.archive[i + 1] : post.archive.find((a) => a.date < post.date));
-  const newer = post.newer ?? (i > 0 ? post.archive[i - 1] : null);
-  const intent = (date: string) => ({ onPointerEnter: () => prefetchArchivedPost(date), onFocus: () => prefetchArchivedPost(date) });
-  return (
-    <nav className="dailysnow__nav" aria-label="Daily Snow archive">
-      {older ? <button type="button" onClick={() => onPick(older.date)} {...intent(older.date)}>← {postDate(older.date)}: {older.title}</button> : <span />}
-      {newer && <button type="button" onClick={() => onPick(newer.date)} {...intent(newer.date)}>{postDate(newer.date)}: {newer.title} →</button>}
-    </nav>
-  );
-}
-
 function readDateParam(): string | null {
   if (typeof window === "undefined") return null;
   const d = new URLSearchParams(window.location.search).get("date");
@@ -135,6 +120,7 @@ export function DailySnowPage({ report, now }: { report: ReportResponse; now: Da
       <div className="dailysnow-layout">
         <HistoryRail live={current} viewed={viewed} onPick={pick} onIntent={prefetchArchivedPost} />
         <article className="dailysnow" aria-label="Daily Snow" aria-busy={loading || undefined}>
+          <ArchiveNav post={post} onPick={pick} position="top" />
           <header className="dailysnow__header">
             <Eyebrow post={post} now={now} archived={post.date !== current?.date} />
             <h1 className="dailysnow__title">{readerWording(post.title)}</h1>
@@ -142,7 +128,7 @@ export function DailySnowPage({ report, now }: { report: ReportResponse; now: Da
           </header>
           <Article post={post} />
           <Footer post={post} />
-          <ArchiveNav post={post} onPick={pick} />
+          <ArchiveNav post={post} onPick={pick} position="bottom" />
         </article>
       </div>
     </section>

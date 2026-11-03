@@ -319,9 +319,18 @@ a { color: var(--accent); }
 .dailysnow-storm td { width: auto; }
 .dailysnow-storm__note { display: block; font-size: var(--fs-caption); }
 .dailysnow__footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--fs-caption); line-height: 1.6; }
-.dailysnow__nav { display: flex; justify-content: space-between; gap: 8px 24px; margin-top: 8px; flex-wrap: wrap; }
-.dailysnow__nav button, .dailysnow__back { background: transparent; border: 0; padding: 12px 0; color: var(--accent); cursor: pointer; text-align: left; font-size: var(--fs-meta); font-weight: 650; }
-.dailysnow__nav button:hover, .dailysnow__back:hover { text-decoration: underline; }
+.dailysnow__nav { display: flex; justify-content: space-between; gap: 12px; }
+.dailysnow__nav--top { margin-bottom: 8px; }
+.dailysnow__nav--bottom { margin-top: 20px; }
+.dailysnow__nav button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 10px 0; border: 0; border-radius: 0; background: transparent; color: var(--accent); font-size: var(--fs-caption); font-weight: 600; line-height: 1.4; white-space: nowrap; cursor: pointer; }
+.dailysnow__nav button > span { color: var(--muted); }
+.dailysnow__nav-next { margin-left: auto; }
+@media (hover: hover) {
+  .dailysnow__nav button:hover { text-decoration: underline; text-underline-offset: 3px; }
+}
+.dailysnow__nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.dailysnow__back { background: transparent; border: 0; padding: 12px 0; color: var(--accent); cursor: pointer; text-align: left; font-size: var(--fs-meta); font-weight: 650; }
+.dailysnow__back:hover { text-decoration: underline; }
 
 /* History rail: recent posts in a sticky left rail beside the article on wide
    screens; phones render no rail and use the archive links instead. Every entry
