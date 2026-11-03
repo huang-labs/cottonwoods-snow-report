@@ -666,3 +666,120 @@ routing job's PR API reads; the review job retains its scoped write permission.
 **Files touched in this follow-up:** `.pr_agent.toml` sets reasoning and budgets;
 `.github/workflows/review.yml` removes per-model effort selection and increases
 the job timeout; `README.md` and these notes document the resulting behavior.
+
+## 2026-11-03 — Data architecture audit after storm tracking
+
+Audit baseline: `732d689` on `origin/main`, including storm observation memory
+(#55), archive navigation, and the advisory code-review workflow (#57). This
+section records findings and proposed follow-ups; it changes no application
+behavior and does not claim the fixes below are implemented.
+
+### Overall assessment and data flow
+
+The architecture fits the dashboard: source adapters fetch and normalize data
+during collection; one KV snapshot holds last-good source payloads and scheduling
+state; Worker reads add freshness and public editorial status; a shared browser
+poller supplies every page. Reads never collect upstream data or invoke AI.
+Metric states preserve reported zero, not reported, and unavailable. Images are
+binary KV objects referenced by JSON rather than embedded in report responses.
+
+Storm tracking improves historical provenance: its pure reducer is separate from
+KV integration, retains source/window/report/check times and counter resets,
+never adds overlapping rolling observations, bounds snapshot context to three
+events, and archives event records separately. Daily Snow rebuilds its digest
+using merged source/storm records and freezes the recap with each edition. Those
+improvements do not resolve the publication-ordering and forecast-window issues
+below. Keeping KV is reasonable; a wholesale storage rewrite is not proposed.
+
+### Correctness findings and proposed order
+
+1. **AI publication ordering (`src/lib/store.ts`).** `newerState` compares attempt
+   start times and lets incoming state win ties. A collector carrying a reservation
+   can overwrite the completed result of that same attempt, even if its merge read
+   sees the completed snapshot. A local probe merged a completed November 3 post
+   with its reservation holding November 2; the result reverted to November 2.
+   Prefer completed state for the same attempt and define monotonic publication
+   ordering. The read/merge/put remains non-atomic; strict request reservations and
+   multi-writer publication need serialization, not a KV advisory lock. Storm
+   reconciliation does not change the AI-state comparison.
+2. **Forecast-window totals (`src/lib/dailysnow/digest.ts`).** `snowNext` sums whole
+   six-hour bars intersecting the requested interval. At November 3 13:00Z
+   (6 AM Denver), the next-24-hour calculation accepts bars starting at 12:00Z,
+   18:00Z, 00:00Z, 06:00Z and 12:00Z: 30 hours of coverage. Five synthetic
+   one-inch bars produce five inches under the next-24-hour label. Define explicit
+   calculation windows and coverage requirements; use suitably bounded input or
+   expose the actual whole-bar window rather than imply an exact rolling total.
+3. **Image revision identity (`src/lib/dailysnow/index.ts`,
+   `src/worker/daily-snow-figure.ts`).** Forced same-day rewrites overwrite
+   date/figure keys while the endpoint advertises one day of immutable caching.
+   Cached stills can disagree with revised prose. Image writes also precede the
+   replacement post, so a subsequent publication failure can change stills used
+   by the previous post. Write revision-specific artifacts before publishing
+   references to them. Frozen structured recap figures already avoid this issue.
+4. **Full-response deadlines (`src/lib/http.ts`).** The abort timer is cleared
+   after headers arrive, before text/JSON/binary body consumption. A stalled-body
+   probe remained pending after 100 ms with a 10 ms configured timeout and an
+   unaborted signal. Since collection awaits all selected sources, one stalled
+   body can delay publishing the others. Keep deadlines through body consumption;
+   enforce byte limits while streaming rather than after buffering. Text and JSON
+   reads also need bounds.
+
+### Contracts, efficiency and maintainability
+
+- **Typed decoding:** `Snapshot.sources` and `ReportResponse.sources` erase each
+  source's payload type, requiring assertions throughout consumers. Introduce a
+  source-to-payload mapping and validated storage decoding. `readSnapshot` accepts
+  `{ "schemaVersion": 1 }` without its required structure; archive and storm reads
+  likewise cast parsed JSON. Define compatibility defaults/migrations and surface
+  corrupt storage distinctly from an uninitialized dataset.
+- **Public projection:** `ApiSource` extends the persisted `SourceRecord`, and
+  `publicRecord` mostly spreads it. Every report includes operational diagnostics,
+  AI-only ensemble/discussion payloads, camera discovery caches and the full latest
+  article. Prefer an explicit client contract while preserving the shared request.
+  Polling should have a deadline, prevent overlapping requests and suspend while
+  hidden; short caching or conditional responses must account for freshness and
+  publication transitions, not only snapshot changes.
+- **Module dependencies:** `report.ts` imports Daily Snow activity/digest code that
+  imports classification from `report.ts`; recommendation digests also import it.
+  Move foundational classification, forecast calculations and shared policy out
+  of public report construction to remove these cycles.
+- **Artifact recovery:** plume panels expire after four days, but same-run reuse
+  checks the upstream chart without checking stored panel existence. Persistent
+  upstream run stalls can leave expired references; crop errors also suppress
+  retries until the image URL changes. Add bounded retry/recovery behavior.
+- **Archive operations:** no backup/restore procedure was found in the repository
+  for permanent posts, figures or storm records. No expiry is retention, not
+  recovery from overwrite/deletion. Storm archiving avoids unchanged writes but
+  still reads up to three records each collection; this bounded cost is acceptable
+  and lower priority than correctness. Multi-key archival is not an atomic commit.
+
+### Endpoint coverage
+
+| Endpoint | Storage and delivery | Audit assessment |
+| --- | --- | --- |
+| `GET /api/report` | One snapshot read, computed freshness/status, `no-store` | Good aggregation; public contract and polling can be tightened |
+| `GET /api/daily-snow?date=…` | Post plus snapshot reads, five-minute HTTP caching | Whole snapshot is needed for recent archive/state metadata; decoding remains unchecked |
+| `GET /api/daily-snow/figure/…` | One binary read, immutable caching | Revision identity must match the cache promise |
+| `GET /api/plume/…` | One binary read, run-specific immutable URL | Good identity; expired panels need recovery |
+| `GET /daily-snow/opengraph-image` | Explicit cache lookup; snapshot read/render on miss | Bounded caching is appropriate |
+| `POST /api/admin/collect` | Disabled without token; authenticated collection | Shares collection/publication coordination risks |
+
+The router also enforces allowed methods and handles HEAD for read routes. No new
+route, binding, storage format, or production operation is introduced by this audit.
+
+### Evidence and limits
+
+After rebasing onto `964fed6`, 285 tests across 21 files and `npm run typecheck`
+passed. Local probes reproduced equal-attempt AI rollback, overbroad forecast-bar
+coverage, incomplete snapshot validation and the stalled-body timeout. The later
+rebase to `732d689` changes review infrastructure/documentation, not these runtime
+paths; they were checked again by content review. Documentation links and
+`git diff --check` were reviewed for this documentation-only PR.
+
+One earlier read-only production request returned HTTP 200, 70,205 bytes of decoded
+report JSON and Brotli content encoding. This is a point-in-time payload observation,
+not a throughput or latency benchmark. No production writes, paid model calls,
+load tests, browser checks, build or smoke run were performed for this audit.
+
+**Existing file touched:** `docs/IMPLEMENTATION_NOTES.md` records the audit,
+reproduction evidence, storm-tracking reassessment and proposed follow-ups.
