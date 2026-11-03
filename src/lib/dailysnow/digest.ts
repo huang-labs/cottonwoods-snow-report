@@ -1,4 +1,5 @@
 import type { ensembleGuidance } from "../ensemble";
+import { plumePanelsLive } from "../plumePanels";
 import { classify } from "../report";
 import { buildDigest, denverDate, localTime, slrOf, RESORTS, type ResortDigest } from "../recommend/digest";
 import { SOURCE_BY_ID } from "../sources";
@@ -158,7 +159,8 @@ function figureCandidates(snapshot: Snapshot, nws: NwsPayload | null, numbers: D
   }
   const plumes = snapshot.sources.plumes?.payload as PlumePayload | null;
   for (const c of plumes?.charts ?? []) {
-    for (const panel of c.panels ?? []) {
+    // Expired panels cannot be frozen into a post; don't offer them as figures.
+    for (const panel of plumePanelsLive(c, now) ? (c.panels ?? []) : []) {
       const id = `plume-${panel.id}-${c.stationCode.toLowerCase()}`;
       const what = panel.id === "snow" ? "accumulated snowfall" : "snow-to-liquid ratio";
       out.push({

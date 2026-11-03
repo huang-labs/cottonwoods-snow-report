@@ -1,6 +1,7 @@
 import type { FetchContext } from "../http";
 import { cropSnowPanels } from "../plumeCrop";
-import { PLUME_PANEL_TTL_S, plumePanelKey } from "../store";
+import { PLUME_PANEL_REFRESH_MS, PLUME_PANEL_TTL_S, panelsStoredAt, plumeCropRetryDue, plumePanelsLive } from "../plumePanels";
+import { plumePanelKey } from "../store";
 import type { PlumeChart, PlumePanel, PlumePayload } from "../types";
 import { assertValid, HOUR, MINUTE, type SourceDefinition } from "./types";
 
@@ -54,7 +55,8 @@ export const plumePanelUrl = (station: string, runCode: string, panel: string) =
 /**
  * Download the chart, crop the two snow panels and store them in KV. Runs once
  * per new model run per station; later collections of the same run reuse the
- * stored panels (see collect below), keeping the 5-minute cron cheap.
+ * stored panels (see collect below), keeping the 5-minute cron cheap. A run
+ * that stays current for days is re-cropped a day before its panels expire.
  */
 async function cropAndStore(ctx: FetchContext, station: string, runCode: string, imageUrl: string): Promise<PlumePanel[]> {
   if (!ctx.kv) throw new Error("no KV available for cropped panels");
@@ -73,6 +75,20 @@ async function cropAndStore(ctx: FetchContext, station: string, runCode: string,
     height: c.height,
     plot: c.plot,
   }));
+}
+
+type CropState = Pick<PlumeChart, "panels" | "cropError" | "panelsStoredAt" | "cropAttempts" | "cropFailedAt">;
+
+/** Crop and store a run's panels. A failure keeps whatever still-live panels `kept` has. */
+async function tryCrop(ctx: FetchContext, station: string, runCode: string, imageUrl: string, kept: CropState): Promise<CropState> {
+  try {
+    const panels = await cropAndStore(ctx, station, runCode, imageUrl);
+    return { panels, panelsStoredAt: ctx.now.toISOString(), cropError: null, cropAttempts: 0, cropFailedAt: null };
+  } catch (err) {
+    // The original chart is still valid; the Plumes page falls back to it.
+    const cropError = err instanceof Error ? err.message : String(err);
+    return { ...kept, cropError, cropAttempts: (kept.cropAttempts ?? 0) + 1, cropFailedAt: ctx.now.toISOString() };
+  }
 }
 
 export const plumesSource: SourceDefinition<PlumePayload> = {
@@ -96,29 +112,31 @@ export const plumesSource: SourceDefinition<PlumePayload> = {
         const forecastHours = forecastHoursFromPath(parsed.imagePath);
         assertValid(forecastHours, `Plume image ${imageUrl}: forecast length not in file name`);
         const prior = previous?.charts?.find((c) => c.stationCode === s.code);
-        let panels: PlumePanel[] | null = null;
-        let cropError: string | null = null;
+        const head = await ctx.probe(imageUrl, { browserLike: true });
+        assertValid(head.status === 200, `Plume image ${imageUrl} returned HTTP ${head.status}`);
+        // Same run already processed (cropped, or cropping failed and the full
+        // chart is the fallback): reuse it unless its panels are due for
+        // re-storing before they expire, or a failed crop is due a retry.
+        const sameRun = prior && prior.imageUrl === imageUrl && (prior.panels || prior.cropError) ? prior : null;
         let imageLastModified: string | null;
-        if (prior && prior.imageUrl === imageUrl && (prior.panels || prior.cropError)) {
-          // Same run already processed (cropped, or cropping failed and the
-          // full chart is the fallback); only confirm it is still published.
-          const head = await ctx.probe(imageUrl, { browserLike: true });
-          assertValid(head.status === 200, `Plume image ${imageUrl} returned HTTP ${head.status}`);
-          panels = prior.panels;
-          cropError = prior.cropError;
-          imageLastModified = prior.imageLastModified;
+        let crop: CropState;
+        if (sameRun) {
+          imageLastModified = sameRun.imageLastModified;
+          const live = plumePanelsLive(sameRun, ctx.now);
+          const kept: CropState = {
+            panels: live ? sameRun.panels : null,
+            panelsStoredAt: live ? (sameRun.panelsStoredAt ?? null) : null,
+            cropError: live ? sameRun.cropError : (sameRun.cropError ?? "stored panels expired"),
+            cropAttempts: sameRun.cropAttempts ?? (sameRun.cropError ? 1 : 0),
+            cropFailedAt: sameRun.cropFailedAt ?? null,
+          };
+          const due = !live || ctx.now.getTime() - panelsStoredAt(sameRun) >= PLUME_PANEL_REFRESH_MS;
+          crop = due && plumeCropRetryDue(sameRun, ctx.now) ? await tryCrop(ctx, s.code, parsed.runCode, imageUrl, kept) : kept;
         } else {
-          const head = await ctx.probe(imageUrl, { browserLike: true });
-          assertValid(head.status === 200, `Plume image ${imageUrl} returned HTTP ${head.status}`);
           assertValid((head.headers.get("content-type") ?? "").startsWith("image/"), `Plume image ${imageUrl} is not an image`);
           const lm = head.headers.get("last-modified");
           imageLastModified = lm ? new Date(lm).toISOString() : null;
-          try {
-            panels = await cropAndStore(ctx, s.code, parsed.runCode, imageUrl);
-          } catch (err) {
-            // The original chart is still valid; the Plumes page falls back to it.
-            cropError = err instanceof Error ? err.message : String(err);
-          }
+          crop = await tryCrop(ctx, s.code, parsed.runCode, imageUrl, { panels: null, panelsStoredAt: null, cropError: null, cropAttempts: 0, cropFailedAt: null });
         }
         const chart: PlumeChart = {
           stationCode: s.code,
@@ -129,8 +147,7 @@ export const plumesSource: SourceDefinition<PlumePayload> = {
           runCode: parsed.runCode,
           initTime: runCodeToIso(parsed.runCode) ?? "",
           forecastHours,
-          panels,
-          cropError,
+          ...crop,
         };
         return { chart, runCode: parsed.runCode, product: parsed.product };
       }),
