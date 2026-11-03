@@ -316,3 +316,15 @@ The owner wants the prev/next links under a post to walk back through every post
 Existing posts: KV sets the expiry on each write, so posts written before this change keep their 32-day expiry (2 posts and 1 still in production on 2026-11-03, expiring in early December), and the owner chose to let them expire. One exception: the first post after deploy links the latest existing post forward, and that rewrite has no expiry, so that one post is kept. The chain then ends there; the posts before it are reachable through the archive list until they leave the 10-post window or expire.
 
 Existing files touched for this: `src/lib/dailysnow/index.ts` (no expiry on writes, neighbor links, index cap), `src/lib/report.ts` (the archive cap), `src/lib/types.ts` (`DailySnowLink`, optional `older`/`newer` on posts, doc comments), `src/components/dailysnow/DailySnow.tsx` (`ArchiveNav` follows the links; `pick` normalizes the live date), `README.md` (storage, KV operations), and tests in `test/worker.test.ts`, `test/dailysnow.test.ts` and `test/dailysnow-ui.test.tsx`.
+
+## 2026-11-03 — Readable snowfall overview
+
+Replaced the shared SnowBars SVG with equal-width start-date groups and always-visible inch amounts. Weather has expandable six-hour detail with 80px slots and keyboard-focusable horizontal scrolling; Daily Snow uses its frozen periods. Removed the old width-dependent label suppression. No source, storage, cron, or AI changes.
+
+Source limitation: six-hour amounts are UTC-aligned and can cross Denver midnight. We group whole periods by Denver start date instead of inventing a uniform distribution across hours. These are explicitly not midnight-to-midnight totals. Partial means fewer source periods than expected on that start date; wholly missing dates show a dash. Existing source periods do not retain hourly coverage, so completeness within an individual six-hour period cannot be determined. DST grouping uses local date keys and actual UTC slots. Current repository no longer has a TV slideshow.
+
+Existing files touched: `src/components/charts.tsx` removes the obsolete snow renderer (snow levels unchanged); `src/components/sections/WeatherPage.tsx` selects the new chart and detail; `src/components/dailysnow/figures.tsx` selects the overview; `README.md` documents presentation and scrolling; this notes file records decisions. New chart, scoped CSS, grouping helper, and tests live separately.
+
+Validation: 17 tests across snowfall and Daily Snow UI pass; typecheck and production build pass. No production writes or live model runs required.
+
+Browser validation on the exported app with public NWS and Daily Snow data copied into local KV: Weather at 320/390/1366px and Daily Snow at 320/1366px have visible amounts and no page overflow. Weather's day columns measure equally; expanded six-hour detail scrolls within its region. Inspected the Daily Snow chart visually at 320px. Other local sources were not seeded, so the missing-feed banner is expected. Real-device Safari and deployment were not run.

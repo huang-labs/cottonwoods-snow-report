@@ -1,0 +1,14 @@
+.snowfall { min-width: 0; }
+.snowfall__heading { font-size: var(--fs-caption); color: var(--muted); margin: 0 0 12px; }
+.snowfall__days, .snowfall__periods { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.snowfall li { min-width: 0; text-align: center; font-size: 12px; display: flex; flex-direction: column; align-items: stretch; }
+.snowfall__plot { height: 132px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.snowfall__amount { font-size: 12px; white-space: nowrap; line-height: 20px; }
+.snowfall__bar { display: block; width: 60%; max-width: 44px; background: var(--accent); flex-shrink: 0; }
+.snowfall__date, .snowfall__partial { color: var(--muted); }
+.snowfall__partial { font-size: 10px; }
+.snowfall__note { color: var(--muted); font-size: var(--fs-caption); margin: 12px 0 0; }
+.snowfall__detail { margin-top: 16px; }
+.snowfall__detail summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
+.snowfall__scroll { overflow-x: auto; padding-bottom: 8px; }
+.snowfall__periods { grid-auto-flow: column; grid-auto-columns: 80px; width: max-content; }
