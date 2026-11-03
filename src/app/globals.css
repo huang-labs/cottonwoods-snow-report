@@ -224,6 +224,9 @@ a { color: var(--accent); }
 .snow-table :is(th, td):last-child { padding-right: var(--bleed); }
 .snow-table thead th { padding-block: 12px; color: var(--muted); font-weight: 650; font-size: var(--fs-label); text-transform: uppercase; letter-spacing: 0.06em; }
 .snow-table .row--primary { position: relative; isolation: isolate; transition: background-color 150ms ease; }
+/* Resort rows get the page's section spacing above and below (24px, as under the
+   page header); phones replace this with their own block padding. */
+.snow-table tbody .row--primary > :is(th, td) { padding-block: 24px; }
 .snow-table .row--primary > th .badge { margin-right: 6px; }
 .resort-name { font: 700 var(--fs-title)/1.25 var(--font); letter-spacing: -0.015em; margin-bottom: 6px; }
 /* A name with no chips after it (a current, unpicked resort) has no gap to keep. */
