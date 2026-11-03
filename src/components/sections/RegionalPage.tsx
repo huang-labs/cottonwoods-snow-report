@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import type { ApiSource, Metric, ReportResponse, ResortReport, SnowfallSet, SourceId } from "@/lib/types";
+import type { ApiSource, Freshness, Metric, ReportResponse, ResortReport, SnowfallSet, SourceId } from "@/lib/types";
 import { sectionHref } from "@/lib/sections";
 import { formatAge, formatDenver } from "@/lib/time";
 import { DailySnowTeaser } from "../dailysnow/DailySnow";
@@ -68,18 +68,49 @@ function PhoneSummary({ r }: { r: ResortReport }) {
   );
 }
 
+/** Most to least severe, so the footer badge shows the worst resort's state. */
+const SEVERITY: Freshness[] = ["unavailable", "stale", "old-report", "time-unknown", "current"];
+
+/** How each state reads in the footer's list of resorts. */
+const STATUS_TEXT: Record<Freshness, string> = {
+  unavailable: "Unavailable",
+  stale: "Source failing",
+  "old-report": "Old report",
+  "time-unknown": "Report time unknown",
+  current: "Current",
+};
+
 /**
- * Each resort's freshness is its own, so it stays in its row, but only when it
- * needs attention: a current report shows just the name, and the report-time
- * column carries its recency. Any other state keeps its badge.
+ * One freshness line for the whole table, at its foot like the other pages' source
+ * lines. Each resort is classified separately, so the badge shows the worst state
+ * and labels the resorts in it; any other states follow, each with its own label.
  */
+function ResortStatusLine({ sources }: { sources: ApiSource[] }) {
+  const worst = SEVERITY.find((f) => sources.some((s) => s.freshness === f)) ?? "current";
+  const groups = SEVERITY.map((f) => ({ f, names: sources.filter((s) => s.freshness === f).map((s) => s.label) })).filter((g) => g.names.length);
+  return (
+    <div className="source-line">
+      <FreshnessBadge freshness={worst} />
+      {worst === "current" ? (
+        <span>All resorts reporting</span>
+      ) : (
+        groups.map(({ f, names }, i) => (
+          <span key={f}>
+            {i > 0 && `${STATUS_TEXT[f]}: `}
+            <strong>{names.join(", ")}</strong>
+          </span>
+        ))
+      )}
+    </div>
+  );
+}
+
 function Row({ source, now, recommended }: { source: ApiSource; now: Date; recommended: boolean }) {
   const r = source.payload as ResortReport | null;
   return (
     <tr className={`row--primary${recommended ? " row--recommended" : ""}`}>
       <th scope="row">
         <div className="resort-name"><a className="resort-name__link" href={sectionHref(source.id)}>{source.label}</a></div>
-        {source.freshness !== "current" && <FreshnessBadge freshness={source.freshness} />}
         {recommended && <span className="badge badge--ai">AI pick</span>}
       </th>
       {COLUMNS.map((c) => {
@@ -147,6 +178,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
       <p className="legend">
         <span className="metric__value metric__value--zero">0″</span> reported zero · <span className="metric__missing">not reported</span> field empty in source · <span className="metric__na">—</span> not provided by source
       </p>
+      <ResortStatusLine sources={PRIMARY.map((id) => report.sources[id])} />
     </section>
   );
 }

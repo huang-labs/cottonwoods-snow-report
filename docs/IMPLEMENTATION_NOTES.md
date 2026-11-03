@@ -367,10 +367,17 @@ Files touched: new `src/components/SectionNav.tsx` (tabs, bar, resorts menu, out
 
 Validation: 204 tests across 17 files, `npm run typecheck` and `npm run build` pass. Browser checks ran on the local dev server (Chromium, freshly collected real data). At 1280px the tabs, brand and page title share the same left edge (x = 82), and a client-side click moved the bar to the new tab with the 220ms transition. At 390px the row scrolls with edge fades, the current tab (Roads) is scrolled into view on load, the resorts menu opens unclipped and inside the viewport, and dark mode renders correctly. Not run: real-device Safari or iOS, and a 320px width.
 
-## 2026-11-03 — Snowfall rows badge only non-current reports
+## 2026-11-03 — Snowfall freshness in one footer status line
 
-Every Snowfall row carried a green "Current" chip, and nearly all the time all four did, so the chip read as decoration. Freshness can't move to one footer chip: each resort is collected and classified separately, so a single badge would hide the case that matters (one resort failing while the others are fine). Options considered: keep it; badge only exceptions; add a footer summary line ("All 4 resort reports current"), skipped because it repeats the report-time column; replace the chip with a colored dot, rejected as color-only and needing a legend.
+Every Snowfall row carried a green "Current" chip, and nearly all the time all four did, so the chip read as decoration. Each resort is collected and classified separately, so a single footer badge alone would hide one resort failing while the others are fine. A first version (PR #41, first commit) kept the chip in a row only when the report wasn't current; the owner preferred a single footer line like the other pages' source lines.
 
-The row now shows its `FreshnessBadge` only when the source isn't `current`; Old report, Report time unknown, Stale and Unavailable keep their chips in the same place. The report-time column (report time and "checked … ago") carries recency for healthy rows. The AI pick chip is unchanged. A name with no chip after it drops its bottom margin so it centers in the row. Resort, weather, roads and plume pages keep their always-on source-line chips, since each describes one source.
+The rows now carry no freshness chip (the AI pick chip is unchanged). Below the legend, a `source-line` shows one badge for the worst state across the four resorts, in the order unavailable, stale, old report, report time unknown, current:
 
-Files touched: `src/components/sections/RegionalPage.tsx` (conditional badge), `src/app/globals.css` (name margin when it has no chips), `test/regional-freshness.test.tsx` (new) and `README.md` (design note).
+- every resort current: "Current · All resorts reporting";
+- otherwise the badge labels the resorts in the worst state, and any other states follow with their own label, worst first, e.g. "Old report · Brighton · Current: Alta, Snowbird, Solitude".
+
+The report-time column still shows each resort's report time, "checked … ago" and "latest check failed". A name with no chip after it drops its bottom margin so it centers in the row. Other pages keep their per-source source lines.
+
+Files touched: `src/components/sections/RegionalPage.tsx` (row chip removed, `ResortStatusLine`), `src/app/globals.css` (name margin when it has no chips), `test/regional-freshness.test.tsx` (new) and `README.md` (design note).
+
+Validation: 209 tests across 18 files, `npm run typecheck` and `npm run build` pass. Browser: the real render with no local data (all Unavailable) at 1366 and 390px, no horizontal overflow; the all-current and one-old-report states mocked on the production page with the same markup at 1366 and 390px. Not run: dark mode (no new colors) and real-device Safari.
