@@ -432,7 +432,7 @@ describe("posting", () => {
     await runCollection(env, { now: at("2026-11-01T13:05:00Z"), sources: [] });
     expect(calls.filter((c) => c.schema === "daily_snow")).toHaveLength(n);
   });
-  it("archives posts and stills without expiry and keeps the snapshot index to the public window", async () => {
+  it("archives posts and stills for 30 days and keeps the snapshot index to the public window", async () => {
     const kv = await seeded();
     const options: unknown[] = [];
     const put = kv.put.bind(kv);
@@ -447,7 +447,8 @@ describe("posting", () => {
     const { ai } = fakeAi(() => answer(["plume-snow-cln"]));
     await runCollection({ SNOW_KV: kv, AI: ai }, { now: SIX_AM, sources: [] });
     expect(options.length).toBeGreaterThanOrEqual(2); // the post and its plume still
-    expect(options.every((o) => o === undefined)).toBe(true);
+    // 30 days after noon UTC on the post date (Nov 1); posted an hour later at 13:00Z.
+    expect(options.every((o) => (o as { expirationTtl?: number } | undefined)?.expirationTtl === 30 * 86_400 - 3_600)).toBe(true);
     const state = (await readSnapshot(kv))!.dailySnow!;
     expect(state.history).toHaveLength(DAILY_SNOW_ARCHIVE_POSTS);
     expect(state.history.map((h) => h.date).slice(0, 2)).toEqual(["2026-11-01", "2026-10-31"]);
@@ -466,6 +467,37 @@ describe("posting", () => {
     expect(second.older).toEqual({ date: "2026-11-01", title: "Storm Underway" });
     expect(second.newer).toBeUndefined();
     expect((await readSnapshot(kv))!.dailySnow!.current).toMatchObject({ date: "2026-11-02", older: { date: "2026-11-01" } });
+  });
+  it("keeps the older post's own expiry when linking it forward", async () => {
+    const kv = await seeded();
+    const { ai } = fakeAi(() => answer(["plume-snow-cln"]));
+    const env = { SNOW_KV: kv, AI: ai };
+    await runCollection(env, { now: SIX_AM, sources: [] });
+    const ttls: Record<string, number | undefined> = {};
+    const put = kv.put.bind(kv);
+    kv.put = async (key: string, value: string | ArrayBuffer, opts?: { expirationTtl?: number }) => {
+      if (key.startsWith("dailysnow:v1:")) ttls[key] = opts?.expirationTtl;
+      return put(key, value);
+    };
+    await runCollection(env, { now: at("2026-11-02T13:00:00Z"), sources: [], forceDailySnow: true });
+    // Both expire 30 days after noon UTC on their own date, counted from the 13:00Z write.
+    expect(ttls).toEqual({ [dailySnowKey("2026-11-02")]: 30 * 86_400 - 3_600, [dailySnowKey("2026-11-01")]: 29 * 86_400 - 3_600 });
+  });
+  it("stops serving and linking posts past the 30-day retention", async () => {
+    const post = { date: "2026-11-01", older: { date: "2026-10-02", title: "Old" } } as DailySnowPost;
+    const state = { ...emptyDailySnowState(), history: [{ date: "2026-11-01", title: "New", phase: "quiet" as const, forecast: [] }, { date: "2026-10-02", title: "Old", phase: "quiet" as const, forecast: [] }] };
+    const nov1 = publicDailySnow(post, state, at("2026-11-01T11:59:59Z"))!;
+    expect(nov1.older).toEqual({ date: "2026-10-02", title: "Old" });
+    expect(nov1.archive.map((a) => a.date)).toEqual(["2026-11-01", "2026-10-02"]);
+    const later = publicDailySnow(post, state, at("2026-11-01T12:00:00Z"))!;
+    expect(later.older).toBeUndefined();
+    expect(later.archive.map((a) => a.date)).toEqual(["2026-11-01"]);
+    expect(publicDailySnow(post, state, at("2026-12-01T12:00:00Z"))).toBeNull();
+    // The archive endpoint treats a stored post past retention (written before TTLs existed) as gone.
+    const { dailySnow } = await import("@/worker/daily-snow");
+    const kv = new MemoryKV();
+    await kv.put(dailySnowKey("2026-09-01"), JSON.stringify({ ...post, date: "2026-09-01" }));
+    expect((await dailySnow(new Request("https://x/api/daily-snow?date=2026-09-01"), { SNOW_KV: kv })).status).toBe(404);
   });
   it("gives a forced rewrite of today's post the post before it, read from the archive", async () => {
     const kv = await seeded();

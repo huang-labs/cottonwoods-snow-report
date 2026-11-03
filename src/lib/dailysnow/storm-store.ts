@@ -1,3 +1,4 @@
+import { DAILY_SNOW_RETENTION_DAYS } from "../report";
 import type { KVLike } from "../store";
 import type { DailySnowPost, Snapshot } from "../types";
 import { advanceStormTracking, mergeStormRecord, seedStormTracking, stormKey } from "./storms";
@@ -27,13 +28,14 @@ export async function trackStorms(kv: KVLike, previous: Snapshot | null, snapsho
   snapshot.stormTracking = advanceStormTracking(state, snapshot, now);
 }
 
-/** Archive only material event changes. Re-read/merge narrows KV's existing concurrent-write window. */
+/** Archive only material event changes. Re-read/merge narrows KV's existing concurrent-write window.
+    Each record expires DAILY_SNOW_RETENTION_DAYS after its last change. */
 export async function archiveStorms(kv: KVLike, snapshot: Snapshot): Promise<void> {
   for (const event of snapshot.stormTracking?.events ?? []) {
     const key = stormKey(event.id);
     const raw = await kv.get(key, "text");
     const merged = raw ? mergeStormRecord(JSON.parse(raw), event) : event;
     const body = JSON.stringify(merged);
-    if (raw !== body) await kv.put(key, body);
+    if (raw !== body) await kv.put(key, body, { expirationTtl: DAILY_SNOW_RETENTION_DAYS * 24 * 3600 });
   }
 }

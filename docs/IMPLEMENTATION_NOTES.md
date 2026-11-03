@@ -877,3 +877,39 @@ upstream/model requests, paid inference or production operations were run.
 
 **New files:** `test/http.test.ts` and `test/publication-merge.test.ts` cover
 response budgets/cancellation and AI publication interleavings respectively.
+
+## 2026-11-03 — Daily Snow archive retention: 30 days
+
+The owner wants a minimal live/recent app rather than a permanent archive. This
+supersedes "every post stays in KV" and drops the "Archive operations" backup
+follow-up from the data architecture audit above.
+
+- **Writes:** posts (`dailysnow:v1:<date>`) and figure stills
+  (`dailysnow-fig:v2:…`) get `expirationTtl` so that they expire 30 days after noon UTC
+  on the post date (`DAILY_SNOW_RETENTION_DAYS` and `dailySnowArchiveTtlS` in
+  `src/lib/report.ts`). A post and its stills expire together, and re-writing
+  the older post to add its `newer` link keeps that post's own expiry instead of
+  extending it. Storm records (`dailysnow-storm:v1:<id>`) expire 30 days after
+  their last material change. The storm bootstrap only reads editions within
+  72–96 hours, so retention does not affect it.
+- **Reads:** `publicDailySnow` returns null past retention, drops an `older` link
+  past retention and filters `archive` entries the same way. `/api/daily-snow`
+  therefore returns 404 for posts written before TTLs existed, which never expire
+  in KV. After a long off-season the report carries no Daily Snow instead of an
+  edition with broken stills.
+- **Existing data:** nothing is migrated or deleted. Keys written before this
+  change keep no expiry until deleted by hand (for example with
+  `cf kv keys list --prefix dailysnow` and a bulk delete), which is a
+  production write and was not run.
+
+Validation: 312 tests across 23 files (two new: the forward-link write keeps the
+older post's expiry; the retention boundary for `older`/`archive`/the post itself
+and the endpoint 404; plus updated TTL assertions for posts, stills and storm
+records), `npm run typecheck`, `npm run build` and `git diff --check` pass. No
+browser check (no layout change); no production writes.
+
+**Existing files touched:** `src/lib/report.ts` (retention constant, TTL helper,
+read filtering), `src/lib/dailysnow/index.ts` (TTL on post, figure and link
+writes), `src/lib/dailysnow/storm-store.ts` (TTL on storm records),
+`src/lib/dailysnow/storm-types.ts` (comment), `src/worker/daily-snow.ts` (404
+past retention), `README.md`, tests.

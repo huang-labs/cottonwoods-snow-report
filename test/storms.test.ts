@@ -184,11 +184,15 @@ describe("persistent storm observations", () => {
     expect(mergeSnapshot(latest, incoming).stormTracking?.events[0].status).toBe("closed");
   });
 
-  it("archives records once per material change, with no expiration", async () => {
+  it("archives records once per material change, for 30 days from the last change", async () => {
     const kv = new MemoryKV();
     const state = run(snapshot(0, { alta: { storm: 15 } }));
     const s = { ...snapshot(0), stormTracking: state };
+    const ttls: unknown[] = [];
+    const first = kv.put.bind(kv);
+    kv.put = async (k: string, v: string | ArrayBuffer, o?: { expirationTtl?: number }) => { ttls.push(o?.expirationTtl); return first(k, v); };
     await archiveStorms(kv, s);
+    expect(ttls).toEqual([30 * 86_400]);
     const key = stormKey(state.events[0].id);
     expect(JSON.parse((await kv.get(key, "text"))!).resorts[0].total.amountIn).toBe(15);
     let puts = 0;

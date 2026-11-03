@@ -10,9 +10,10 @@ export async function dailySnow(request: Request, env: CollectorEnv) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return Response.json({ error: "Expected ?date=YYYY-MM-DD" }, { status: 400 });
   try {
     const [raw, snapshot] = await Promise.all([env.SNOW_KV.get(dailySnowKey(date), "text"), readSnapshot(env.SNOW_KV)]);
-    const post = raw ? (JSON.parse(raw) as DailySnowPost) : null;
+    // Older posts stored before retention existed can outlive it; treat them as gone.
+    const post = raw ? publicDailySnow(JSON.parse(raw) as DailySnowPost, snapshot?.dailySnow, new Date()) : null;
     if (!post) return Response.json({ error: "No Daily Snow for that date" }, { status: 404, headers: { "Cache-Control": "no-store" } });
-    return Response.json(publicDailySnow(post, snapshot?.dailySnow, new Date()), {
+    return Response.json(post, {
       headers: { "Cache-Control": "public, max-age=300" },
     });
   } catch (err) {

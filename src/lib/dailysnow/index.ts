@@ -1,7 +1,7 @@
 import { createFetchContext, type CollectorSecrets } from "../http";
 import type { RecommendEnv } from "../recommend";
 import { denverDate } from "../recommend/digest";
-import { DAILY_SNOW_ARCHIVE_POSTS } from "../report";
+import { DAILY_SNOW_ARCHIVE_POSTS, dailySnowArchiveTtlS } from "../report";
 import type { KVLike } from "../store";
 import type { DailySnowFigure, DailySnowLink, DailySnowPost, DailySnowState, Snapshot } from "../types";
 import { historyEntry } from "./continuity";
@@ -15,7 +15,7 @@ export interface DailySnowEnv extends RecommendEnv, CollectorSecrets {
 }
 
 /** Archived posts and their figure stills (one write per post, plus one per image figure).
-    Stored without expiry: KV keeps every post as the business archive, and /api/daily-snow serves any of them. */
+    Each expires DAILY_SNOW_RETENTION_DAYS after its post date; /api/daily-snow serves any still stored. */
 export const dailySnowKey = (date: string) => `dailysnow:v1:${date}`;
 export const dailySnowFigureKey = (date: string, id: string, revision?: string) => revision
   ? `dailysnow-fig:v2:${date}:${id}:${revision}` : `dailysnow-fig:v1:${date}:${id}`;
@@ -25,11 +25,11 @@ const MAX_IMAGE_BYTES = 3_000_000;
 
 /** Point the archived post at `date` forward to its newer neighbor. A failure only costs that one
     "newer" link (the page falls back to the archive list), so it never fails the new post. */
-async function linkNewer(kv: KVLike, date: string, newer: DailySnowLink): Promise<void> {
+async function linkNewer(kv: KVLike, date: string, newer: DailySnowLink, now: Date): Promise<void> {
   try {
     const raw = await kv.get(dailySnowKey(date), "text");
     if (!raw) return;
-    await kv.put(dailySnowKey(date), JSON.stringify({ ...(JSON.parse(raw) as DailySnowPost), newer }));
+    await kv.put(dailySnowKey(date), JSON.stringify({ ...(JSON.parse(raw) as DailySnowPost), newer }), { expirationTtl: dailySnowArchiveTtlS(date, now) });
   } catch (err) {
     console.warn("daily-snow: could not link the previous post forward", err);
   }
@@ -88,7 +88,7 @@ async function storeFigures(
         if (!bytes || !bytes.byteLength) return;
         const hash = await crypto.subtle.digest("SHA-256", bytes);
         const revision = [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
-        await env.SNOW_KV.put(dailySnowFigureKey(date, f.id, revision), bytes);
+        await env.SNOW_KV.put(dailySnowFigureKey(date, f.id, revision), bytes, { expirationTtl: dailySnowArchiveTtlS(date, now) });
         out[f.id] = { ...f, url: dailySnowFigureUrl(date, f.id, revision) };
       } catch (e) {
         console.error(`dailysnow: figure ${f.id} not stored`, e);
@@ -176,8 +176,8 @@ export function planDailySnow(
         ...(fallbackReason ? { fallbackReason } : {}),
         ...(older ? { older: { date: older.date, title: older.title } } : {}),
       };
-      await env.SNOW_KV.put(dailySnowKey(date), JSON.stringify(post));
-      if (older) await linkNewer(env.SNOW_KV, older.date, { date, title: post.title });
+      await env.SNOW_KV.put(dailySnowKey(date), JSON.stringify(post), { expirationTtl: dailySnowArchiveTtlS(date, now) });
+      if (older) await linkNewer(env.SNOW_KV, older.date, { date, title: post.title }, now);
       const history = [historyEntry(post), ...base.history.filter((h) => h.date !== date)].slice(0, DAILY_SNOW_ARCHIVE_POSTS);
       return { ...reserved, current: post, history, lastError: null, consecutiveFailures: 0, lastFinishedAt: finishedAt() };
     } catch (e) {
