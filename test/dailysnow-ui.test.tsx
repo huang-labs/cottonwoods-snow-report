@@ -126,6 +126,34 @@ it("opens an archived post and returns to the latest", async () => {
   expect(window.location.search).toBe("");
 });
 
+it("offers matching date navigation before the heading and after the article", () => {
+  const edition: ApiDailySnow = { ...post,
+    older: { date: "2026-10-31", title: "Storm Arrives" },
+    newer: { date: "2026-11-02", title: "Storm Exits" },
+  };
+  render(<DailySnowPage report={report(edition)} now={now} />);
+  const top = screen.getByRole("navigation", { name: "Daily Snow archive" });
+  const bottom = screen.getByRole("navigation", { name: "Daily Snow archive (end of article)" });
+  const heading = screen.getByRole("heading", { level: 1 });
+  expect(top.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(document.querySelector(".dailysnow__footer")!.compareDocumentPosition(bottom) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  for (const nav of [top, bottom]) {
+    const previous = within(nav).getByRole("button", { name: "Previous post: Sat, Oct 31: Storm Arrives" });
+    const next = within(nav).getByRole("button", { name: "Next post: Mon, Nov 2: Storm Exits" });
+    expect(previous.textContent).toBe("← Sat, Oct 31");
+    expect(next.textContent).toBe("Mon, Nov 2 →");
+  }
+});
+
+it("omits empty navigation and only shows the available direction at archive ends", () => {
+  const { rerender } = render(<DailySnowPage report={report({ ...post, archive: [] })} now={now} />);
+  expect(screen.queryByRole("navigation", { name: "Daily Snow archive" })).toBeNull();
+  rerender(<DailySnowPage report={report({ ...post, archive: [], newer: { date: "2026-11-02", title: "Storm Exits" } })} now={now} />);
+  const nav = within(screen.getByRole("navigation", { name: "Daily Snow archive" }));
+  expect(nav.queryByRole("button", { name: /Previous post/ })).toBeNull();
+  expect(nav.getByRole("button", { name: /Next post/ })).toBeTruthy();
+});
+
 it("walks the archive through each post's neighbor links, past the recent-posts list", async () => {
   // The live post's older neighbor isn't in the archive list; only its own link reaches it.
   const live: ApiDailySnow = { ...post, archive: [{ date: "2026-11-01", title: "Storm Underway" }], older: { date: "2026-09-15", title: "Early Season Dusting" } };
@@ -144,7 +172,7 @@ it("walks the archive through each post's neighbor links, past the recent-posts 
   expect(window.location.search).toBe("");
 });
 
-it("shows the recent posts above or beside the article, today first, at most three", () => {
+it("shows the recent posts in a left rail beside the article, today first, at most three", () => {
   const history = [
     { date: "2026-11-01", title: "Storm Underway" },
     { date: "2026-10-31", title: "Storm Arrives" },
@@ -162,48 +190,29 @@ it("shows the recent posts above or beside the article, today first, at most thr
   expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-date")?.textContent)).toEqual(["Latest · Sun, Nov 1", "Sat, Oct 31", "Fri, Oct 30"]);
   // The live post is today's entry — marked active at rest — and not repeated from the archive.
   expect(entries[0].getAttribute("data-active")).toBe("true");
-  expect(entries[0].getAttribute("aria-current")).toBe("true");
-  expect(entries[1].getAttribute("aria-current")).toBeNull();
   expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-title")?.textContent)).toEqual(["Storm Underway", "Storm Arrives", "Snow Showers Return"]);
   expect(entries[0].querySelector(".dailysnow__history-entry-phase")?.textContent).toBe("Storm");
 });
 
-it("expands recent posts and collapses them after choosing a post", async () => {
-  const older: ApiDailySnow = { ...post, date: "2026-10-31", title: "Storm Arrives", outdated: true };
-  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(older), { headers: { "content-type": "application/json" } })));
-  render(<DailySnowPage report={report(post)} now={now} />);
-  const toggle = screen.getByRole("button", { name: "Recent posts" });
-  expect(toggle.getAttribute("aria-expanded")).toBe("false");
-  expect(document.getElementById(toggle.getAttribute("aria-controls")!)?.className).toBe("dailysnow__history-list");
-  fireEvent.click(toggle);
-  expect(toggle.getAttribute("aria-expanded")).toBe("true");
-  fireEvent.click(toggle);
-  expect(toggle.getAttribute("aria-expanded")).toBe("false");
-  fireEvent.click(toggle);
-  fireEvent.click(document.querySelectorAll<HTMLElement>(".dailysnow__history-entry")[1]!);
-  expect(toggle.getAttribute("aria-expanded")).toBe("false");
-  expect(await screen.findByRole("heading", { level: 1, name: "Storm Arrives" })).toBeTruthy();
-});
-
-it("hides the recent posts while the live post is the only one, but keeps the archive links", () => {
-  render(<DailySnowPage report={report({ ...post, archive: [{ date: "2026-11-01", title: "Storm Underway" }] })} now={now} />);
+it("hides the rail while the live post is the only one, but keeps the archive links", () => {
+  render(<DailySnowPage report={report({ ...post, archive: [{ date: "2026-11-01", title: "Storm Underway" }], older: { date: "2026-10-31", title: "Storm Arrives" } })} now={now} />);
   expect(document.querySelector(".dailysnow__history")).toBeNull();
   expect(document.querySelector(".dailysnow__nav")).not.toBeNull();
 });
 
-it("highlights the viewed post in the recent posts and keeps the archive links", async () => {
+it("highlights the viewed post in the rail and keeps the archive links for phones", async () => {
   const older: ApiDailySnow = { ...post, date: "2026-10-31", title: "Storm Arrives", outdated: true };
   vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(older), { headers: { "content-type": "application/json" } })));
   render(<DailySnowPage report={report(post)} now={now} />);
   const rail = document.querySelector<HTMLElement>(".dailysnow__history")!;
   fireEvent.click(rail.querySelectorAll<HTMLElement>(".dailysnow__history-entry")[1]!);
   expect(await screen.findByRole("heading", { level: 1, name: "Storm Arrives" })).toBeTruthy();
-  // Re-query: the list re-renders with the archived post loaded.
+  // Re-query: the rail re-renders with the archived post loaded.
   const active = document.querySelector(".dailysnow__history-entry[data-active]");
   expect(active?.querySelector(".dailysnow__history-entry-title")?.textContent).toBe("Storm Arrives");
   // The bar and fill follow the viewed post: exactly one entry is highlighted.
   expect(document.querySelectorAll(".dailysnow__history-entry[data-active]").length).toBe(1);
-  // The bottom archive links stay on every view: they walk past the three recent posts.
+  // The bottom archive links stay on every view: phones navigate with them.
   expect(document.querySelector(".dailysnow__nav")).not.toBeNull();
 });
 

@@ -1,4 +1,4 @@
-/** Shared Daily Snow display labels and dates, used by the page and the recent posts. */
+/** Shared Daily Snow display labels and dates, used by the page and the history rail. */
 
 import type { DailySnowPhase } from "@/lib/types";
 

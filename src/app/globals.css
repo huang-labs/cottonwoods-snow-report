@@ -319,25 +319,30 @@ a { color: var(--accent); }
 .dailysnow-storm td { width: auto; }
 .dailysnow-storm__note { display: block; font-size: var(--fs-caption); }
 .dailysnow__footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--fs-caption); line-height: 1.6; }
-.dailysnow__nav { display: flex; justify-content: space-between; gap: 8px 24px; margin-top: 8px; flex-wrap: wrap; }
-.dailysnow__nav button, .dailysnow__back { background: transparent; border: 0; padding: 12px 0; color: var(--accent); cursor: pointer; text-align: left; font-size: var(--fs-meta); font-weight: 650; }
-.dailysnow__nav button:hover, .dailysnow__back:hover { text-decoration: underline; }
+.dailysnow__nav { display: flex; justify-content: space-between; gap: 12px; }
+.dailysnow__nav--top { margin-bottom: 20px; }
+.dailysnow__nav--bottom { margin-top: 20px; }
+.dailysnow__nav button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--accent); font-size: var(--fs-caption); font-weight: 650; line-height: 1.4; white-space: nowrap; cursor: pointer; }
+.dailysnow__nav-next { margin-left: auto; }
+@media (hover: hover) {
+  .dailysnow__nav button:hover { border-color: var(--accent); background: var(--panel); }
+}
+.dailysnow__nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.dailysnow__back { background: transparent; border: 0; padding: 12px 0; color: var(--accent); cursor: pointer; text-align: left; font-size: var(--fs-meta); font-weight: 650; }
+.dailysnow__back:hover { text-decoration: underline; }
 
-/* Recent posts: a quiet disclosure above the article on phones,
-   with an always-visible sticky left rail on wide screens. */
-.dailysnow-layout { display: flex; flex-direction: column; gap: 20px; }
-.dailysnow-layout > .dailysnow { width: 100%; min-width: 0; margin: 0 auto; transition: opacity 0.15s; }
+/* History rail: recent posts in a sticky left rail beside the article on wide
+   screens; phones render no rail and use the archive links instead. Every entry
+   carries a 3px left border with square left corners, so the accent bar on the
+   entry whose post is on screen spans the full height of its fill. */
+.dailysnow-layout { display: flex; justify-content: center; align-items: start; gap: 40px; }
+.dailysnow-layout > .dailysnow { flex: 0 1 720px; min-width: 0; margin: 0; transition: opacity 0.15s; }
 /* The previous post stays while a picked one loads; dim it only if the load is slow. */
 .dailysnow-layout > .dailysnow[aria-busy] { opacity: 0.6; transition-delay: 0.2s; }
-.dailysnow__history { width: 100%; max-width: 720px; margin: 0 auto; border: 1px solid var(--line); border-radius: 8px; }
-.dailysnow__history-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: var(--fs-caption); font-weight: 600; text-align: left; cursor: pointer; }
-.dailysnow__history-toggle svg { flex: none; }
-.dailysnow__history[data-expanded] .dailysnow__history-toggle svg { transform: rotate(180deg); }
-.dailysnow__history .dailysnow__history-list { display: none; }
-.dailysnow__history[data-expanded] .dailysnow__history-list { display: flex; padding: 0 6px 6px; }
-.dailysnow__history-heading { display: none; margin: 0 0 8px; font-size: var(--fs-label); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.dailysnow__history { display: none; flex: 0 0 240px; position: sticky; top: 20px; max-height: calc(100dvh - 40px); overflow-y: auto; }
+.dailysnow__history-heading { margin: 0 0 8px; font-size: var(--fs-label); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .dailysnow__history-list { display: flex; flex-direction: column; gap: 2px; }
-.dailysnow__history-entry { display: flex; flex-direction: column; gap: 2px; min-width: 0; width: 100%; text-align: left; color: var(--text); background: transparent; border: 0; border-left: 3px solid transparent; border-radius: 0 8px 8px 0; padding: 7px 12px 7px 9px; cursor: pointer; }
+.dailysnow__history-entry { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; background: transparent; border: 0; border-left: 3px solid transparent; border-radius: 0 8px 8px 0; padding: 10px 12px 10px 9px; cursor: pointer; }
 @media (hover: hover) {
   .dailysnow__history-entry:hover { background: var(--panel); }
 }
@@ -348,14 +353,7 @@ a { color: var(--accent); }
 .dailysnow__history-entry-title { color: var(--muted); font-size: var(--fs-caption); line-height: 1.45; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .dailysnow__history-entry[data-active] .dailysnow__history-entry-title { color: var(--text); }
 @media (min-width: 901px) {
-  .dailysnow-layout { flex-direction: row; justify-content: center; align-items: start; gap: 40px; }
-  .dailysnow-layout > .dailysnow { flex: 0 1 720px; margin: 0; }
-  .dailysnow__history { flex: 0 0 240px; margin: 0; border: 0; border-radius: 0; position: sticky; top: 20px; max-height: calc(100dvh - 40px); overflow-y: auto; }
-  .dailysnow__history-heading { display: block; }
-  .dailysnow__history-toggle { display: none; }
-  .dailysnow__history .dailysnow__history-list,
-  .dailysnow__history[data-expanded] .dailysnow__history-list { display: flex; padding: 0; }
-  .dailysnow__history-entry { padding: 10px 12px 10px 9px; }
+  .dailysnow__history { display: block; }
 }
 
 /* ---- Weather ---- */
