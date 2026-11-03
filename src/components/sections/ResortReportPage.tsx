@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ApiSource, Metric, ResortReport, SnowfallSet } from "@/lib/types";
 import { formatDenver } from "@/lib/time";
 import {
@@ -190,7 +191,7 @@ export function ResortReportPage({
       >
         <div className="resort-section-heading">
           <h2 id="resort-weather-heading">On the mountain</h2>
-          <a href="/weather">Forecast ↗</a>
+          <Link href="/weather">Forecast ↗</Link>
         </div>
         {observations.length === 0 ? (
           <p className="muted">
