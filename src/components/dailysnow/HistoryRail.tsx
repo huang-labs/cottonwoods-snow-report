@@ -6,6 +6,8 @@ import { PHASE_LABEL, postDate } from "./labels";
 const HISTORY_COUNT = 3;
 
 type Entry = { date: string; title: string; phase?: DailySnowPhase; live: boolean };
+/** Picks a post by date; null = the live post. */
+type Pick = (date: string | null) => void;
 
 /** The live post first, then the archived posts before it, newest first. */
 function entriesFor(live: ApiDailySnow): Entry[] {
@@ -17,13 +19,16 @@ function entriesFor(live: ApiDailySnow): Entry[] {
 
 /** One clickable past post. `active` marks the post on screen: it gets the
     accent bar and the panel fill; "Today" still names the live entry. */
-function HistoryEntry({ entry, active, onPick }: { entry: Entry; active: boolean; onPick: (date: string | null) => void }) {
+function HistoryEntry({ entry, active, onPick, onIntent }: { entry: Entry; active: boolean; onPick: Pick; onIntent?: Pick }) {
+  const date = entry.live ? null : entry.date;
   return (
     <button
       type="button"
       className="dailysnow__history-entry"
       data-active={active || undefined}
-      onClick={() => onPick(entry.live ? null : entry.date)}
+      onClick={() => onPick(date)}
+      onPointerEnter={() => onIntent?.(date)}
+      onFocus={() => onIntent?.(date)}
     >
       <span className="dailysnow__history-entry-top">
         <span className="dailysnow__history-entry-date">{entry.live ? "Today" : postDate(entry.date)}</span>
@@ -39,7 +44,7 @@ function HistoryEntry({ entry, active, onPick }: { entry: Entry; active: boolean
  * nothing here: they navigate with the archive links below the post. Hidden
  * while the live post is the only one there is.
  */
-export function HistoryRail({ live, viewed, onPick }: { live: ApiDailySnow | null; viewed: string | null; onPick: (date: string | null) => void }) {
+export function HistoryRail({ live, viewed, onPick, onIntent }: { live: ApiDailySnow | null; viewed: string | null; onPick: Pick; onIntent?: Pick }) {
   if (!live) return null;
   const entries = entriesFor(live);
   if (entries.length < 2) return null;
@@ -48,7 +53,7 @@ export function HistoryRail({ live, viewed, onPick }: { live: ApiDailySnow | nul
       <p className="dailysnow__history-heading">Recent posts</p>
       <div className="dailysnow__history-list">
         {entries.map((e) => (
-          <HistoryEntry key={e.date} entry={e} active={viewed ? e.date === viewed : e.live} onPick={onPick} />
+          <HistoryEntry key={e.date} entry={e} active={viewed ? e.date === viewed : e.live} onPick={onPick} onIntent={onIntent} />
         ))}
       </div>
     </aside>

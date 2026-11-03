@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { formatDenver } from "@/lib/time";
 import { isSnowPlume } from "@/lib/dailysnow/plume";
 import type { ApiDailySnow, DailySnowSectionId, ReportResponse } from "@/lib/types";
+import { prefetchArchivedPost, useArchivedPost } from "./archive";
 import { Figure } from "./figures";
 import { HistoryRail } from "./HistoryRail";
 import { PHASE_LABEL, postDate } from "./labels";
@@ -66,45 +67,36 @@ function ArchiveNav({ post, onPick }: { post: ApiDailySnow; onPick: (date: strin
   const i = post.archive.findIndex((a) => a.date === post.date);
   const older = post.older ?? (i >= 0 ? post.archive[i + 1] : post.archive.find((a) => a.date < post.date));
   const newer = post.newer ?? (i > 0 ? post.archive[i - 1] : null);
+  const intent = (date: string) => ({ onPointerEnter: () => prefetchArchivedPost(date), onFocus: () => prefetchArchivedPost(date) });
   return (
     <nav className="dailysnow__nav" aria-label="Daily Snow archive">
-      {older ? <button type="button" onClick={() => onPick(older.date)}>← {postDate(older.date)}: {older.title}</button> : <span />}
-      {newer && <button type="button" onClick={() => onPick(newer.date)}>{postDate(newer.date)}: {newer.title} →</button>}
+      {older ? <button type="button" onClick={() => onPick(older.date)} {...intent(older.date)}>← {postDate(older.date)}: {older.title}</button> : <span />}
+      {newer && <button type="button" onClick={() => onPick(newer.date)} {...intent(newer.date)}>{postDate(newer.date)}: {newer.title} →</button>}
     </nav>
   );
 }
 
 function readDateParam(): string | null {
+  if (typeof window === "undefined") return null;
   const d = new URLSearchParams(window.location.search).get("date");
   return d && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
 }
 
-/** An archived post, fetched on demand; null date = the current post from the report. */
-function useArchivedPost(date: string | null): { post: ApiDailySnow | null; error: string | null } {
-  const [state, setState] = useState<{ date: string; post: ApiDailySnow | null; error: string | null } | null>(null);
-  useEffect(() => {
-    if (!date) return;
-    let live = true;
-    fetch(`/api/daily-snow?date=${date}`)
-      .then(async (r) => (r.ok ? ((await r.json()) as ApiDailySnow) : Promise.reject(new Error(r.status === 404 ? "No post for that day" : `HTTP ${r.status}`))))
-      .then((post) => live && setState({ date, post, error: null }))
-      .catch((e: Error) => live && setState({ date, post: null, error: e.message }));
-    return () => {
-      live = false;
-    };
-  }, [date]);
-  return date && state?.date === date ? state : { post: null, error: null };
-}
-
 /** Daily Snow page: the full post with figures and archive links. */
 export function DailySnowPage({ report, now }: { report: ReportResponse; now: Date }) {
-  const [date, setDate] = useState<string | null>(null);
-  useEffect(() => setDate(readDateParam()), []);
+  // Read ?date= on the first render: this page only mounts in the browser, after the report
+  // loads (SectionView renders a placeholder until then), so a deep link never shows the live post first.
+  const [date, setDate] = useState<string | null>(readDateParam);
   const current = report.dailySnow ?? null;
-  /** The archived post being viewed, or null while the live post is on screen. */
+  /** The archived post being picked, or null while the live post is wanted. */
   const viewed = date && date !== current?.date ? date : null;
   const archived = useArchivedPost(viewed);
-  const post = viewed ? archived.post : current;
+  const wanted = viewed ? archived.post : current;
+  // While a pick loads, keep the post already on screen instead of swapping in a placeholder.
+  const [shown, setShown] = useState(wanted);
+  if (wanted && wanted !== shown) setShown(wanted);
+  const loading = viewed !== null && archived.loading;
+  const post = wanted ?? (loading ? shown : null);
 
   const pick = (picked: string | null) => {
     const d = picked === current?.date ? null : picked; // the live post has no ?date=
@@ -133,10 +125,10 @@ export function DailySnowPage({ report, now }: { report: ReportResponse; now: Da
   return (
     <section className="page page--dailysnow">
       <div className="dailysnow-layout">
-        <HistoryRail live={current} viewed={viewed} onPick={pick} />
-        <article className="dailysnow" aria-label="Daily Snow">
+        <HistoryRail live={current} viewed={viewed} onPick={pick} onIntent={prefetchArchivedPost} />
+        <article className="dailysnow" aria-label="Daily Snow" aria-busy={loading || undefined}>
           <header className="dailysnow__header">
-            <Eyebrow post={post} now={now} archived={!!viewed} />
+            <Eyebrow post={post} now={now} archived={post.date !== current?.date} />
             <h1 className="dailysnow__title">{post.title}</h1>
             <p className="dailysnow__summary">{post.summary}</p>
           </header>
