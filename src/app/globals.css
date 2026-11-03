@@ -249,17 +249,10 @@ a { color: var(--accent); }
 /* Phones show a headline-plus-line summary of each resort instead of the value cells. */
 .snow-table .snow-phone { display: none; }
 .report-time { font-size: var(--fs-caption); }
-/* Right-aligned, so the report times end on the same edge as the footer legend.
-   The hidden phone-summary cell follows it in each row, so it takes the last
-   cell's page-edge padding itself. */
-.snow-table .report-time { text-align: right; padding-right: var(--bleed); }
 .report-time__checked { color: var(--muted); font-size: var(--fs-label); }
 .report-time__failed { color: var(--bad); font-size: var(--fs-label); }
-/* The table's footer sits just under its last row line, which serves as its rule:
-   freshness on the left, the value legend pushed right (wrapping under it on phones). */
-.snow-foot { border-top: 0; padding-top: 0; margin-top: calc(14px - var(--page-gap)); }
-.snow-foot__legend { margin-left: auto; }
-.snow-foot__legend .metric__missing, .snow-foot__legend .metric__na { font-size: 1em; }
+.legend { color: var(--muted); font-size: var(--fs-caption); margin-top: calc(16px - var(--page-gap)); }
+.legend .metric__missing, .legend .metric__na { font-size: 1em; }
 
 /* AI pick: an accent line spanning its data row and reasoning row, in the bleed.
    The pseudo lives on the cells: on the <tr> itself Chromium wraps it in an

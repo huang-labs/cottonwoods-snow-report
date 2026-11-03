@@ -15,9 +15,13 @@ function withFreshness(states: Record<"alta" | "snowbird" | "solitude" | "bright
   return report;
 }
 
-const statusLine = () => document.querySelector(".page--regional > .snow-foot");
-/** The footer's freshness text, without the legend on its right. */
-const statusText = () => [...(statusLine()?.children ?? [])].filter((e) => !e.classList.contains("snow-foot__legend")).map((e) => e.textContent).join("|");
+const statusLine = () => document.querySelector(".page--regional > .source-line");
+/** The source line's freshness text, without the check time and attribution after it. */
+const statusText = () =>
+  [...(statusLine()?.children ?? [])]
+    .filter((e) => !/^Last successful check|^Latest check failed/.test(e.textContent ?? "") && !e.classList.contains("source-line__attr"))
+    .map((e) => e.textContent)
+    .join("|");
 
 it("keeps freshness out of the resort rows", () => {
   render(<RegionalPage now={now} report={withFreshness({ alta: "current", snowbird: "old-report", solitude: "stale", brighton: "unavailable" })} />);
@@ -34,14 +38,29 @@ it("shows one Current badge and the oldest last successful check when every reso
   const line = statusLine();
   expect(line?.querySelectorAll(".badge")).toHaveLength(1);
   expect(line?.querySelector(".badge--current")?.textContent).toBe("Current");
-  expect(statusText()).toBe("Current|Last successful check: 4 min ago");
+  expect(statusText()).toBe("Current");
+  expect(line?.textContent).toContain("Last successful check: 4 min ago");
 });
-it("puts the value legend on the right of the same footer line", () => {
+it("keeps the value legend on its own line between the table and the source line", () => {
   render(<RegionalPage now={now} report={withFreshness({ alta: "current", snowbird: "current", solitude: "current", brighton: "current" })} />);
-  const legend = statusLine()?.lastElementChild;
-  expect(legend?.className).toBe("snow-foot__legend");
-  expect(legend?.textContent).toContain("reported zero");
-  expect(document.querySelectorAll(".page--regional .source-line")).toHaveLength(1);
+  const page = document.querySelector(".page--regional")!;
+  const order = [...page.children].map((e) => e.className);
+  expect(order.slice(-3)).toEqual(["snow-table", "legend", "source-line"]);
+  expect(page.querySelector(".legend")?.textContent).toContain("reported zero");
+  expect(statusLine()?.textContent).not.toContain("reported zero");
+});
+
+it("ends with the resorts as the source attribution, like the other pages' source lines", () => {
+  render(<RegionalPage now={now} report={withFreshness({ alta: "current", snowbird: "current", solitude: "current", brighton: "current" })} />);
+  expect(statusLine()?.lastElementChild?.className).toBe("source-line__attr");
+  expect(statusLine()?.lastElementChild?.textContent).toBe("Alta, Snowbird, Solitude and Brighton snow reports (resort websites)");
+});
+
+it("names resorts whose latest check failed", () => {
+  const report = withFreshness({ alta: "current", snowbird: "stale", solitude: "current", brighton: "current" });
+  report.sources.snowbird.status = "error";
+  render(<RegionalPage now={now} report={report} />);
+  expect(statusLine()?.querySelector(".source-line__error")?.textContent).toBe("Latest check failed: Snowbird");
 });
 
 it("badges the worst state and names the resorts in each state", () => {
@@ -50,7 +69,6 @@ it("badges the worst state and names the resorts in each state", () => {
   expect(line?.querySelector(".badge--old-report")?.textContent).toBe("Old report");
   expect(statusText()).toBe("Old report|Snowbird, Brighton|Current: Alta, Solitude");
   expect(line?.textContent).toContain("Current: Alta, Solitude");
-  expect(line?.textContent).not.toContain("Last successful check");
 });
 
 it("orders mixed problems from most to least severe", () => {
