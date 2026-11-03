@@ -20,6 +20,7 @@
     "recommend:once": "tsx scripts/recommend-once.ts",
     "dailysnow:once": "tsx scripts/dailysnow-once.ts",
     "dailysnow:replay": "tsx scripts/dailysnow-replay.ts",
+    "share:render": "tsx scripts/render-share-image.ts",
     "smoke": "tsx scripts/smoke-worker.ts"
   },
   "dependencies": {

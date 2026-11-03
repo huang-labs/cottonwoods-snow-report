@@ -40,7 +40,8 @@ try {
     assert.equal(res.status, 200, path);
     const html = await res.text();
     assert.match(html, /Loading report/);
-    assert.match(html, /property="og:image"[^>]+opengraph-image/);
+    const expectedImage = path === "/" ? "/opengraph-image" : path === "/daily-snow" ? "/daily-snow/opengraph-image" : "/share-brand-v1.png";
+    assert.ok(html.includes(`${expectedImage}\"`), `share image for ${path}`);
     const script = /src="([^\"]*\/_next\/static\/[^\"]+\.js)"/.exec(html)?.[1];
     assert.ok(script, `static script for ${path}`);
     const js = await get(script);
@@ -48,6 +49,11 @@ try {
     assert.match(js.headers.get("cache-control")!, /immutable/);
     await js.arrayBuffer();
   }
+  const brand = await get("/share-brand-v1.png");
+  assert.equal(brand.status, 200);
+  assert.match(brand.headers.get("content-type")!, /^image\/png/);
+  const brandedPng = decode(new Uint8Array(await brand.arrayBuffer()));
+  assert.deepEqual([brandedPng.width, brandedPng.height], [1200, 630]);
   // Next static export uses .txt payloads for client-side navigation.
   const navigation = await get("/weather.txt");
   assert.equal(navigation.status, 200);
@@ -78,7 +84,7 @@ try {
     for (let i = 0; i < png.data.length; i += png.channels) {
       if (png.data[i] > 180 && png.data[i + 1] > 180 && png.data[i + 2] > 180) bright++;
     }
-    assert.ok(bright > 5000, "share image contains rendered text");
+    assert.ok(bright > 1200 * 630 * 0.7, "share image has a light background");
     const head = await get(path, "HEAD");
     assert.equal(head.status, 200);
     assert.equal((await head.arrayBuffer()).byteLength, 0);

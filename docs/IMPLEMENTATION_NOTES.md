@@ -447,3 +447,28 @@ A tighter Snowfall header-to-table gap (15 px desktop, 10 px phones) was tried s
 
 - The Snowfall page header reads "Resort snowfall" (was "Regional snowfall"); the section id, route and nav label are unchanged.
 - The Daily Snow NWS snowfall figure is titled with its caption ("NWS 6-hour snowfall forecast · Alta / Snowbird (LCC)") in the chart's heading slot, replacing "6-hour snowfall · inches", and no longer repeats it below. The caption dropped the "· updated …" NWS grid time. That time was frozen into the post at generation (not live), but it named the NWS grid's issue time, which read like a page refresh time. Posts already stored with the suffix have it stripped at render. The chart's footer note is unchanged.
+
+## 2026-11-03 — Light share previews by page role
+
+Sharing `/` keeps the dynamic resort-reported 24-hour snowfall preview, `/daily-snow` keeps a separate dynamic preview of the latest stored post (also for archive query links), and all seven other section pages share a data-independent branded PNG. Page titles/descriptions remain specific to the linked page. All three images use the editorial light palette, navy/blue wordmark, open spacing and fine rules at 1200 × 630; no browser appearance setting changes them. The snowfall image omits the old base/lift detail to keep the four reported amounts legible, preserves muted zero versus an unavailable dash, and identifies the next-storm line as NWS forecast data. Existing data/freshness rules remain unchanged. Daily Snow shows an AI badge and stored model attribution, bounded headline/summary, and a neutral fallback before a post exists.
+
+The branded preview is committed as `public/share-brand-v1.png`, regenerated with `npm run share:render`; its render source and palette are shared with the dynamic images. A rendering test compares the asset with its source. The dynamic handlers bump their internal cache versions, retaining host-scoped caches and existing 600/60-second TTLs. Messaging services can retain their own cached previews after deployment; replacing the branded asset requires a new filename and metadata URL. The site does not control messaging-service cache expiry.
+
+Satori mutates style objects during rendering: passing the same frame object directly caused later renders to lose header/footer content. Each image now passes a fresh copy, and image tests check visible header/footer ink on repeated dynamic renders, light background, dimensions, model labels, long copy, zero and missing values. The static branded image intentionally places its large wordmark in the middle.
+
+Validation: 231 tests across 18 files passed; `npm run typecheck` and `npm run build` passed. `npm run smoke` passed against a local workerd instance with empty KV: all nine exported pages, all three PNG endpoints/assets, crawler metadata for every section, navigation payloads, API methods and HEAD. Inspected actual PNGs with representative snowfall, a forecast line, normal and long Daily Snow copy, and the branded image. Not run: native iMessage/WhatsApp clients, a deployed preview or a new live AI generation. No production KV writes.
+
+Existing files touched:
+- `src/lib/og/card-image.tsx`: light editorial homepage renderer; font exports retained.
+- `src/lib/og/daily-snow-image.tsx`: matching forecast renderer, bounded copy and AI/model attribution.
+- `src/lib/metadata.ts`: non-home/non-Daily-Snow sections reference the static brand asset.
+- `src/worker/share-image.tsx` and `src/worker/daily-snow-share-image.tsx`: cache version bumps.
+- `test/share-card.test.tsx`: light/repeated renders, branded asset consistency and content cases.
+- `test/metadata.test.ts`: homepage dynamic image and section-specific image routing.
+- `scripts/check-share-preview.ts`: fetch and decode the intended image for every page.
+- `scripts/smoke-worker.ts`: static brand asset and metadata checks alongside dynamic PNGs.
+- `package.json`: reproducible `share:render` command.
+- `README.md`: image routing, regeneration and cache operations.
+- `docs/IMPLEMENTATION_NOTES.md`: decisions, validation, limitations and file scope.
+
+New files: `src/lib/og/style.tsx`, `src/lib/og/branded-image.tsx`, `scripts/render-share-image.ts`, `public/share-brand-v1.png`. No changes to page layout, source adapters, storage, collection or AI inference.

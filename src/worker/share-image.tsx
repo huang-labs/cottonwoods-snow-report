@@ -16,7 +16,7 @@ export const contentType = "image/png";
  */
 const CACHE_S = 600;
 // Scope cached images to the requested host, including PR previews.
-const CACHE_PATH = "/__cache/opengraph-image/v3";
+const CACHE_PATH = "/__cache/opengraph-image/v4";
 
 /** Link-preview image (iMessage, WhatsApp, Slack…) with live numbers from the KV snapshot. */
 export async function shareImage(request: Request, env: CollectorEnv, ctx: ExecutionContext) {
