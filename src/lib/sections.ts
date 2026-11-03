@@ -5,6 +5,8 @@ export interface SectionDef {
   title: string;
   /** Short label for the navbar tabs. */
   label: string;
+  /** Draw a faint divider before this tab in the navbar. */
+  divider?: boolean;
 }
 
 export const SECTIONS: SectionDef[] = [
@@ -13,7 +15,7 @@ export const SECTIONS: SectionDef[] = [
   { id: "weather", title: "Mountain weather", label: "Weather" },
   { id: "plumes", title: "Ensemble plumes", label: "Plumes" },
   { id: "traffic", title: "Canyon roads", label: "Roads" },
-  { id: "alta", title: "Alta", label: "Alta" },
+  { id: "alta", title: "Alta", label: "Alta", divider: true },
   { id: "snowbird", title: "Snowbird", label: "Snowbird" },
   { id: "solitude", title: "Solitude", label: "Solitude" },
   { id: "brighton", title: "Brighton", label: "Brighton" },

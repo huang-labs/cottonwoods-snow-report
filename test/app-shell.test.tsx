@@ -111,6 +111,8 @@ describe("app shell", () => {
     const navLinks = within(nav).getAllByRole("link");
     expect(navLinks.map((a) => a.getAttribute("href"))).toEqual(SECTIONS.map((s) => sectionHref(s.id)));
     expect(nav.querySelector("details, summary")).toBeNull();
+    // A faint divider separates the resorts from the other sections.
+    expect(navLinks.filter((a) => a.hasAttribute("data-divider")).map((a) => a.textContent)).toEqual(["Alta"]);
     expect(screen.getByRole("link", { name: "Snowfall" }).getAttribute("aria-current")).toBe("page");
     // The tabs sit in their own bar after the masthead, with one bar marking the current tab.
     const tabs = document.querySelector(".section-nav__tabs")!;

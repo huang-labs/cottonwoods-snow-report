@@ -73,7 +73,8 @@ export function SectionNav({ pathname }: { pathname: string | null }) {
         <div ref={tabs} className="section-nav__tabs" data-bar={bar ? "" : undefined} data-animate={animate ? "" : undefined}
           onScroll={updateFade}>
           {SECTIONS.map((s) => (
-            <Link key={s.id} href={sectionHref(s.id)} aria-current={sectionHref(s.id) === pathname ? "page" : undefined}>{s.label}</Link>
+            <Link key={s.id} href={sectionHref(s.id)} aria-current={sectionHref(s.id) === pathname ? "page" : undefined}
+              data-divider={s.divider ? "" : undefined}>{s.label}</Link>
           ))}
           <span className="section-nav__bar" aria-hidden="true"
             style={bar ? { transform: `translateX(${bar.left}px)`, width: bar.width } : undefined} />
