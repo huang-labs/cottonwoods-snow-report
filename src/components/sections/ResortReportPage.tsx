@@ -63,6 +63,15 @@ function snowSlots(snowfall: SnowfallSet) {
   };
 }
 
+/**
+ * Capitalize the source's raw status string for display. Sources differ in
+ * casing (Alta terrain is "closed", Alta lifts "Closed", Snowbird "closed"),
+ * so the page normalizes the first letter and leaves the rest verbatim.
+ */
+function displayStatus(raw: string): string {
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
 /** One resort's report page: header, snowfall, weather, narrative, lifts and terrain, webcams. */
 export function ResortReportPage({
   source,
@@ -294,7 +303,7 @@ export function ResortReportPage({
                 <div className="status-item__row">
                   <strong>{lift.name}</strong>
                   <span>
-                    <StatusDot status={lift.status} /> {lift.rawStatus}
+                    <StatusDot status={lift.status} /> {displayStatus(lift.rawStatus)}
                   </span>
                 </div>
                 {lift.hours && <p className="status-item__meta">{lift.hours}</p>}
@@ -322,7 +331,7 @@ export function ResortReportPage({
                 <div className="status-item__row">
                   <strong>{terrain.name}</strong>
                   <span>
-                    <StatusDot status={terrain.status} /> {terrain.rawStatus}
+                    <StatusDot status={terrain.status} /> {displayStatus(terrain.rawStatus)}
                   </span>
                 </div>
                 <p className="status-item__meta">{terrain.kind}</p>
