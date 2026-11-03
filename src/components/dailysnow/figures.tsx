@@ -41,9 +41,12 @@ function Totals({ rows, label }: { rows: Extract<DailySnowFigure, { kind: "total
 export function Figure({ figure: f, postedAt }: { figure: DailySnowFigure; postedAt: string }) {
   let body;
   switch (f.kind) {
-    case "snow-bars":
-      body = <SnowfallChart bars={f.bars} label={f.caption} />;
+    case "snow-bars": {
+      // Posts written before 2026-11-03 stored the NWS grid time in the caption.
+      const title = f.caption.replace(/ · updated .*$/, "");
+      body = <SnowfallChart bars={f.bars} label={title} title={title} />;
       break;
+    }
     case "snow-level":
       body = <SnowLevel series={f.series} label={f.caption} />;
       break;
@@ -73,14 +76,16 @@ export function Figure({ figure: f, postedAt }: { figure: DailySnowFigure; poste
   return (
     <figure className={`dailysnow-figure dailysnow-figure--${f.kind === "image" ? "image" : "chart"}${f.id.startsWith("plume-") ? " dailysnow-figure--plume" : ""}`}>
       {body}
-      <figcaption>
-        {f.caption}
-        {f.kind === "snow-level" && (
-          <span className="snow-level__legend">
-            {f.series.map((s) => <span key={s.canyon} className={`snow-level__key snow-level__key--${s.canyon.toLowerCase()}`}>{s.canyon}</span>)}
-          </span>
-        )}
-      </figcaption>
+      {f.kind !== "snow-bars" && (
+        <figcaption>
+          {f.caption}
+          {f.kind === "snow-level" && (
+            <span className="snow-level__legend">
+              {f.series.map((s) => <span key={s.canyon} className={`snow-level__key snow-level__key--${s.canyon.toLowerCase()}`}>{s.canyon}</span>)}
+            </span>
+          )}
+        </figcaption>
+      )}
     </figure>
   );
 }

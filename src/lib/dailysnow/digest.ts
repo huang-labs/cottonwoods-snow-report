@@ -104,7 +104,7 @@ function figureCandidates(snapshot: Snapshot, nws: NwsPayload | null, numbers: D
     const bars = p.sixHourSnow.filter((b) => Date.parse(b.start) + 6 * HOUR > t);
     if (!bars.some((b) => b.snowIn > 0)) continue;
     out.push({
-      figure: { id: `nws-snow-${canyon.toLowerCase()}`, kind: "snow-bars", canyon, bars, caption: `NWS 6-hour snowfall forecast · ${p.name}${p.gridUpdatedAt ? ` · updated ${localTime(p.gridUpdatedAt, now)}` : ""}` },
+      figure: { id: `nws-snow-${canyon.toLowerCase()}`, kind: "snow-bars", canyon, bars, caption: `NWS 6-hour snowfall forecast · ${p.name}` },
       describe: `Bar chart of NWS forecast snowfall per 6 hours for the next 7 days, ${p.name}`,
     });
   }

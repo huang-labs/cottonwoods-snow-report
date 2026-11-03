@@ -105,7 +105,7 @@ describe("app shell", () => {
   it("opens on the page under the editorial nav", async () => {
     mockApi(REPORT);
     renderAt("/");
-    expect(await screen.findByRole("heading", { level: 1, name: "Regional snowfall" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { level: 1, name: "Resort snowfall" })).toBeTruthy();
     // Non-resort sections are nav links; the resorts sit behind one menu.
     const navLinks = within(screen.getByRole("navigation", { name: "Sections" }))
       .getAllByRole("link")
@@ -124,7 +124,7 @@ describe("app shell", () => {
 
   it("renders every section page from real-source fixtures", async () => {
     mockApi(REPORT);
-    const expected = ["Regional snowfall", "Waiting for the first post", "Cottonwoods mountain weather", "Utah ensemble snow plumes", "Canyon roads", "Alta", "Snowbird", "Solitude", "Brighton"];
+    const expected = ["Resort snowfall", "Waiting for the first post", "Cottonwoods mountain weather", "Utah ensemble snow plumes", "Canyon roads", "Alta", "Snowbird", "Solitude", "Brighton"];
     expect(SECTIONS).toHaveLength(9);
     for (const [i, title] of expected.entries()) {
       const view = renderAt(sectionHref(SECTIONS[i].id));
@@ -165,14 +165,14 @@ describe("app shell", () => {
   it("redirects legacy ?slide= links to the section page", async () => {
     mockApi(REPORT);
     renderAt("/?slide=snowbird");
-    await screen.findByRole("heading", { level: 1, name: "Regional snowfall" });
+    await screen.findByRole("heading", { level: 1, name: "Resort snowfall" });
     expect(nav.replace).toHaveBeenCalledWith("/snowbird");
   });
 
   it("persists the appearance choice and returns to the system default", async () => {
     mockApi(REPORT);
     renderAt("/");
-    await screen.findByRole("heading", { level: 1, name: "Regional snowfall" });
+    await screen.findByRole("heading", { level: 1, name: "Resort snowfall" });
     fireEvent.click(screen.getByRole("button", { name: "Dark appearance" }));
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(window.localStorage.getItem("cottonwoods-snow-report.appearance")).toBe("dark");

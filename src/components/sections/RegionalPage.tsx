@@ -124,7 +124,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
     <section className="page page--regional">
       <DailySnowTeaser post={report.dailySnow} now={now} />
       <header className="page__header">
-        <h1>Regional snowfall</h1>
+        <h1>Resort snowfall</h1>
         <p className="page__sub">Resort-reported totals in the same windows for every resort. Each resort measures at its own site and time, so totals aren’t strictly comparable.</p>
       </header>
       <table className="snow-table">
