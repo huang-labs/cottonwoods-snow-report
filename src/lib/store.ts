@@ -32,23 +32,35 @@ export async function readSnapshot(kv: KVLike): Promise<Snapshot | null> {
  * call spanning the next trigger). KV has no compare-and-swap, so instead of
  * the last write winning wholesale, each stored record keeps whichever copy
  * has the newer attempt: per source, the newer lastAttemptAt wins; AI states
- * compare lastAttemptAt, falling back to the current output's generatedAt.
+ * advance attempt bookkeeping separately from last-good publication, preferring
+ * completion over reservation for the same attempt.
  * Sources absent from the incoming snapshot (removed from the code) still drop.
  */
 const attemptMs = (r: SourceRecord | undefined): number => (r?.lastAttemptAt ? Date.parse(r.lastAttemptAt) : -1);
 
-function stateAttemptMs(s: { lastAttemptAt: string | null; current: { generatedAt: string } | null } | undefined): number {
-  if (s?.lastAttemptAt) return Date.parse(s.lastAttemptAt);
-  return s?.current?.generatedAt ? Date.parse(s.current.generatedAt) : -1;
+interface PublicationState {
+  lastAttemptAt: string | null;
+  lastFinishedAt?: string | null;
+  current: { generatedAt: string } | null;
+}
+const timestamp = (t: string | null | undefined): number => t && Number.isFinite(Date.parse(t)) ? Date.parse(t) : -1;
+const publicationMs = (s: PublicationState): number => timestamp(s.current?.generatedAt);
+const stateAttemptMs = (s: PublicationState): number => Math.max(timestamp(s.lastAttemptAt), publicationMs(s));
+function completed(s: PublicationState): boolean {
+  const attempt = timestamp(s.lastAttemptAt);
+  return (attempt >= 0 && timestamp(s.lastFinishedAt) >= attempt)
+    || (publicationMs(s) >= 0 && publicationMs(s) >= attempt);
 }
 
-function newerState<T extends { lastAttemptAt: string | null; current: { generatedAt: string } | null }>(
-  latest: T | undefined,
-  incoming: T | undefined,
-): T | undefined {
+/** Attempt bookkeeping and last-good publication advance independently. */
+function newerState<T extends PublicationState>(latest: T | undefined, incoming: T | undefined): T | undefined {
   if (!latest) return incoming;
   if (!incoming) return latest;
-  return stateAttemptMs(incoming) >= stateAttemptMs(latest) ? incoming : latest;
+  const delta = stateAttemptMs(incoming) - stateAttemptMs(latest);
+  const state = delta > 0 || (delta === 0 && completed(incoming) && !completed(latest)) ? incoming : latest;
+  // A later reservation/failure may still carry a stale output from its initial read.
+  const published = publicationMs(incoming) > publicationMs(latest) ? incoming : latest;
+  return { ...state, current: published.current };
 }
 
 export function mergeSnapshot(latest: Snapshot | null, incoming: Snapshot): Snapshot {
@@ -64,7 +76,16 @@ export function mergeSnapshot(latest: Snapshot | null, incoming: Snapshot): Snap
   const recommendation = newerState(latest.recommendation, incoming.recommendation);
   if (recommendation) merged.recommendation = recommendation;
   const dailySnow = newerState(latest.dailySnow, incoming.dailySnow);
-  if (dailySnow) merged.dailySnow = dailySnow;
+  if (dailySnow) {
+    // A reservation's older history must not remove a concurrently published edition.
+    const entries = [...(latest.dailySnow?.history ?? []), ...(incoming.dailySnow?.history ?? [])];
+    const history = new Map<string, (typeof entries)[number]>();
+    for (const entry of entries) {
+      const prev = history.get(entry.date);
+      if (!prev || timestamp(entry.postedAt) > timestamp(prev.postedAt)) history.set(entry.date, entry);
+    }
+    merged.dailySnow = { ...dailySnow, history: [...history.values()].sort((a, b) => b.date.localeCompare(a.date)).slice(0, Math.max(latest.dailySnow?.history?.length ?? 0, incoming.dailySnow?.history?.length ?? 0)) };
+  }
   const stormTracking = mergeStormTracking(latest.stormTracking, incoming.stormTracking);
   if (stormTracking) merged.stormTracking = stormTracking;
   return merged;

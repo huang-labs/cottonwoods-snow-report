@@ -15,7 +15,8 @@ function methodNotAllowed(allow: string) {
 
 /** Only API and share-image paths need code; asset-first routing serves pages. */
 export async function handleFetch(request: Request, env: WorkerEnv, ctx: ExecutionContext): Promise<Response> {
-  const path = new URL(request.url).pathname;
+  const url = new URL(request.url);
+  const path = url.pathname;
   if (path === "/api/admin/collect") {
     if (!env.ADMIN_TOKEN) return new Response("Not found", { status: 404 });
     return request.method === "POST" ? adminCollect(request, env) : methodNotAllowed("POST");
@@ -28,7 +29,7 @@ export async function handleFetch(request: Request, env: WorkerEnv, ctx: Executi
   else if (path === "/api/daily-snow") route = () => dailySnow(request, env);
   else if (path === "/daily-snow/opengraph-image") route = () => dailySnowShareImage(request, env, ctx);
   else if (panel) route = () => plumePanel(env, panel[1], panel[2], panel[3]);
-  else if (figure) route = () => dailySnowFigure(env, figure[1], figure[2]);
+  else if (figure) route = () => dailySnowFigure(env, figure[1], figure[2], url.searchParams.get("v") ?? undefined);
   if (route) {
     if (request.method !== "GET" && request.method !== "HEAD") return methodNotAllowed("GET, HEAD");
     const response = await route();

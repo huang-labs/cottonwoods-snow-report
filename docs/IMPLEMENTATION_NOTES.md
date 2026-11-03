@@ -794,3 +794,83 @@ Supersedes the footer layout in "Snowfall freshness in the table footer" above. 
 - Unchanged from #41: no chips in rows, no notes under values, 24px row padding.
 
 Validation: 287 tests across 21 files pass, and `npm run typecheck` and `npm run build` pass. On a local server seeded with a real collection (Chromium): at 1366px the legend sits 16px under the table. The source line starts one page gap below it with its own rule, its left edge at the page's (125px) and its right at the page edge (1241px). At 390px it wraps the attribution under the status. Neither width overflows horizontally. Not run: dark mode (no new colors), a live mixed-freshness state in the browser (covered by unit tests) and real-device Safari.
+
+## 2026-11-03 — Data architecture audit, phase 1 correctness fixes
+
+Implements the four ordered correctness findings in the audit above. Typed
+storage decoding, public response projection/polling, dependency cleanup, plume
+recovery, and archive backup/restore remain follow-ups.
+
+- **AI publication:** merge attempt bookkeeping separately from last-good output.
+  Completion beats reservation at the same attempt time, and a newer reservation
+  or failure carrying stale output cannot revert a publication visible to the
+  merge read. Recommendation attempts now record optional `lastFinishedAt`,
+  including failures and rule-based no-pick updates; legacy successful states
+  remain comparable by `generatedAt`. Daily Snow history merges by date and
+  publication time, retaining the existing input history bound. Exact ties retain
+  the stored value. KV read/merge/put and date-keyed archive writes remain
+  non-atomic; strict reservations, request caps and multi-writer archive/snapshot
+  consistency still require serialization, not an advisory KV lock.
+- **Forecast windows:** retain optional, unrounded `hourlySnow` from the NWS
+  adapter's existing uniform distribution of interval accumulations, bounded to
+  seven days. Rolling totals integrate only the requested interval, including
+  fractional boundary hours using that same allocation assumption. The digest
+  states the estimate basis and exact UTC window start. Every intersecting hour
+  must be present exactly once; absent, duplicate, non-finite or negative amounts
+  yield null, while covered zero remains zero. Five synthetic one-inch six-hour
+  bars no longer produce five inches under the next-24-hour label: hourly
+  allocation yields four. Legacy six-hour-only payloads cannot establish full
+  coverage and yield null until a successful NWS collection (normally within
+  15 minutes). The forecast horizon may not cover a full seven days; that total
+  is then unavailable. Partial future snow coverage can still establish posting
+  activity without being presented as a complete total. Measured resort windows,
+  existing NWS charts and ensemble calculations are unchanged.
+- **Figure identity:** SHA-256 of each still determines the revision stored at
+  `dailysnow-fig:v2:<date>:<figure>:<sha256>` and its `?v=<sha256>` URL. Images are
+  written before their post references, so successful rewrites and failed
+  replacement publications leave older referenced bytes untouched. Revision URLs
+  keep immutable one-day caching; legacy v1 keys/unversioned URLs remain readable
+  with five-minute revalidation. Previously cached immutable legacy responses may
+  survive their original cache lifetime. No migration, backfill or production
+  write was performed. Unreferenced revision artifacts can remain after failures
+  or rewrites; recovery/garbage collection is separate. Once new posts reference
+  v2 artifacts, a runtime rollback must retain the revision-aware figure reader
+  or restore prior post/snapshot references; a wholesale revert breaks new images.
+- **HTTP budgets:** the default 15-second deadline now spans headers and streamed
+  body consumption for text, JSON and bytes. All body types default to an 8 MB
+  decoded-byte bound, overridable per call; Daily Snow external stills retain
+  their 3 MB limit. Limits are checked before buffering the rest of the response;
+  rejected responses and probe bodies are cancelled. Deadline rejection does not
+  depend on a cooperative producer. Diagnostics record one call with full elapsed
+  time and the HTTP status when headers arrived, even if the body failed.
+
+**Validation:** seven focused regression cases failed against the pre-change
+application code (same-attempt reservation rollback for both AI features, the
+forecast-window probe, rewrite image isolation, and three stalled-body readers).
+After rebasing onto `c6e1d02` (preserving the snowfall legend/source-line
+changes and both appended note sections), **309 tests across 23 files**, `npm run typecheck`,
+`npm run build`, `npm run smoke`, and `git diff --check` pass. Smoke exercised
+nine static pages, navigation payloads, API methods, local KV, share PNGs/metadata
+and HEAD in workerd, using temporary local state that the script removed. No
+browser layout checks were run because no layout or styling changed. No live
+upstream/model requests, paid inference or production operations were run.
+
+**Existing files touched:**
+
+- `src/lib/store.ts`: independent attempt/publication ordering and history merge.
+- `src/lib/recommend/index.ts`: completion timestamps and ordered rule-based output.
+- `src/lib/types.ts`: optional hourly forecast data and recommendation completion.
+- `src/lib/sources/nws.ts`: retain the adapter's unrounded hourly allocation.
+- `src/lib/dailysnow/digest.ts`: bounded totals, coverage and estimate provenance.
+- `src/lib/dailysnow/index.ts`: content-addressed still writes and references.
+- `src/lib/http.ts`: full-response deadlines, streaming limits and cancellation.
+- `src/worker/daily-snow-figure.ts`: revision lookup, validation and cache policy.
+- `src/worker/fetch.ts`: pass the figure revision query to the reader.
+- `test/dailysnow.test.ts`: forecast/rewrite regressions and updated publication assertions.
+- `test/sources.test.ts`: hourly allocation, zero and missing-value coverage.
+- `test/worker.test.ts`: revision routes, legacy reads, immutable caching and HEAD.
+- `README.md`: collection guarantees, budgets, forecast behavior and artifact storage.
+- `docs/IMPLEMENTATION_NOTES.md`: this implementation record and rollout limits.
+
+**New files:** `test/http.test.ts` and `test/publication-merge.test.ts` cover
+response budgets/cancellation and AI publication interleavings respectively.

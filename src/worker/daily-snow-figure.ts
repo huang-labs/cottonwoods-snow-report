@@ -11,13 +11,14 @@ function imageType(b: Uint8Array): string | null {
 }
 
 /** A Daily Snow figure still, copied when the post was written; never changes. */
-export async function dailySnowFigure(env: CollectorEnv, date: string, id: string) {
+export async function dailySnowFigure(env: CollectorEnv, date: string, id: string, revision?: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^[a-z0-9-]{1,40}$/.test(id)) return new Response("Not found", { status: 404 });
+  if (revision !== undefined && !/^[a-f0-9]{64}$/.test(revision)) return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
   try {
-    const buf = await env.SNOW_KV.get(dailySnowFigureKey(date, id), "arrayBuffer");
+    const buf = await env.SNOW_KV.get(dailySnowFigureKey(date, id, revision), "arrayBuffer");
     const type = buf ? imageType(new Uint8Array(buf, 0, Math.min(12, buf.byteLength))) : null;
     if (!buf || !type) return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
-    return new Response(buf, { headers: { "Content-Type": type, "Cache-Control": "public, max-age=86400, immutable" } });
+    return new Response(buf, { headers: { "Content-Type": type, "Cache-Control": revision ? "public, max-age=86400, immutable" : "public, max-age=300, must-revalidate" } });
   } catch (err) {
     console.error("daily-snow figure: storage read failed", err);
     return new Response("Storage unavailable", { status: 503, headers: { "Cache-Control": "no-store" } });

@@ -239,6 +239,8 @@ export interface PointForecast {
   gridUpdatedAt: string | null;
   blocks: ForecastBlock[];
   sixHourSnow: SixHourSnow[];
+  /** Unrounded hourly NWS accumulation; absent on snapshots collected before phase 1. */
+  hourlySnow?: Array<{ start: string; snowIn: number }>;
   nextStorm: NextStorm | null;
   periods: Array<{ name: string; detailedForecast: string; start: string }>;
 }
@@ -373,6 +375,8 @@ export interface Recommendation {
 
 export interface RecommendationState {
   current: Recommendation | null;
+  /** Completion of the last attempt; absent in legacy snapshots. */
+  lastFinishedAt?: string | null;
   lastAttemptAt: string | null;
   lastError: string | null;
   consecutiveFailures: number;

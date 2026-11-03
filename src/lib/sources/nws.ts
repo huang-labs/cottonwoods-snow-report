@@ -169,6 +169,8 @@ export function summarizeGrid(grid: GridData, now: Date, blockCount = 6): Omit<P
     gridUpdatedAt: p.updateTime ? new Date(p.updateTime).toISOString() : null,
     blocks,
     sixHourSnow,
+    hourlySnow: [...snow].filter(([t]) => t >= Math.floor(now.getTime() / HOUR) * HOUR && t < now.getTime() + 7 * 24 * HOUR)
+      .map(([t, snowIn]) => ({ start: new Date(t).toISOString(), snowIn })),
     nextStorm: findNextStorm(snow, snowLevel, now),
   };
 }
