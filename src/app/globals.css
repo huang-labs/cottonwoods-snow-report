@@ -102,13 +102,14 @@ a { color: var(--accent); }
 .editorial-nav__resorts a { display: block; min-height: 44px; padding: 10px 12px; border-radius: 6px; text-decoration: none; }
 .editorial-nav__resorts a[aria-current="page"] { background: var(--panel); color: var(--accent); font-weight: 600; }
 
-.editorial-page { max-width: 1180px; width: 100%; margin: 0 auto; padding: 36px var(--gutter) 64px; }
+.editorial-page { max-width: 1180px; width: 100%; margin: 0 auto; padding: 24px var(--gutter) 64px; }
 
 .banner { max-width: calc(1180px - 2 * var(--gutter)); width: calc(100% - 2 * var(--gutter)); margin: 12px auto 0; border-radius: 8px; padding: 8px 14px; font-size: var(--fs-meta); border: 1px solid var(--line); background: var(--panel); color: var(--bad); }
 
 /* ---- page primitives ---- */
 .page { display: flex; flex-direction: column; gap: var(--page-gap); }
-.page__header { display: flex; flex-direction: column; gap: 12px; }
+/* A header sits closer to what follows it than sections do to each other. */
+.page__header { display: flex; flex-direction: column; gap: 8px; margin-bottom: calc(24px - var(--page-gap)); }
 .page__sub { max-width: 72ch; font-size: var(--fs-meta); line-height: 1.6; color: var(--muted); }
 .page__sub strong { color: var(--text); font-weight: 600; }
 .page__note { font-size: var(--fs-caption); color: var(--muted); }
@@ -236,8 +237,8 @@ a { color: var(--accent); }
 
 /* Daily Snow teaser: a highlighted summary panel reaching into the gutters while
    its text keeps the page's aligned edge; on phones it becomes a full-width band. */
-.dailysnow-teaser { margin: 0 calc(-1 * var(--bleed)); padding: 24px var(--bleed); border-radius: 8px; background: var(--panel); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 28px; color: var(--text); text-decoration: none; }
-.dailysnow-teaser__title { font: 700 var(--fs-title)/1.25 var(--font); letter-spacing: -0.015em; grid-column: 1 / -1; margin-top: 4px; }
+.dailysnow-teaser { margin: 0 calc(-1 * var(--bleed)) calc(28px - var(--page-gap)); padding: 16px var(--bleed); border-radius: 8px; background: var(--panel); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 28px; color: var(--text); text-decoration: none; }
+.dailysnow-teaser__title { font: 700 var(--fs-title)/1.25 var(--font); letter-spacing: -0.015em; grid-column: 1 / -1; }
 .dailysnow-teaser__summary { grid-column: 1; max-width: 72ch; line-height: 1.6; }
 .dailysnow-teaser__time { grid-column: 2; grid-row: 1; text-align: right; font-size: var(--fs-caption); color: var(--muted); }
 .dailysnow-teaser__more { grid-column: 2; grid-row: 3; align-self: end; text-align: right; color: var(--accent); font-weight: 650; font-size: var(--fs-meta); }
