@@ -1,4 +1,4 @@
-# Loaded explicitly from the trusted base checkout, never from the PR branch.
+# The official Action reads this policy from the trusted default branch.
 [config]
 fallback_models = []
 custom_model_max_tokens = 32000
@@ -8,9 +8,7 @@ num_retries = 1
 ai_timeout = 180
 retry_same_model_on_timeout = false
 propagate_tool_errors = true
-publish_output = false
-publish_output_progress = false
-use_repo_settings_file = false
+publish_output = true
 use_global_settings_file = false
 repo_context_files = ["AGENTS.md"]
 repo_context_from_default_branch = true
@@ -26,7 +24,8 @@ require_security_review = true
 require_ticket_analysis_review = false
 enable_review_labels_security = false
 enable_review_labels_effort = false
-inline_key_issues = false
+persistent_comment = true
+inline_key_issues = true
 extra_instructions = """
 Report actionable defects introduced by this diff with a concrete trigger,
 impact, and file/line reference. Prioritize correctness, regressions, security,

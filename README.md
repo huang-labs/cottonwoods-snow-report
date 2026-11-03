@@ -45,11 +45,13 @@ The shared pieces live in `src/lib/ai/`: `model.ts` builds the request body, run
 
 ## AI code review
 
-GitHub Actions runs **one advisory PR-Agent review per eligible PR event**, paid
-from OpenRouter credits. Coding agents apply exactly one author label. The
-reviewer is chosen from the other two families using the PR number (even/odd),
-so pushes and retries keep the same reviewer while both alternatives are used
-across PRs:
+The official [PR-Agent Action](https://github.com/marketplace/actions/the-pr-agent)
+runs **one advisory review per eligible PR event** through OpenRouter. A short
+routing step selects a model; PR-Agent owns inference, review formatting,
+persistent comments, inline findings, coverage and failure reporting.
+
+Apply exactly one author label. PR-number parity keeps the selected reviewer
+stable across pushes while distributing reviews between the other two families:
 
 | Author label | Even PR number | Odd PR number |
 | --- | --- | --- |
@@ -57,59 +59,41 @@ across PRs:
 | `author:claude` | GPT-6.1 Sol | GLM 5.3 |
 | `author:glm` | Claude Opus 5.5 | GPT-6.1 Sol |
 
-Default OpenRouter model IDs are `anthropic/claude-opus-5.5`,
-`openai/gpt-6.1-sol`, and `z-ai/glm-5.3`. Optional repository variables
-`AI_REVIEW_CLAUDE_MODEL`, `AI_REVIEW_GPT_MODEL`, and `AI_REVIEW_GLM_MODEL` override
-them with an explicit model from the same vendor (without the `openrouter/`
-prefix). Auto routers, cross-vendor overrides and model fallbacks are disabled.
-OpenRouter may switch hosting providers serving the selected model.
-
-Setup requires a dedicated OpenRouter key in the repository Actions secret
-`OPENROUTER_API_KEY`. Set the key's credit limit/reset period in OpenRouter to
-bound spending; the workflow does not change billing limits. No Cloudflare
-credentials or coding subscriptions are used for reviews. Requests disclose PR
-diffs, PR metadata and trusted repository context to OpenRouter and the selected
-provider; account privacy settings govern their handling.
+Setup: store a dedicated OpenRouter key as Actions secret `OPENROUTER_API_KEY`;
+set its spending cap/reset period in OpenRouter. Defaults are
+`anthropic/claude-opus-5.5`, `openai/gpt-6.1-sol`, and `z-ai/glm-5.3`. Optional
+repository variables `AI_REVIEW_CLAUDE_MODEL`, `AI_REVIEW_GPT_MODEL`, and
+`AI_REVIEW_GLM_MODEL` accept explicit same-vendor model IDs, without the
+`openrouter/` prefix. Model fallbacks and auto routers are disabled. OpenRouter
+may switch hosting providers serving the same model. Review content is sent to
+OpenRouter and the selected provider under your account privacy settings.
 
 Reviews run on open, reopen, ready-for-review, pushes and author-label changes.
-Drafts, forks, Dependabot and bot events are skipped. Missing/conflicting labels
-produce a configuration notice without inference. A collaborator with current
-write/maintain/admin permission can post exactly `/review` to rerun. Arguments,
-`/improve`, ordinary comments and other commands are ignored. Closed PRs cannot
-be reviewed. For another coding family or mixed authorship, choose the author
-label with the owner before requesting a review.
+Drafts, forks, Dependabot and bot events are skipped. Missing/conflicting author
+labels produce an Actions notice without inference. A collaborator with current
+write/maintain/admin permission can post exactly `/review` to rerun; other
+commands and arguments are ignored. Automatic description rewriting and code
+suggestion generation are disabled. Review findings are advisory: keep this
+workflow optional in branch protection. Model/run details identify the reviewer;
+GitHub tests and preview deployment remain independent.
 
-The marked **AI code review** comment is updated in place with the selected
-model, reviewed commit, findings with code links, reported token usage, and any
-omitted/partial coverage. Initial publication uses summary findings rather than
-inline threads. A failure is reported separately from a review with no findings;
-the workflow fails on inference/runtime errors, but findings are advisory. Keep
-this workflow optional in branch protection: it never auto-approves, changes
-code or blocks merges based on model opinion. Review jobs have 15 minutes, a
-32,000-token context budget, an 8,192-token output cap, one transient-error retry,
-and no large-PR chunking. GLM uses high reasoning effort; the others use medium.
-Token limits are not dollar caps, and cancellation cannot refund a running call.
+The `pull_request_target` workflow and review configuration come from trusted
+base/default branches, with no checkout or execution of PR code. PR-Agent reads
+PR data and default-branch AGENTS.md through GitHub's API. Repeated requests for
+the same head cancel each other; different heads have separate concurrency groups
+so delayed older jobs cannot cancel newer heads. Native PR-Agent owns how
+in-progress/full-diff reviews and their persistent findings are updated.
 
-The workflow executes tooling/config from the trusted PR base commit (default
-branch for `/review`), never PR-head code. PR-Agent fetches the live diff and
-default-branch AGENTS.md through GitHub's API. Branch configuration and command
-overrides cannot change its model or endpoint. A head/base/author-label change
-during inference discards the result. The runtime image is pinned in
-`scripts/ci-review/review.mjs`; update its digest deliberately and rerun the
-routing tests plus live model validation. Preview and review comments have
-separate identities, so deployments cannot overwrite reviews.
+Policy is in `.pr_agent.toml`: 32k context budget, 8,192 output-token cap, one
+transient-error retry, no large-PR chunking, and a 15-minute job timeout. GLM uses
+low reasoning (high exhausted the completion budget in validation); GPT/Opus use
+medium. These limits are not dollar caps. The official Action wrapper is pinned
+to v0.49.0's commit; its Dockerfile uses upstream's rolling `github_action` image.
+Update deliberately and check live model compatibility after upgrades.
 
-**Activation:** the setup PR can run routing tests, but automatically reviews
-only after trusted tooling exists on its base branch. After merging, open or
-update a labeled PR, or post `/review`. Existing PRs need a new event. The
-initial setup PR reports this bootstrap limitation explicitly.
-
-Run CI-tooling tests with `node --test scripts/ci-review/*.test.mjs` (no npm
-dependencies required). Missing secret, credit/authentication errors, provider
-rate limits and timeouts appear in the review status; raw provider logs are
-kept out of PR comments and Actions output. Retry with `/review` after fixing
-configuration. Automatic reviews use the full current diff, not incremental
-finding state; a concern can therefore recur until addressed.
+Automatic reviews activate after merging this workflow/config into main. Existing
+PRs need a new eligible event. Provider/auth/credit failures appear in PR-Agent's
+native output and Actions logs; fix the configuration and post `/review` to retry.
 
 ## Local development
 

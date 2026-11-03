@@ -112,7 +112,7 @@ jobs:
         run: |
           body=$(printf '### Preview\n\n%s\n\nUpdated for %s. Uses production data (read-only); cron collection does not run on previews.' "$URL" "${SHA:0:7}")
           # Target the preview comment itself; another workflow also posts as this bot.
-          comment_id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("### Preview\n"))) | .id' | head -n1)
+          comment_id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --jq '.[] | select(.user.login == "github-actions[bot]" and (.body // "" | startswith("### Preview\n"))) | .id' | head -n1)
           if [ -n "$comment_id" ]; then
             gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" -f body="$body"
           else

@@ -578,52 +578,61 @@ This supersedes this PR's earlier mobile tabs, stacked list and collapsible hist
 **Plain-text follow-up:** 22 Daily Snow UI tests, typecheck, static build and diff checks pass. Chromium at 390px and 1366px confirms borderless text controls; 320px with a temporary cloned second control has no overflow. Dark mode checked at 390px. Touch areas remain 44px tall. This follow-up changes only scoped navigation styles and these notes; README navigation placement remains accurate.
 
 **Rebase validation:** rebased onto `origin/main` at `4cbea56` (storm observation memory), preserving its README/storage/lifecycle notes, recap rendering and source-wording changes. All 285 tests across 21 files, typecheck, static build and diff checks passed after resolution. No new browser or live model run was needed for the documentation conflicts.
-## 2026-11-03 — One independent PR-Agent reviewer through OpenRouter
 
-**Decision.** Use a three-model pool but exactly one reviewer per PR event. The
-author label (`author:codex`, `author:claude`, `author:glm`) excludes that family;
-PR-number parity selects between the remaining families in Claude, Codex, GLM
-order. Selection remains stable on pushes. Defaults are Claude Opus 5.5,
-GPT-6.1 Sol, and GLM 5.3, verified against the OpenRouter catalog. Same-vendor
-repository variables can change explicit model IDs. Model fallbacks and auto
-routers are disabled; provider failover for the selected model remains allowed.
+## 2026-11-03 — Official PR-Agent Action through OpenRouter
 
-**Boundary.** The workflow executes base-commit tooling/config, reads the live
-diff and default-branch AGENTS.md via GitHub's API, and discards results if head,
-base, or author labels change. It runs no PR-head code in the privileged job.
-The PR-Agent CLI image is pinned by multi-platform digest. One publisher owns a
-marked comment; structured findings have model/commit attribution, coverage,
-token usage and code links. No inline threads, auto-approval, model-driven merge
-gate, PR description rewriting, incremental finding state, or code edits.
-Comment commands are exact `/review` requests checked against current write
-permissions before entering concurrency and again before execution.
+**Decision.** Use the official Marketplace Action directly, pinned to v0.49.0's
+wrapper commit `efdde4afe14aa401a3889012c7f3e9ef3081a430`. Its Dockerfile still
+uses upstream's rolling `github_action` image; the runtime is not digest-pinned.
+PR-Agent owns inference, comments, inline findings, persistent state, coverage,
+model attribution and errors. The only custom logic is a short workflow routing
+step: an author label excludes that family; PR-number parity selects one of the
+other two. Defaults are Opus 5.5, GPT-6.1 Sol and GLM 5.3. There is exactly one
+reviewer per eligible event and no cross-model fallback.
 
-**Costs and failures.** Reviews use OpenRouter credits and a dedicated
-`OPENROUTER_API_KEY` repository secret. The owner controls the key's spending cap
-in OpenRouter. The 32k context budget, 8k output cap, one transient retry, no
-chunking and 15-minute job timeout limit work but are not a dollar cap. GLM uses
-high reasoning effort because its catalog does not support medium; Opus/GPT use
-medium. Missing/ambiguous labels spend no credits; provider/runtime failures are
-explicit and never reported as clean reviews. Raw provider logs are not
-published. Cancelling a superseded request cannot refund completed inference.
+The trusted-base `pull_request_target` workflow checks current PR state and manual
+request permissions before selecting a model. No PR code is checked out or run.
+Policy and AGENTS.md come from the default branch via API. Forks, drafts, bot
+events and Dependabot are skipped; missing/conflicting author labels spend no
+credits and produce an Actions notice. Exact `/review` is the only accepted
+comment command. Same-head concurrency avoids an old head cancelling a new one.
+PR-Agent's native behavior owns in-flight updates; there is no custom publisher,
+Docker launcher, output validator or post-inference state manager.
 
-**Activation and limitations.** The setup PR's base lacks the new trusted
-tooling, so automatic inference activates after merge. The bootstrap check
-reports that limitation. Existing PRs need a push, author-label event or manual
-command. Diff review is bounded context, not full-repository agent exploration.
-Summaries can repeat unresolved findings on later full-diff reviews. GitHub API
-reads are not atomic with comment publication, so the displayed commit is the
-authority for what was reviewed.
+**Limits and operations.** A dedicated `OPENROUTER_API_KEY` repository secret and
+three author labels are installed. The owner controls the key's credit cap in
+OpenRouter. Policy uses a 32k context budget, 8,192-token output cap, one transient
+retry, no chunking and a 15-minute job limit. GLM uses low reasoning; GPT/Opus use
+medium. Findings are advisory; no automatic approval, merging, description
+rewriting or code edits. Activation and actual bot publication require merging
+the workflow/config, then triggering a labeled PR or `/review`.
 
-**Validation so far.** 24 CI-tooling tests, all 249 application tests across 20
-files, typecheck, actionlint 1.7.12 on both workflows, and `git diff --check` pass.
-Live model and publication checks are recorded below when completed. Application
-build/browser checks are not required for these CI-only changes.
+**Live provider validation.** PR-Agent code and locked dependencies from the
+published CLI image were run locally against PR #57 through OpenRouter (Docker
+is unavailable here). Opus produced a valid review in 58 s (24,019 input / 4,206
+output tokens), GPT in 79 s (15,121 / 2,126), and GLM with low reasoning in 32 s
+(15,147 / 2,133). All reported full diff coverage. GLM's initial high-effort call
+failed after 264 s: it exhausted all 8,192 completion tokens on reasoning, with
+empty content and `finish_reason: length`. Lowering effort fixed it. These were
+explicit provider-validation calls; normal operation selects one model.
 
-**Existing files touched and why:** `AGENTS.md` adds the author-label rule;
-`README.md` documents operations and limits; `.github/workflows/deploy.yml`
-targets only the bot's Preview comment instead of its latest comment, preventing
-preview uploads from overwriting an AI review; this file records decisions and
-validation. New files are `.github/workflows/review.yml`, `.pr_agent.toml`, and
-`scripts/ci-review/{review.mjs,review.test.mjs}`. Reverting disables reviews and
-restores the prior preview publisher; spent inference credits are not refunded.
+**Validation.** All 285 application tests across 21 files and typecheck pass;
+the Deploy workflow also passed build and preview on the preceding head. Final
+workflow routing passes 16 scenarios, including every author/parity combination,
+permission and eligibility skips, stale events and invalid model overrides.
+actionlint 1.7.12 passes on both workflows; TOML/Action configuration assertions
+and diff checks pass. The official Action's native runner was also exercised
+locally with a real `pull_request_target` payload and GLM through OpenRouter:
+it exited successfully in 43 s and emitted exactly one review to `GITHUB_OUTPUT`.
+Publication was disabled for this local check; GitHub bot identity and actual
+comment publication require merge.
+No browser checks were needed for this CI-only change. Bot publication and the
+trusted-base trigger cannot be exercised before this setup merges. Scratch
+model responses, environments and validation harnesses are outside the repo.
+
+**Existing files touched:** `AGENTS.md` adds the author-label rule; `README.md`
+documents setup/operations; `.github/workflows/deploy.yml` updates only the bot's
+Preview comment rather than its latest comment, preventing reviews from being
+overwritten; these notes record decisions and evidence. New files are
+`.github/workflows/review.yml` and `.pr_agent.toml`. A revert removes reviews and
+restores preview publication; already-spent inference credits are not refunded.
