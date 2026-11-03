@@ -134,6 +134,8 @@ a { color: var(--accent); }
 
 .editorial-page { max-width: 1180px; width: 100%; margin: 0 auto; padding: 24px var(--gutter) 64px; }
 
+.banner--required-missing { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.feed-status { color: var(--muted); }
 .banner { max-width: calc(1180px - 2 * var(--gutter)); width: calc(100% - 2 * var(--gutter)); margin: 12px auto 0; border-radius: 8px; padding: 8px 14px; font-size: var(--fs-meta); border: 1px solid var(--line); background: var(--panel); color: var(--bad); }
 
 /* ---- page primitives ---- */
@@ -149,11 +151,11 @@ a { color: var(--accent); }
 .eyebrow { color: var(--accent); font-size: var(--fs-label); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .eyebrow .badge { margin: 0 0.5em; vertical-align: 1px; }
 
-/* Freshness and AI chips carry color: green fresh, amber aging, red stale, blue AI. */
+/* Shared status tones: green current, amber delayed/old, red unavailable/failing, neutral unknown. */
 .badge { display: inline-block; border-radius: 4px; padding: 2px 7px; font-size: 11px; line-height: 1.45; font-weight: 650; letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; background: color-mix(in srgb, var(--muted) 12%, transparent); color: var(--muted); }
-.badge--current { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
-.badge--old-report, .badge--time-unknown { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
-.badge--stale, .badge--unavailable { background: color-mix(in srgb, var(--bad) 15%, transparent); color: var(--bad); }
+.badge--ok { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.badge--warn { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+.badge--bad { background: color-mix(in srgb, var(--bad) 15%, transparent); color: var(--bad); }
 .badge--ai { background: color-mix(in srgb, var(--accent) 13%, transparent); color: var(--accent); }
 
 /* Measured values. Tight tracking only at display sizes; small numbers keep normal
@@ -267,7 +269,7 @@ a { color: var(--accent); }
 .recommendation-row__body > strong { font-size: var(--fs-body); }
 .recommendation-row__body p { margin-top: 6px; }
 .recommendation-row__caveats { color: var(--warn); }
-.recommendation-row__meta { color: var(--muted); font-size: var(--fs-label); margin-top: 10px; overflow-wrap: anywhere; }
+.recommendation-row__meta { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 10px; color: var(--muted); font-size: var(--fs-label); margin-top: 10px; overflow-wrap: anywhere; }
 .snow-table .row--recommended > th:first-child,
 .snow-table .recommendation-row > td { position: relative; }
 .snow-table .row--recommended > th:first-child { border-bottom-color: transparent; }
@@ -293,7 +295,7 @@ a { color: var(--accent); }
 .dailysnow__header { display: flex; flex-direction: column; gap: 16px; }
 .dailysnow__meta { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 24px; flex-wrap: wrap; }
 .dailysnow__posted { color: var(--muted); font-size: var(--fs-caption); }
-.dailysnow__warn { color: var(--warn); }
+.dailysnow__posted, .dailysnow-teaser__time { display: flex; align-items: baseline; justify-content: flex-end; flex-wrap: wrap; gap: 6px 10px; }
 .dailysnow__title { margin-top: 4px; }
 .dailysnow__summary { font-size: 18px; line-height: 1.5; font-weight: 500; color: var(--text); }
 .dailysnow__article { margin-top: 8px; }
@@ -334,8 +336,8 @@ a { color: var(--accent); }
   .dailysnow__history-entry:hover { background: var(--panel); }
 }
 .dailysnow__history-entry[data-active] { background: var(--panel-2); border-left-color: var(--accent); }
-.dailysnow__history-entry-top { display: flex; align-items: baseline; gap: 8px; }
-.dailysnow__history-entry-date { font-weight: 700; font-size: var(--fs-meta); }
+.dailysnow__history-entry-top { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
+.dailysnow__history-entry-date { white-space: nowrap; font-weight: 700; font-size: var(--fs-meta); }
 .dailysnow__history-entry-phase { color: var(--accent); font-size: var(--fs-label); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 650; }
 .dailysnow__history-entry-title { color: var(--muted); font-size: var(--fs-caption); line-height: 1.45; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .dailysnow__history-entry[data-active] .dailysnow__history-entry-title { color: var(--text); }
@@ -466,6 +468,7 @@ a { color: var(--accent); }
   .snow-table .recommendation-row::before { border-radius: 0 0 2px 2px; }
 
   .dailysnow-teaser { border-radius: 0; grid-template-columns: minmax(0, 1fr); }
+  .dailysnow-teaser__time { justify-content: flex-start; }
   .dailysnow-teaser__time, .dailysnow-teaser__summary, .dailysnow-teaser__more { grid-column: 1; grid-row: auto; text-align: left; }
 
   .dailysnow__summary { font-size: 17px; }

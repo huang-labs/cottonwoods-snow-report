@@ -7,10 +7,10 @@ import { allowedAmounts, buildModelInput, DAILY_SNOW_TIMEOUT_MS, SYSTEM_PROMPT, 
 import { IN_FLIGHT_MS, MAX_ATTEMPTS, RETRY_AFTER_MS, shouldRunDailySnow } from "@/lib/dailysnow/schedule";
 import { inchAmountsIn, ungroundedInches } from "@/lib/ai/grounding";
 import { FALLBACK_MODEL, PRIMARY_MODEL } from "@/lib/ai/model";
-import { buildReport, DAILY_SNOW_ARCHIVE_POSTS } from "@/lib/report";
+import { buildReport, publicDailySnow, DAILY_SNOW_ARCHIVE_POSTS } from "@/lib/report";
 import { parseAfd } from "@/lib/sources/nwsafd";
 import { MemoryKV, readSnapshot, writeSnapshot } from "@/lib/store";
-import type { AfdPayload, DailySnowHistoryEntry, DailySnowNumbers, DailySnowPost, DailySnowState, PlumePayload, ResortCamsPayload, Snapshot } from "@/lib/types";
+import type { AfdPayload, DailySnowHistoryEntry, DailySnowNumbers, DailySnowPost, DailySnowState, PlumePayload, ResortCamsPayload, ResortReport, NwsPayload, Snapshot } from "@/lib/types";
 import { createFixtureFetch, fixture } from "./fixtureFetch";
 
 // Nov 1 2026 is the end of daylight saving time: 13:00 UTC is 6:00 AM MST.
@@ -342,8 +342,33 @@ describe("posting", () => {
     expect(state.attempts).toEqual({ date: "2026-11-01", count: 1, calls: 2 });
 
     const report = buildReport(await readSnapshot(kv), at("2026-11-01T15:00:00Z"));
-    expect(report.dailySnow).toMatchObject({ title: "Storm Underway", outdated: false, failing: false, archive: [{ date: "2026-11-01", title: "Storm Underway" }] });
-    expect(buildReport(await readSnapshot(kv), at("2026-11-02T15:00:00Z")).dailySnow?.outdated).toBe(true);
+    expect(report.dailySnow).toMatchObject({ title: "Storm Underway", outdated: false, publicationStatus: "current", failing: false, archive: [{ date: "2026-11-01", title: "Storm Underway" }] });
+    const nextMorning = buildReport(await readSnapshot(kv), at("2026-11-02T15:00:00Z"));
+    expect(nextMorning.dailySnow).toMatchObject({ outdated: true, publicationStatus: "pending" });
+    const nextNoon = at("2026-11-02T19:00:00Z");
+    expect(buildReport(await readSnapshot(kv), nextNoon).dailySnow?.publicationStatus).toBe("delayed");
+    // With no resort/forecast activity, the same old edition is intentionally retained.
+    const quietSnapshot = structuredClone((await readSnapshot(kv))!);
+    quietSnapshot.recommendation = undefined;
+    for (const id of ["alta", "snowbird", "solitude", "brighton"] as const) {
+      const rec = quietSnapshot.sources[id]!;
+      rec.lastSuccessfulFetchAt = rec.sourceUpdatedAt = nextNoon.toISOString();
+      const resort = rec.payload as ResortReport;
+      resort.operatingStatus = "Closed for the season";
+      for (const metric of Object.values(resort.snowfall)) {
+        if (metric.state === "reported") metric.value = 0;
+      }
+    }
+    const nws = quietSnapshot.sources.nws!;
+    nws.lastSuccessfulFetchAt = nws.sourceUpdatedAt = nextNoon.toISOString();
+    for (const point of (nws.payload as NwsPayload).points) {
+      for (const bar of point.sixHourSnow) bar.snowIn = 0;
+    }
+    expect(buildReport(quietSnapshot, nextNoon).dailySnow?.publicationStatus).toBe("paused");
+    quietSnapshot.sources = {};
+    expect(buildReport(quietSnapshot, nextNoon).dailySnow?.publicationStatus).toBe("delayed");
+    expect(publicDailySnow({ ...post, date: "2026-10-31" }, state, nextNoon)?.publicationStatus).toBeUndefined();
+    expect(publicDailySnow(null, undefined, nextNoon)).toBeNull();
 
     const n = calls.filter((c) => c.schema === "daily_snow").length;
     await runCollection(env, { now: at("2026-11-01T13:05:00Z"), sources: [] });

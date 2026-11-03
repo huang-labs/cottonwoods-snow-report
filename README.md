@@ -112,15 +112,30 @@ To deploy by hand, set `CLOUDFLARE_API_TOKEN` (or run `npx wrangler login`), the
 
 ## Freshness semantics (what the badges mean)
 
-| Badge | Meaning |
-| --- | --- |
-| Current | Collected on schedule, and the upstream report time is within the source's window (resorts 26 h, NWS 12 h, NWS discussion/ensemble 18 h, plumes 30 h, travel times 30 min) |
-| Old report | Fetched recently, but the upstream report itself is old (for example, yesterday's report or an off-season report) |
-| Report time unknown | The source publishes no time (roads aggregate, webcams) |
-| Stale — source failing | No successful fetch for more than 22 min (four missed runs plus KV propagation), extended by a slower source's interval (NWS/travel times 32 min, plumes, ensemble and NWS discussion 47 min); shows the last good payload |
-| Unavailable | Never collected successfully |
+Collection recency, upstream report age and publication availability are separate. Source thresholds are intentionally different: a daily resort report and a travel measurement do not expire at the same age. `src/lib/report.ts` classifies sources; `src/lib/freshness.ts` owns their public labels, tones and explanations. API state names remain compatible (`stale` displays as “Updates delayed”, `time-unknown` as “Time unknown”).
 
-Every section shows the source report time (America/Denver) and the last successful check. Values distinguish **0″** (reported zero), **not reported** (the source left the field empty) and **n/a** (the source doesn't provide that measurement). Measurement windows keep each source's own label.
+| Badge | Treatment | Meaning |
+| --- | --- | --- |
+| Current | Green | Collected on schedule, and the upstream report time is within the source's window: resorts 26 h, NWS 12 h, NWS discussion/ensemble 18 h, plumes 30 h, travel times 30 min |
+| Old report | Amber | Fetched recently, but the upstream report exceeds that source's window |
+| Time unknown | Neutral | A recent collection succeeded, but the source publishes no time or its report time could not be established |
+| Updates delayed | Amber | No successful fetch for more than 22 min, extended by a slower source's interval: NWS/travel times 32 min; plumes, ensemble and NWS discussion 47 min. The last good payload remains visible. This does not identify whether the source or collector is responsible. |
+| Unavailable | Red | No usable collected payload is available |
+
+Source badges live in page footers and resort headers. The Snowfall footer summarizes the resorts, worst state first. The global required-feed banner groups unavailable and delayed feeds separately. A confirmed failed latest check is shown separately from freshness; recently collected data can remain Current while a subsequent check has failed. Source footers retain the source report time (America/Denver), last successful check and attribution. Measurement windows keep each source's own label; **0″**, **not reported** and **—** mean reported zero, an empty reported field and a measurement the source does not provide, respectively.
+
+Editorial content uses the same badge shape and semantic tones, with wording appropriate to its purpose:
+
+| Surface | Rule and behavior |
+| --- | --- |
+| Resort pick | “Recommendation needs updating” (amber) when the target date changes (tomorrow after 2 PM Denver) or generation exceeds 12 h. “Updates failing” (red) after three consecutive failures. Retain the prose but remove the resort row's AI-pick endorsement for either state. |
+| Latest Daily Snow | Always show edition date and posting time. Yesterday's edition is normal before 6 AM Denver; publication is pending during the 6–10 AM window. Show “Latest edition delayed” (amber), identically in teaser and article, when an expected edition is missing after retries/request budget are exhausted or the window closes. An in-flight final attempt can finish after 10 AM. An edition older than yesterday remains delayed overnight. |
+| Quiet-day Daily Snow | No delay warning when usable resort/forecast inputs establish that no edition is expected under the existing season/snow activity gate. Missing or delayed inputs cannot establish an intentional pause. |
+| Archived Daily Snow | Date and “Archive”, without a publication warning. The history rail calls the latest stored edition “Latest” with its date, never assumes it is today's. |
+
+The API adds optional `dailySnow.publicationStatus` (`current`, `scheduled`, `pending`, `delayed`, `paused`) on the latest edition in `/api/report`; archive responses omit it. The existing `outdated` and `failing` fields remain for compatibility. Publication status is computed on reads using the schedule and shared activity rules; reads never collect sources or invoke AI. No additional KV keys or migrations are required.
+
+Context-specific qualifications stay beside the information they qualify: camera stills older than 3 h have an amber “not updating” caption; unknown capture times and stream-player status remain explicit. UDOT camera request time is not capture time. Noncurrent travel measurements retain an amber “Not live” explanation and muted values. Resort road notices older than 24 h are omitted. Dashboard polling errors, or more than 3 min since the last successful response, produce a global connection banner. Ensemble AI inputs retain their stricter eligibility checks. These rules are independent of badge presentation.
 
 ## Design
 
@@ -129,7 +144,7 @@ Mobile-first and light by default, with a full dark theme chosen by the masthead
 - **One type scale.** `src/app/globals.css` defines size tokens (display, h2, title, h3, prose, body, meta, caption, label) and every page uses them: page titles are the display size, section headings h2, item names (resort names, the Daily Snow teaser title) the title size, timestamps and notes caption. Add a token rather than a new pixel size.
 - **One page pattern.** Each page is a title with a muted subtitle, its sections, and its source line(s) at the foot (freshness chip, source time, last check, attribution). Freshness chips live in source lines and resort headers, not mid-sentence. The Snowfall table has no chips in its rows; its footer, just under the last row, shows the worst resort's chip on the left, with the oldest "Last successful check" when all are current or the resorts in each state otherwise, and the value legend on the right; the report-time column is right-aligned to the same edge.
 - **No card chrome.** Long-form pages (resort reports, Daily Snow) are page content: one reading width, no borders, sections separated by space. The pale panel fill is reserved for summaries: the Daily Snow teaser (reaching into the page gutters, edge-to-edge on phones), the next-storm box, the road-status box, resort snow tiles and code-drawn charts. Photos and plume images stand on their own.
-- **Data marks.** Measured values are snow-blue, zeros gray; inch and degree marks are raised to the cap line. Freshness and AI chips carry color (green fresh, amber aging, red stale, blue AI). The AI resort pick is an accent line spanning its table row and reasoning row.
+- **Data marks.** Measured values are snow-blue, zeros gray; inch and degree marks are raised to the cap line. Status chips share semantic tones (green current, amber old/delayed, red unavailable/confirmed failure, neutral unknown); AI provenance stays blue. The AI resort pick is an accent line spanning its table row and reasoning row.
 - **Snowfall windows.** Every resort shows the same windows in the same order, under our labels (Overnight, 12 h, 24 h, 48 h, 72 h, 7 days, Storm, Season; `SNOW_LABEL` in `src/components/sections/resort-display.ts`). A window the resort doesn’t publish keeps its slot as “—”. On resort pages the resort’s own wording appears only where its window differs (Alta’s 12 h for overnight, Solitude’s “since lifts closed”); the Snowfall table shows no note under its values, since its column headers name the windows (“Overnight / 12 h”). Source notes that cover several windows are listed once. Values are never derived: each number is the resort’s own.
 - **Notices.** Resort alerts and road notices share one compact list (`NoticeList` in `ui.tsx`): title and text as one sentence, source and time beneath, most severe first. On resort pages they sit under the jump links, so the header block is identical on every resort.
 - **Phones.** One breakpoint (900px). The snowfall table shows each resort as a name line (with its report time), its 24 h total as a headline, and the other windows on one line of text, and charts redraw at the screen width, so the NWS forecast table and six-hour snowfall charts scroll inside their own boxes.

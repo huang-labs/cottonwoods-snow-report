@@ -4,7 +4,7 @@ import type { ApiSource, Metric, ReportResponse, ResortReport, SnowfallSet, Sour
 import { sectionHref } from "@/lib/sections";
 import { formatAge, formatDenver } from "@/lib/time";
 import { DailySnowTeaser } from "../dailysnow/DailySnow";
-import { FRESHNESS_TEXT, FreshnessBadge, MetricValue } from "../ui";
+import { FRESHNESS_TEXT, FreshnessBadge, MetricValue, StatusBadge } from "../ui";
 import { summarizeFreshness } from "./freshness-summary";
 import { newSnowKey, SNOW_LABEL } from "./resort-display";
 
@@ -151,7 +151,9 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
                       {pick.summary && <p className="muted">{pick.plan}</p>}
                       {!!pick.caveats.length && <p className="recommendation-row__caveats">{pick.caveats.join(" · ")}</p>}
                       <div className="recommendation-row__meta">
-                        AI · {pick.model ?? "Model not recorded"} · For {pick.targetDate} · Updated {formatDenver(pick.generatedAt, now)}{pick.outdated ? " · Outdated" : ""}{pick.failing ? " · Updates failing" : ""}
+                        AI · {pick.model ?? "Model not recorded"} · For {pick.targetDate} · Updated {formatDenver(pick.generatedAt, now)}
+                        {pick.outdated && <StatusBadge tone="warn">Recommendation needs updating</StatusBadge>}
+                        {pick.failing && <StatusBadge tone="bad">Updates failing</StatusBadge>}
                       </div>
                     </div>
                   </td>

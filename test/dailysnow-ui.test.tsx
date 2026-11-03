@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { clearArchivedPosts } from "@/components/dailysnow/archive";
-import { DailySnowPage } from "@/components/dailysnow/DailySnow";
+import { DailySnowPage, DailySnowTeaser } from "@/components/dailysnow/DailySnow";
 import { RegionalPage } from "@/components/sections/RegionalPage";
 import { buildReport } from "@/lib/report";
 import type { ApiDailySnow, ApiRecommendation } from "@/lib/types";
@@ -54,9 +54,20 @@ it("shows the post as page content with the AI badge, sections and figures", () 
   expect(screen.getByText(/AI-generated from NWS forecasts.*GLM 5\.3 Flash/)).toBeTruthy();
 });
 
-it("marks an old post as outdated", () => {
-  render(<DailySnowPage report={report({ ...post, outdated: true, failing: true })} now={now} />);
-  expect(screen.getByText(/Outdated · Today's post failed/, { selector: ".dailysnow__warn" })).toBeTruthy();
+it("uses the same publication-delay badge in the teaser and latest article", () => {
+  const delayed: ApiDailySnow = { ...post, outdated: true, failing: true, publicationStatus: "delayed" };
+  render(<><DailySnowTeaser post={delayed} now={now} /><DailySnowPage report={report(delayed)} now={now} /></>);
+  const badges = screen.getAllByText("Latest edition delayed");
+  expect(badges).toHaveLength(2);
+  expect(badges.every((b) => b.className === "badge badge--warn")).toBe(true);
+  expect(screen.queryByText(/Outdated|Today's post failed/)).toBeNull();
+});
+
+it.each(["scheduled", "pending", "paused"] as const)("dates the latest edition without a warning when publication is %s", (publicationStatus) => {
+  const older = { ...post, outdated: true, publicationStatus };
+  render(<><DailySnowTeaser post={older} now={now} /><DailySnowPage report={report(older)} now={now} /></>);
+  expect(screen.queryByText("Latest edition delayed")).toBeNull();
+  expect(screen.getAllByText(/Posted Yesterday|Posted Today/)).toHaveLength(2);
 });
 
 it("waits for the first post", () => {
@@ -65,7 +76,7 @@ it("waits for the first post", () => {
 });
 
 it("opens an archived post and returns to the latest", async () => {
-  const older: ApiDailySnow = { ...post, date: "2026-10-31", title: "Storm Arrives", outdated: true };
+  const older: ApiDailySnow = { ...post, date: "2026-10-31", title: "Storm Arrives", outdated: true, publicationStatus: "delayed" };
   const fetchMock = vi.fn(async () => new Response(JSON.stringify(older), { headers: { "content-type": "application/json" } }));
   vi.stubGlobal("fetch", fetchMock);
   render(<DailySnowPage report={report(post)} now={now} />);
@@ -75,6 +86,7 @@ it("opens an archived post and returns to the latest", async () => {
   expect(fetchMock).toHaveBeenCalledWith("/api/daily-snow?date=2026-10-31");
   expect(window.location.search).toBe("?date=2026-10-31");
   expect(screen.getByText(/· Archive/)).toBeTruthy();
+  expect(screen.queryByText("Latest edition delayed")).toBeNull();
   // Re-query: the nav re-renders (older link becomes the return link) with the archived post.
   const navAfter = within(document.querySelector<HTMLElement>(".dailysnow__nav")!);
   fireEvent.click(navAfter.getByRole("button", { name: /Storm Underway/ }));
@@ -115,7 +127,7 @@ it("shows the recent posts in a left rail beside the article, today first, at mo
   // Counts posts, not days: a day without a post must not make the heading wrong.
   expect(rail.querySelector(".dailysnow__history-heading")?.textContent).toBe("Recent posts");
   const entries = [...rail.querySelectorAll(".dailysnow__history-entry")];
-  expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-date")?.textContent)).toEqual(["Today", "Sat, Oct 31", "Fri, Oct 30"]);
+  expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-date")?.textContent)).toEqual(["Latest · Sun, Nov 1", "Sat, Oct 31", "Fri, Oct 30"]);
   // The live post is today's entry — marked active at rest — and not repeated from the archive.
   expect(entries[0].getAttribute("data-active")).toBe("true");
   expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-title")?.textContent)).toEqual(["Storm Underway", "Storm Arrives", "Snow Showers Return"]);
@@ -237,7 +249,8 @@ it("keeps a previous resort pick visible with its update warnings", () => {
   render(<RegionalPage report={{ ...report(post), recommendation: { ...recommendation, outdated: true, failing: true } }} now={now} />);
   expect(screen.getByRole("generic", { name: "AI recommendation reasoning" })).toBeTruthy();
   expect(screen.getByText("Alta today")).toBeTruthy();
-  expect(screen.getByText(/Outdated · Updates failing/)).toBeTruthy();
+  expect(screen.getByText("Recommendation needs updating")).toBeTruthy();
+  expect(screen.getByText("Updates failing")).toBeTruthy();
   expect(screen.queryByText("AI pick")).toBeNull();
 });
 

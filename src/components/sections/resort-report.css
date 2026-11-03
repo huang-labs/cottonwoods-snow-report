@@ -303,7 +303,7 @@
   font-size: var(--fs-label);
 }
 .rcam__time--stale {
-  color: var(--bad);
+  color: var(--warn);
 }
 
 @media (max-width: 900px) {

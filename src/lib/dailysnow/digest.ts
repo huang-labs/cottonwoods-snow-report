@@ -164,6 +164,25 @@ function figureCandidates(snapshot: Snapshot, nws: NwsPayload | null, numbers: D
   return out;
 }
 
+/** The same activity gate serves publication and its public availability notice. */
+export function dailySnowActivity(snapshot: Snapshot, now: Date, base = buildDigest(snapshot, snapshot.recommendation?.resortLastOperatingAt ?? {}, now)) {
+  const nws = (snapshot.sources.nws?.payload ?? null) as NwsPayload | null;
+  const maxOf = (xs: Array<number | null>) => Math.max(0, ...xs.map((x) => x ?? 0));
+  const reports = RESORTS.map((r) => snapshot.sources[r.id]?.payload as ResortReport | null);
+  const recent = maxOf(reports.flatMap((r) => (r ? [reported(r.snowfall.overnight), reported(r.snowfall.h12), reported(r.snowfall.h24)] : [])));
+  const recent48 = Math.max(recent, maxOf(reports.flatMap((r) => (r ? [reported(r.snowfall.h48), reported(r.snowfall.storm)] : []))));
+  const anyInSeason = base.resorts.some((r) => r.inSeason);
+  const snowAhead = (nws?.points ?? []).some((p) => (snowNext(p, now, 7 * 24) ?? 0) >= 1);
+  const worthPosting = anyInSeason || snowAhead || recent48 > 0;
+  // Missing/delayed inputs cannot establish an intentional quiet-day skip. This
+  // affects the public notice only; model eligibility keeps the original gate.
+  const inputsUsable = [...RESORTS.map((r) => r.id), "nws" as const].every((id) => {
+    const freshness = classify(SOURCE_BY_ID[id], snapshot.sources[id], now).freshness;
+    return freshness === "current" || freshness === "time-unknown";
+  });
+  return { recent, recent48, worthPosting, publicationExpected: worthPosting || !inputsUsable };
+}
+
 export function buildDailyDigest(snapshot: Snapshot, previous: DailySnowPost | null, history: DailySnowHistoryEntry[], now: Date): DailyBuild {
   const date = denverDate(now);
   const base = buildDigest(snapshot, snapshot.recommendation?.resortLastOperatingAt ?? {}, now);
@@ -188,9 +207,7 @@ export function buildDailyDigest(snapshot: Snapshot, previous: DailySnowPost | n
   };
 
   const maxOf = (xs: Array<number | null>) => Math.max(0, ...xs.map((x) => x ?? 0));
-  const reports = RESORTS.map((r) => snapshot.sources[r.id]?.payload as ResortReport | null);
-  const recent = maxOf(reports.flatMap((r) => (r ? [reported(r.snowfall.overnight), reported(r.snowfall.h12), reported(r.snowfall.h24)] : [])));
-  const recent48 = Math.max(recent, maxOf(reports.flatMap((r) => (r ? [reported(r.snowfall.h48), reported(r.snowfall.storm)] : []))));
+  const { recent, recent48, worthPosting } = dailySnowActivity(snapshot, now, base);
   const next12 = maxOf((nws?.points ?? []).map((p) => snowNext(p, now, 12)));
   const next72 = maxOf(numbers.canyons.map((c) => c.next72In));
   const { phase, reason } = phaseOf(recent, recent48, next12, next72);
@@ -246,7 +263,5 @@ export function buildDailyDigest(snapshot: Snapshot, previous: DailySnowPost | n
     ...buildContinuity(previous, history, numbers, phase, date, now),
     figures: figures.map((f) => ({ id: f.figure.id, caption: f.figure.caption, shows: f.describe })),
   };
-  const anyInSeason = base.resorts.some((r) => r.inSeason);
-  const snowAhead = numbers.canyons.some((c) => (c.next7dIn ?? 0) >= 1);
-  return { digest, numbers, figures, worthPosting: anyInSeason || snowAhead || recent48 > 0 };
+  return { digest, numbers, figures, worthPosting };
 }

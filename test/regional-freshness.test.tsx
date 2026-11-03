@@ -60,7 +60,7 @@ it("orders mixed problems from most to least severe", () => {
   expect(line?.querySelector(".badge--stale")).not.toBeNull();
   const text = line?.textContent ?? "";
   expect(line?.textContent).not.toContain("Source failing:");
-  const order = ["Solitude", "Old report: Brighton", "Report time unknown: Alta", "Current: Snowbird"].map((t) => text.indexOf(t));
+  const order = ["Solitude", "Old report: Brighton", "Time unknown: Alta", "Current: Snowbird"].map((t) => text.indexOf(t));
   expect(order.every((i) => i >= 0)).toBe(true);
   expect([...order].sort((a, b) => a - b)).toEqual(order);
 });

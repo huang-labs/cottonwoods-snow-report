@@ -483,3 +483,41 @@ New files: `src/lib/og/style.tsx`, `src/lib/og/image-fonts.ts`, `src/lib/og/bran
 - **Fix:** `RegionalPage.tsx` uses Next.js `Link` for all four resort names. `ResortReportPage.tsx` uses the same component for its Forecast link, which had the same reload behavior. Existing hash jump links and external source links keep their behavior. The shared poller, source adapters and freshness rules are unchanged. Direct visits still need the initial report request.
 - **Regression:** five app-shell tests exercise the four table links and the Forecast link through the mocked router boundary, then render the destination in the existing shell and assert no loading screen or extra report fetch. All five failed before the change and passed afterward. The browser check covers the real Next.js router, which jsdom does not mount.
 - **Verified:** 233 tests across 18 files, typecheck, static build and Worker smoke (9 pages) pass. In the built local Worker seeded through fixture collection, all four table-to-resort transitions at 1280 px and 390 px retained the document, showed no loading state, and made zero navigation-triggered report requests. The phone Forecast transition also retained the report; resort pages had no horizontal document overflow. Production KV was not written.
+
+## 2026-11-03 — Consistent freshness and publication notices
+
+**Decision.** Keep source-specific age windows and data eligibility rules, and separate collection recency, upstream report age and editorial publication availability. This supersedes older notes describing red stale badges, amber unknown times, generic editorial “Outdated” text and a history entry called “Today”.
+
+**Source presentation.** `src/lib/freshness.ts` owns labels, explanations and tones. `StatusBadge` shares the existing chip geometry and theme tokens: green Current, amber Old report / Updates delayed, neutral Time unknown, red Unavailable / confirmed update failure, blue AI provenance. The API's existing freshness enum remains unchanged. A stale collection note no longer asserts that the source is failing: the classifier establishes elapsed time, not the cause. Confirmed failed latest attempts remain separate. The global required-feed banner groups unavailable feeds separately from delayed feeds with retained payloads. Camera stills older than 3 h use amber captions; contextual travel-time and connection explanations keep their existing placements.
+
+**Editorial notices.** The resort pick retains its target-day/12-hour limit and three-failure threshold. Either condition removes the row endorsement while keeping the reasoning; the badges say “Recommendation needs updating” and “Updates failing”. Daily Snow shows one shared “Latest edition delayed” badge in its teaser and latest article when an expected replacement misses its publication opportunity. Yesterday's edition is normal before 6 AM Denver, then pending through the existing 6–10 AM attempt window. Exhausting three attempts or the daily call budget ends that opportunity early. An in-flight final attempt remains pending through its existing lease, even after 10 AM. Editions older than yesterday stay delayed overnight. Denver calendar arithmetic handles spring and fall DST changes. Archived views keep their date and Archive label without a publication warning; the history rail says Latest plus the actual edition date.
+
+**Quiet days and API.** The existing season/recent-snow/forecast-snow gate is shared through `dailySnowActivity`, without changing model eligibility or computed facts. Only usable resort and NWS inputs can establish an intentional quiet-day publication pause; missing or delayed inputs cannot suppress the delay notice. `/api/report` adds optional `dailySnow.publicationStatus` (current/scheduled/pending/delayed/paused). Existing `outdated` and `failing` flags remain compatible, and archive responses omit the new field. This is pure classification on reads: no source calls, model requests, KV writes or schema migration. A missing first post keeps its existing empty state.
+
+**Validation.** 249 tests in 20 files pass, including new Denver midnight/window boundaries, retry and call-cap exhaustion, an attempt crossing the cutoff, prior-day failures, older editions, quiet/missing inputs, both DST changes, archive suppression, matching teaser/article badges, required-feed grouping and retained recommendation warnings. Typecheck, static build and `git diff --check` pass. The workerd smoke passes all nine pages, navigation assets, API methods, KV, both share PNGs, metadata and HEAD responses. No live model inference was run; prompts and eligibility were not retuned.
+
+Browser checks used this worktree's local Worker on port 8794 with an empty KV and local copies of the real production API report and November 1 Daily Snow archive. Delayed/missing source records and a clearly labeled retained recommendation fixture exercised warning states. No production writes were made. Checked Snowfall, Daily Snow, Alta, Roads, Weather and Plumes at 390×844 and 1366×768; Snowfall also at 320×740. Light and dark status colors were checked. No page-width overflow occurred. Fixed the phone teaser's timestamp/status alignment and allowed the longer history date to wrap as a unit. Archived figure assets were not copied into local KV; this validates the article/status layout, not local figure availability. Browser screenshots stayed outside the repository.
+
+**Existing files touched and why:**
+
+- `src/lib/report.ts`: factual delayed-collection note and optional publication classification in the report response.
+- `src/lib/types.ts`: clarify the existing stale state and add the optional editorial status type.
+- `src/lib/dailysnow/digest.ts`: share the unchanged activity gate with public publication availability; guard quiet-day claims against unusable inputs.
+- `src/lib/dailysnow/schedule.ts`: update the publication-delay comment; cadence, limits and execution are unchanged.
+- `src/components/ui.tsx`: reusable status badge and source label/tone mapping.
+- `src/components/dashboard-context.tsx`: distinguish unavailable and delayed required feeds.
+- `src/components/sections/RegionalPage.tsx`: explicit recommendation badges, preserving endorsement suppression.
+- `src/components/dailysnow/DailySnow.tsx`: identical latest-publication badge in teaser/article; preserve archive treatment.
+- `src/components/dailysnow/HistoryRail.tsx`: Latest plus edition date instead of unconditional Today.
+- `src/app/globals.css`: shared semantic tones and wrapping/alignment for editorial metadata and feed groups.
+- `src/components/sections/resort-report.css`: amber for old camera images.
+- `test/collect.test.ts`: distinguish elapsed collection age from an unverified failure cause.
+- `test/app-shell.test.tsx`: updated required-feed banner rendering.
+- `test/regional-freshness.test.tsx`: updated unknown-time wording in the existing footer grouping checks.
+- `test/recommend-ui.test.tsx`: retained recommendation warnings and absent endorsement.
+- `test/dailysnow-ui.test.tsx`: shared badges, expected publication states, archive suppression and actual latest date.
+- `test/dailysnow.test.ts`: report-level activity/publication integration and compatible old flags.
+- `README.md`: complete state/threshold/placement/effect reference, including the optional API field.
+- `docs/IMPLEMENTATION_NOTES.md`: this decision, scope and verification record.
+
+**New files:** `src/lib/freshness.ts`, `src/lib/dailysnow/publication.ts`, `test/freshness-ui.test.tsx`, `test/publication-status.test.ts`. No source adapters, source thresholds, inference schedules, storage keys or routes changed. Revert restores prior labels and publication notices without a data migration.

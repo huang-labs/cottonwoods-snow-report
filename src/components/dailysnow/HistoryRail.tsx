@@ -18,7 +18,7 @@ function entriesFor(live: ApiDailySnow): Entry[] {
 }
 
 /** One clickable past post. `active` marks the post on screen: it gets the
-    accent bar and the panel fill; "Today" still names the live entry. */
+    accent bar and the panel fill; "Latest" names the live entry regardless of its date. */
 function HistoryEntry({ entry, active, onPick, onIntent }: { entry: Entry; active: boolean; onPick: Pick; onIntent?: Pick }) {
   const date = entry.live ? null : entry.date;
   return (
@@ -31,7 +31,7 @@ function HistoryEntry({ entry, active, onPick, onIntent }: { entry: Entry; activ
       onFocus={() => onIntent?.(date)}
     >
       <span className="dailysnow__history-entry-top">
-        <span className="dailysnow__history-entry-date">{entry.live ? "Today" : postDate(entry.date)}</span>
+        <span className="dailysnow__history-entry-date">{entry.live ? `Latest · ${postDate(entry.date)}` : postDate(entry.date)}</span>
         {entry.phase && <span className="dailysnow__history-entry-phase">{PHASE_LABEL[entry.phase]}</span>}
       </span>
       <span className="dailysnow__history-entry-title">{entry.title}</span>
