@@ -255,7 +255,7 @@ a { color: var(--accent); }
 .dailysnow__summary { font-size: 19px; line-height: 1.5; font-weight: 500; color: var(--text); }
 .dailysnow__article { margin-top: 8px; }
 .dailysnow__section h2 { margin: 40px 0 0; }
-.dailysnow__section p { margin: 14px 0 0; line-height: 1.7; }
+.dailysnow__section > div > p { margin: 14px 0 0; line-height: 1.7; }
 .dailysnow-figure { margin: 28px 0; }
 .dailysnow-figure--chart { padding: 16px; border-radius: 8px; background: var(--panel); }
 .dailysnow-figure img, .dailysnow-figure .plume__svg { display: block; width: 100%; height: auto; }
