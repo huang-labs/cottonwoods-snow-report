@@ -123,7 +123,6 @@ export function DailySnowPage({ report, now }: { report: ReportResponse; now: Da
       <div className="dailysnow-layout">
         <HistoryRail live={current} viewed={viewed} onPick={pick} onIntent={prefetchArchivedPost} />
         <article className="dailysnow" aria-label="Daily Snow" aria-busy={loading || undefined}>
-          <ArchiveNav post={post} onPick={pick} position="top" />
           <header className="dailysnow__header">
             <Eyebrow post={post} now={now} archived={post.date !== current?.date} />
             <h1 className="dailysnow__title">{readerWording(post.title)}</h1>
@@ -131,7 +130,7 @@ export function DailySnowPage({ report, now }: { report: ReportResponse; now: Da
           </header>
           <Article post={post} />
           <Footer post={post} />
-          <ArchiveNav post={post} onPick={pick} position="bottom" />
+          <ArchiveNav post={post} onPick={pick} />
         </article>
       </div>
     </section>

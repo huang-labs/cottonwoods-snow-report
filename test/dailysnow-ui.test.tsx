@@ -126,30 +126,27 @@ it("opens an archived post and returns to the latest", async () => {
   expect(window.location.search).toBe("");
 });
 
-it("offers matching date navigation before the heading and after the article", () => {
+it("offers date navigation only after the article", () => {
   const edition: ApiDailySnow = { ...post,
     older: { date: "2026-10-31", title: "Storm Arrives" },
     newer: { date: "2026-11-02", title: "Storm Exits" },
   };
   render(<DailySnowPage report={report(edition)} now={now} />);
-  const top = screen.getByRole("navigation", { name: "Daily Snow archive" });
+  expect(screen.queryByRole("navigation", { name: "Daily Snow archive" })).toBeNull();
+  expect(screen.getAllByRole("navigation")).toHaveLength(1);
   const bottom = screen.getByRole("navigation", { name: "Daily Snow archive (end of article)" });
-  const heading = screen.getByRole("heading", { level: 1 });
-  expect(top.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(document.querySelector(".dailysnow__footer")!.compareDocumentPosition(bottom) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  for (const nav of [top, bottom]) {
-    const previous = within(nav).getByRole("button", { name: "Previous post: Sat, Oct 31: Storm Arrives" });
-    const next = within(nav).getByRole("button", { name: "Next post: Mon, Nov 2: Storm Exits" });
-    expect(previous.textContent).toBe("← Sat, Oct 31");
-    expect(next.textContent).toBe("Mon, Nov 2 →");
-  }
+  const previous = within(bottom).getByRole("button", { name: "Previous post: Sat, Oct 31: Storm Arrives" });
+  const next = within(bottom).getByRole("button", { name: "Next post: Mon, Nov 2: Storm Exits" });
+  expect(previous.textContent).toBe("← Sat, Oct 31");
+  expect(next.textContent).toBe("Mon, Nov 2 →");
 });
 
 it("omits empty navigation and only shows the available direction at archive ends", () => {
   const { rerender } = render(<DailySnowPage report={report({ ...post, archive: [] })} now={now} />);
-  expect(screen.queryByRole("navigation", { name: "Daily Snow archive" })).toBeNull();
+  expect(screen.queryByRole("navigation")).toBeNull();
   rerender(<DailySnowPage report={report({ ...post, archive: [], newer: { date: "2026-11-02", title: "Storm Exits" } })} now={now} />);
-  const nav = within(screen.getByRole("navigation", { name: "Daily Snow archive" }));
+  const nav = within(screen.getByRole("navigation", { name: "Daily Snow archive (end of article)" }));
   expect(nav.queryByRole("button", { name: /Previous post/ })).toBeNull();
   expect(nav.getByRole("button", { name: /Next post/ })).toBeTruthy();
 });
