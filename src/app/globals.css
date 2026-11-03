@@ -221,6 +221,10 @@ a { color: var(--accent); }
    dividers and hover highlights share one width; first/last-cell padding keeps the
    text on the page's aligned edge. */
 .snow-table { width: calc(100% + 2 * var(--bleed)); margin: 0 calc(-1 * var(--bleed)); border-collapse: collapse; font-size: var(--fs-meta); }
+/* The table's first row brings its own top padding, which the teaser's panel edge
+   doesn't, so the header sits closer to the table here: the intro-to-table gap then
+   reads the same as the teaser-to-title gap above it. */
+.page--regional > .page__header { margin-bottom: calc(15px - var(--page-gap)); }
 .snow-table th, .snow-table td { text-align: left; padding: 18px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .snow-table :is(th, td):first-child { padding-left: var(--bleed); }
 .snow-table :is(th, td):last-child { padding-right: var(--bleed); }
@@ -433,6 +437,7 @@ a { color: var(--accent); }
      The value cells stay for screen readers; the summary is their visual copy. */
   .snow-table, .snow-table tbody, .snow-table tr { display: block; }
   .snow-table thead { display: none; }
+  .page--regional > .page__header { margin-bottom: calc(10px - var(--page-gap)); }
   .snow-table .row--primary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; padding: 16px var(--bleed); border-bottom: 1px solid var(--line); }
   .snow-table tbody tr.row--primary > :is(th, td) { border: 0; padding: 0; }
   .snow-table .row--primary > th { grid-row: 1; grid-column: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
