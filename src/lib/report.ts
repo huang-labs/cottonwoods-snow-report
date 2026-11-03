@@ -80,6 +80,10 @@ export function publicRecommendation(state: RecommendationState | undefined, now
 /** Consecutive failed Daily Snow attempts before the post says updates are failing. */
 export const DAILY_SNOW_FAILING_AFTER = 2;
 
+/** Recent posts indexed in the snapshot and listed in every response's `archive`. Navigation
+    doesn't depend on it: each post links its neighbors, and every post stays in KV. */
+export const DAILY_SNOW_ARCHIVE_POSTS = 10;
+
 /** A Daily Snow post (current or archived) as the API serves it. */
 export function publicDailySnow(post: DailySnowPost | null | undefined, state: DailySnowState | undefined, now: Date): ApiDailySnow | null {
   if (!post) return null;
@@ -88,7 +92,7 @@ export function publicDailySnow(post: DailySnowPost | null | undefined, state: D
     ...post,
     outdated: post.date !== today,
     failing: post.date !== today && (state?.consecutiveFailures ?? 0) >= DAILY_SNOW_FAILING_AFTER,
-    archive: (state?.history ?? []).map((h) => ({ date: h.date, title: h.title })),
+    archive: (state?.history ?? []).slice(0, DAILY_SNOW_ARCHIVE_POSTS).map((h) => ({ date: h.date, title: h.title })),
   };
 }
 

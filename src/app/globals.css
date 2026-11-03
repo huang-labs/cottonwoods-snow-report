@@ -275,6 +275,29 @@ a { color: var(--accent); }
 .dailysnow__nav button, .dailysnow__back { background: transparent; border: 0; padding: 12px 0; color: var(--accent); cursor: pointer; text-align: left; font-size: var(--fs-meta); font-weight: 650; }
 .dailysnow__nav button:hover, .dailysnow__back:hover { text-decoration: underline; }
 
+/* History rail: recent posts in a sticky left rail beside the article on wide
+   screens; phones render no rail and use the archive links instead. Every entry
+   carries a 3px left border with square left corners, so the accent bar on the
+   entry whose post is on screen spans the full height of its fill. */
+.dailysnow-layout { display: flex; justify-content: center; align-items: start; gap: 40px; }
+.dailysnow-layout > .dailysnow { flex: 0 1 720px; min-width: 0; margin: 0; }
+.dailysnow__history { display: none; flex: 0 0 240px; position: sticky; top: 20px; max-height: calc(100dvh - 40px); overflow-y: auto; }
+.dailysnow__history-heading { margin: 0 0 8px; font-size: var(--fs-label); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.dailysnow__history-list { display: flex; flex-direction: column; gap: 2px; }
+.dailysnow__history-entry { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; background: transparent; border: 0; border-left: 3px solid transparent; border-radius: 0 8px 8px 0; padding: 10px 12px 10px 9px; cursor: pointer; }
+@media (hover: hover) {
+  .dailysnow__history-entry:hover { background: var(--panel); }
+}
+.dailysnow__history-entry[data-active] { background: var(--panel-2); border-left-color: var(--accent); }
+.dailysnow__history-entry-top { display: flex; align-items: baseline; gap: 8px; }
+.dailysnow__history-entry-date { font-weight: 700; font-size: var(--fs-meta); }
+.dailysnow__history-entry-phase { color: var(--accent); font-size: var(--fs-label); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 650; }
+.dailysnow__history-entry-title { color: var(--muted); font-size: var(--fs-caption); line-height: 1.45; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.dailysnow__history-entry[data-active] .dailysnow__history-entry-title { color: var(--text); }
+@media (min-width: 901px) {
+  .dailysnow__history { display: block; }
+}
+
 /* ---- Weather ---- */
 .weather-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px 40px; }
 .weather-point { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
