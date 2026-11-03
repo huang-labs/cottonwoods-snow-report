@@ -14,11 +14,11 @@ The owner builds this dashboard with several AI agents working on features in pa
 
 ## Product and design
 
-- The dashboard serves phones, desktop browsers and a TV slideshow. Check the affected modes for layout changes, including ordinary laptop widths. Browse pages can scroll; TV slides need a deliberate viewport budget. Long-form, read-on-a-phone pages stay out of the slideshow (`slideshow: false` in `src/lib/sections.ts`).
+- The dashboard serves phones and desktop browsers. Check layout changes at phone widths and at ordinary laptop widths.
 - Long-form content is page content: no card border or panel. Use card styling only for summary cards (the resort pick, the Daily Snow teaser). Give an article one reading width and let its children fill it, so every edge lines up.
 - Label AI output wherever it appears (the `badge--ai` badge, plus a footer naming the model), and keep it visibly separate from measured or forecast data.
 - Keep resort pages consistent in structure while honoring each resort's available data. Preserve source-specific measurement windows, report/observation times, and the distinction between reported zero, not reported and unavailable.
-- Share data rules and reusable rendering. Keep browse and TV markup separate where their needs differ, and choose the presentation in the section renderer rather than scattering mode checks through layouts. Scope feature styles so they don't change unrelated pages or the other mode.
+- Share data rules and reusable rendering. Scope feature styles so they don't change unrelated pages.
 - Local times are America/Denver. Cloudflare crons are UTC only, so schedule local-time work in code (see `src/lib/dailysnow/schedule.ts`) and test it across daylight-saving changes.
 - Before changing source adapters or freshness semantics, read [docs/IMPLEMENTATION_NOTES.md](docs/IMPLEMENTATION_NOTES.md) and the relevant fixtures and tests. [docs/IMPLEMENTATION_BRIEF.md](docs/IMPLEMENTATION_BRIEF.md) holds the broader product requirements.
 
@@ -51,7 +51,7 @@ The resort pick (`src/lib/recommend/`) and Daily Snow (`src/lib/dailysnow/`) set
 ## Validation
 
 - Application code: run the relevant tests and `npm run typecheck`. Add `npm run build` when routing, styling integration or build behavior changes. Exercise missing or stale data and responsive behavior when affected.
-- Adding or reordering a section: `test/playback.test.tsx` asserts the section list and slideshow order.
+- Adding or reordering a section: `test/app-shell.test.tsx` asserts the section list and order.
 - Documentation-only changes need a link and content review and `git diff --check`, not application tests.
 
 <!-- BEGIN:nextjs-agent-rules -->
