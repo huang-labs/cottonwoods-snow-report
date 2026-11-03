@@ -22,7 +22,7 @@
   --fs-h2: 22px;
   --fs-title: 20px;
   --fs-h3: 17px;
-  --fs-prose: 17px;
+  --fs-prose: 16px;
   --fs-body: 16px;
   --fs-meta: 14px;
   --fs-caption: 13px;
@@ -252,10 +252,10 @@ a { color: var(--accent); }
 .dailysnow__posted { color: var(--muted); font-size: var(--fs-caption); }
 .dailysnow__warn { color: var(--warn); }
 .dailysnow__title { margin-top: 4px; }
-.dailysnow__summary { font-size: 19px; line-height: 1.5; font-weight: 500; color: var(--text); }
+.dailysnow__summary { font-size: 18px; line-height: 1.5; font-weight: 500; color: var(--text); }
 .dailysnow__article { margin-top: 8px; }
 .dailysnow__section h2 { margin: 40px 0 0; }
-.dailysnow__section p { margin: 14px 0 0; line-height: 1.7; }
+.dailysnow__section > div > p { margin: 14px 0 0; line-height: 1.6; }
 .dailysnow-figure { margin: 28px 0; }
 .dailysnow-figure--chart { padding: 16px; border-radius: 8px; background: var(--panel); }
 .dailysnow-figure img, .dailysnow-figure .plume__svg { display: block; width: 100%; height: auto; }
@@ -410,6 +410,6 @@ a { color: var(--accent); }
   .dailysnow-teaser { border-radius: 0; grid-template-columns: minmax(0, 1fr); }
   .dailysnow-teaser__time, .dailysnow-teaser__summary, .dailysnow-teaser__more { grid-column: 1; grid-row: auto; text-align: left; }
 
-  .dailysnow__summary { font-size: 18px; }
+  .dailysnow__summary { font-size: 17px; }
   .dailysnow-figure--chart { padding: 12px; }
 }
