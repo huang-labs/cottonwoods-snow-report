@@ -383,3 +383,13 @@ The report-time column still shows each resort's report time, "checked … ago" 
 Files touched: new `src/components/sections/freshness-summary.ts`, `src/components/sections/RegionalPage.tsx` (row chip and value notes removed, `SnowTableFoot`, subtitle), `src/components/ui.tsx` (`FRESHNESS_TEXT` exported), `src/app/globals.css` (footer layout, unused `.legend`, `.cell-label` and `.snow-phone__note` rules removed, name margin when it has no chips), `test/regional-freshness.test.tsx` (new: footer rendering and `summarizeFreshness`), `test/resort-report-ui.test.tsx` (no notes under values) and `README.md` (design notes).
 
 Validation: 213 tests across 18 files, `npm run typecheck` and `npm run build` pass; the no-notes test fails against the previous component. Browser on the seeded local server: row heights as above, no horizontal overflow at 1366, 1024, 390 and 320px, the footer legend aligned to the page's right edge, and a mocked mixed-state footer at 1024px. Not run: dark mode (no new colors) and real-device Safari.
+
+## 2026-11-03 — Full-width page intros
+
+The `.page__sub` intro under each page title loses its `72ch` cap (561px at 14px). It now spans the header width, up to 1116px inside the 1180px page container, so on desktop each intro is a single line that lines up with the content below. On phones it wraps naturally.
+
+Natural widths at 14px: Regional 882px, Weather 798px, Roads 585px. Plumes was about 1236px with the longest date, so its last sentence is trimmed to "Times in MT (source charts use UTC); dashed lines mark midnight, the orange line is now." (about 1040px). It keeps the run code, both initialization times and the line legend. Text width is the viewport minus 64px, so all four are one line from about 1104px viewport width up. On narrower laptops, such as 1024px, Plumes takes two lines. New intros should stay under about 1050px at 14px.
+
+Files touched: `src/app/globals.css` (drops the cap) and `src/components/sections/PlumesPage.tsx` (intro wording).
+
+Validation: 213 tests across 18 files and `npm run typecheck` pass. In Chromium, Regional, Weather and Roads each render as one 1116px line at 1280px and 1366px, and as 3, 3 and 2 lines at 390px. Local KV had no plume data, so the Plumes intro was measured by injecting worst-case text ("Wed, Nov 26, 12:00 PM MT"). Not run: `npm run build`, real-device Safari.

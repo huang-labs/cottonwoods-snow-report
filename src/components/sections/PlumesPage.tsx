@@ -48,7 +48,7 @@ export function PlumesPage({ source, now }: { source: ApiSource; now: Date }) {
         <h1>Utah ensemble snow plumes</h1>
         {p && (
           <p className="page__sub">
-            Run <strong>{p.runCode}</strong> · initialized <strong>{formatDenver(p.initTime, now)} MT</strong> ({initLabel(p.initTime)}). Times are Mountain Time (the original charts are labelled in UTC); dashed lines mark midnight and the orange line is now.
+            Run <strong>{p.runCode}</strong> · initialized <strong>{formatDenver(p.initTime, now)} MT</strong> ({initLabel(p.initTime)}). Times in MT (source charts use UTC); dashed lines mark midnight, the orange line is now.
           </p>
         )}
       </header>
