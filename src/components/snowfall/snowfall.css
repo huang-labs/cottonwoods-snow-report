@@ -1,0 +1,15 @@
+.snowfall { min-width: 0; }
+.snowfall__heading { font-size: var(--fs-caption); color: var(--muted); margin: 0 0 12px; }
+.snowfall__scroll { overflow-x: auto; padding-bottom: 10px; }
+.snowfall__scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.snowfall__days, .snowfall__periods { list-style: none; padding: 0; margin: 0; display: grid; }
+.snowfall__days { width: 100%; }
+.snowfall__day { min-width: 0; text-align: center; border-right: 1px solid var(--line); }
+.snowfall__day:last-child { border-right: 0; }
+.snowfall__period { min-width: 0; text-align: center; }
+.snowfall__plot { height: 132px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+.snowfall__amount { font-size: 12px; white-space: nowrap; line-height: 20px; }
+.snowfall__bar { display: block; width: 60%; max-width: 32px; background: var(--accent); flex-shrink: 0; }
+.snowfall__time { color: var(--muted); font-size: 12px; }
+.snowfall__date { display: block; margin-top: 8px; font-size: var(--fs-caption); }
+.snowfall__note { color: var(--muted); font-size: var(--fs-caption); margin: 8px 0 0; }

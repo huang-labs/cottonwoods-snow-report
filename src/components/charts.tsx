@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { SixHourSnow } from "@/lib/types";
 
 const dayFmt = new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", weekday: "short" });
 const dayKeyFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Denver", year: "numeric", month: "2-digit", day: "2-digit" });
@@ -35,42 +34,6 @@ function Chart({ label, height, children }: { label: string; height: number; chi
 
 const TOP = 20; // room for value labels above the tallest bar
 const AXIS = 24; // day labels under the axis
-
-/** NWS 6-hour snowfall bars, a day label at each Mountain Time midnight. */
-export function SnowBars({ bars, label }: { bars: SixHourSnow[]; label: string }) {
-  const h = 120;
-  const maxSnow = Math.max(4, ...bars.map((b) => b.snowIn));
-  return (
-    <Chart label={label} height={TOP + h + AXIS}>
-      {(w) => {
-        const bw = w / Math.max(1, bars.length);
-        const gap = bw > 12 ? 2 : 1;
-        return (
-          <>
-            {bars.map((b, i) => {
-              const bh = (b.snowIn / maxSnow) * h;
-              return (
-                <g key={b.start}>
-                  {newDay(bars, i) && i * bw + 30 <= w && (
-                    <>
-                      <line x1={i * bw} x2={i * bw} y1={TOP} y2={TOP + h} className="chart__grid" />
-                      <text x={i * bw + 4} y={TOP + h + 17} className="chart__label">{dayFmt.format(new Date(b.start))}</text>
-                    </>
-                  )}
-                  <rect x={i * bw + gap} y={TOP + h - bh} width={bw - 2 * gap} height={Math.max(bh, b.snowIn > 0 ? 2 : 0)} className="chart__bar" />
-                  {b.snowIn >= 0.5 && bw >= 18 && (
-                    <text x={i * bw + bw / 2} y={TOP + h - bh - 5} textAnchor="middle" className="chart__value">{b.snowIn.toFixed(1)}</text>
-                  )}
-                </g>
-              );
-            })}
-            <line x1={0} x2={w} y1={TOP + h} y2={TOP + h} className="chart__axis" />
-          </>
-        );
-      }}
-    </Chart>
-  );
-}
 
 export interface SnowLevelSeries {
   canyon: string;

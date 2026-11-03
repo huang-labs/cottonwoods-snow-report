@@ -1,5 +1,6 @@
 import type { DailySnowFigure } from "@/lib/types";
-import { SnowBars, SnowLevel } from "../charts";
+import { SnowLevel } from "../charts";
+import { SnowfallChart } from "../snowfall/SnowfallChart";
 import { PlumePanelSvg } from "../PlumePanelSvg";
 
 /** Resort-reported totals as horizontal bars. */
@@ -41,7 +42,7 @@ export function Figure({ figure: f, postedAt }: { figure: DailySnowFigure; poste
   let body;
   switch (f.kind) {
     case "snow-bars":
-      body = <SnowBars bars={f.bars} label={f.caption} />;
+      body = <SnowfallChart bars={f.bars} label={f.caption} />;
       break;
     case "snow-level":
       body = <SnowLevel series={f.series} label={f.caption} />;
