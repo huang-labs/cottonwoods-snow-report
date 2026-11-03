@@ -40,6 +40,17 @@ it.each(["alta", "snowbird", "solitude", "brighton"])(
   },
 );
 
+it("capitalizes every lift and terrain status regardless of source casing", () => {
+  for (const id of ["alta", "snowbird", "solitude", "brighton"]) {
+    const { container } = render(renderSection(id, report, FIXTURE_NOW, null));
+    for (const span of container.querySelectorAll(".status-item__row span")) {
+      const label = (span.textContent ?? "").trim();
+      if (label) expect(label).toMatch(/^[A-Z]/);
+    }
+    cleanup();
+  }
+});
+
 it("keeps critical notices above snow and retains the full narrative, lift hours and terrain notes", () => {
   const base = report.sources.alta.payload as ResortReport;
   const narrative = "Detailed mountain report. ".repeat(40);
