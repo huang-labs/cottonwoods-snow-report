@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { runCollection } from "@/lib/collect";
 import { dailySnowFigureKey, dailySnowKey, emptyDailySnowState, planDailySnow } from "@/lib/dailysnow";
 import { buildContinuity, historyEntry } from "@/lib/dailysnow/continuity";
-import { buildDailyDigest, phaseOf } from "@/lib/dailysnow/digest";
+import { buildDailyDigest, dailySnowActivity, phaseOf, snowNext } from "@/lib/dailysnow/digest";
 import { allowedAmounts, buildModelInput, DAILY_SNOW_TIMEOUT_MS, SYSTEM_PROMPT, validateDailySnow } from "@/lib/dailysnow/llm";
 import { IN_FLIGHT_MS, MAX_ATTEMPTS, RETRY_AFTER_MS, shouldRunDailySnow } from "@/lib/dailysnow/schedule";
 import { inchAmountsIn, ungroundedInches } from "@/lib/ai/grounding";
@@ -90,6 +90,31 @@ describe("NWS forecast discussion", () => {
 });
 
 describe("digest", () => {
+  it("uses exact hourly coverage rather than five intersecting six-hour bars", () => {
+    const p = (snap().sources.nws!.payload as NwsPayload).points[0];
+    const now = new Date("2026-11-03T13:00:00Z");
+    const h = 3_600_000;
+    p.sixHourSnow = Array.from({ length: 5 }, (_, i) => ({ start: new Date(now.getTime() - h + i * 6 * h).toISOString(), snowIn: 1, snowLevelFt: null }));
+    delete p.hourlySnow;
+    expect(snowNext(p, now, 24)).toBeNull();
+    p.hourlySnow = Array.from({ length: 30 }, (_, i) => ({ start: new Date(now.getTime() - h + i * h).toISOString(), snowIn: 1 / 6 }));
+    expect(snowNext(p, now, 24)).toBe(4);
+    expect(snowNext(p, new Date(now.getTime() + 5 * 60_000), 24)).toBe(4);
+    p.hourlySnow.splice(5, 1);
+    expect(snowNext(p, now, 24)).toBeNull();
+  });
+  it("distinguishes covered zero from missing, duplicate, and partial coverage", () => {
+    const p = (snap().sources.nws!.payload as NwsPayload).points[0];
+    const now = new Date("2026-11-03T12:00:00Z");
+    p.hourlySnow = Array.from({ length: 24 }, (_, i) => ({ start: new Date(now.getTime() + i * 3_600_000).toISOString(), snowIn: 0 }));
+    expect(snowNext(p, now, 24)).toBe(0);
+    expect(snowNext(p, new Date(now.getTime() + 60_000), 24)).toBeNull();
+    p.hourlySnow[1] = p.hourlySnow[0];
+    expect(snowNext(p, now, 24)).toBeNull();
+    p.hourlySnow = [];
+    expect(snowNext(p, now, 24)).toBeNull();
+    expect(phaseOf(0, 0, null, null).reason).toContain("unavailable snowfall forecast");
+  });
   it("decides the storm phase in code", () => {
     expect(phaseOf(0, 0, 5, 12).phase).toBe("storm");
     expect(phaseOf(3, 3, 2, 4).phase).toBe("storm");
@@ -108,7 +133,9 @@ describe("digest", () => {
     expect(digest.weekday).toBe("Sunday");
     expect(digest.phase).toBe("storm");
     expect(numbers.canyons.map((c) => c.canyon)).toEqual(["LCC", "BCC"]);
-    expect(numbers.canyons[0].next7dIn).toBeGreaterThanOrEqual(numbers.canyons[0].next72In!);
+    expect(numbers.canyons[0].next24In).not.toBeNull();
+    // A truncated forecast horizon must not masquerade as a complete seven days.
+    expect(numbers.canyons[0].next7dIn).toBeNull();
     expect(digest.discussion?.sections[0].name).toBe("KEY MESSAGES");
     // Entries stored before posting times were kept are labeled by day.
     expect(digest.recentPosts[0].forecast[0]).toBe("LCC: 10″ in the 24 h and 16″ in the 72 h from Saturday morning; next storm 17″");
@@ -317,6 +344,37 @@ describe("posting", () => {
     await kv.put("plume-panel:v1:CLN:2026103012:snow", new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]).buffer as ArrayBuffer);
     return kv;
   }
+  it("keeps old stills through successful rewrites and a failed replacement publication", async () => {
+    const kv = await seeded();
+    const { ai } = fakeAi(() => answer(["plume-snow-cln"]));
+    const env = { SNOW_KV: kv, AI: ai };
+    const first = await planDailySnow(undefined, snap(), env, SIX_AM, { force: true })!.run!();
+    const urlOf = (state: DailySnowState) => {
+      const f = state.current!.figures["plume-snow-cln"];
+      if (f.kind !== "image") throw new Error("expected image");
+      return f.url;
+    };
+    const keyOf = (url: string) => dailySnowFigureKey("2026-11-01", "plume-snow-cln", new URL(url, "https://snow.test").searchParams.get("v")!);
+    const firstUrl = urlOf(first);
+    const firstBytes = await kv.get(keyOf(firstUrl), "arrayBuffer");
+    await kv.put("plume-panel:v1:CLN:2026103012:snow", new Uint8Array([137, 80, 78, 71, 4]).buffer);
+    const second = await planDailySnow(first, snap(), env, new Date(SIX_AM.getTime() + 60_000), { force: true })!.run!();
+    expect(urlOf(second)).not.toBe(firstUrl);
+    expect(await kv.get(keyOf(firstUrl), "arrayBuffer")).toEqual(firstBytes);
+    const secondBytes = await kv.get(keyOf(urlOf(second)), "arrayBuffer");
+    const archived = await kv.get(dailySnowKey("2026-11-01"), "text");
+    await kv.put("plume-panel:v1:CLN:2026103012:snow", new Uint8Array([137, 80, 78, 71, 5]).buffer);
+    const originalPut = kv.put.bind(kv);
+    kv.put = async (key, value) => {
+      if (key === dailySnowKey("2026-11-01")) throw new Error("publication failed");
+      await originalPut(key, value);
+    };
+    const failed = await planDailySnow(second, snap(), env, new Date(SIX_AM.getTime() + 120_000), { force: true })!.run!();
+    expect(failed.lastError).toBe("publication failed");
+    expect(failed.current).toEqual(second.current);
+    expect(await kv.get(dailySnowKey("2026-11-01"), "text")).toBe(archived);
+    expect(await kv.get(keyOf(urlOf(second)), "arrayBuffer")).toEqual(secondBytes);
+  });
   it("writes the post, archives it with its figures, and does not post twice", async () => {
     const kv = await seeded();
     const { ai, calls } = fakeAi(() => answer(["plume-snow-cln", "nws-snow-level"]));
@@ -328,7 +386,7 @@ describe("posting", () => {
     expect(post.title).toBe("Storm Underway");
     expect(post).not.toHaveProperty("fallbackReason");
     expect(post.phase).toBe("storm");
-    expect(post.figures["plume-snow-cln"]).toMatchObject({ kind: "image", url: "/api/daily-snow/figure/2026-11-01/plume-snow-cln" });
+    expect(post.figures["plume-snow-cln"]).toMatchObject({ kind: "image", url: expect.stringMatching(/^\/api\/daily-snow\/figure\/2026-11-01\/plume-snow-cln\?v=[a-f0-9]{64}$/) });
     // The time axis is frozen with the still so the post keeps the run it was written about.
     const plumes = captured.sources.plumes!.payload as PlumePayload;
     const cln = plumes.charts.find((c) => c.stationCode === "CLN")!;
@@ -336,7 +394,7 @@ describe("posting", () => {
       axis: { plot: cln.panels!.find((p) => p.id === "snow")!.plot, initTime: cln.initTime, forecastHours: cln.forecastHours },
     });
     expect(post.figures["nws-snow-level"].kind).toBe("snow-level");
-    expect(await kv.get(dailySnowFigureKey("2026-11-01", "plume-snow-cln"), "arrayBuffer")).not.toBeNull();
+    expect(await kv.get(dailySnowFigureKey("2026-11-01", "plume-snow-cln", new URL(post.figures["plume-snow-cln"].kind === "image" ? post.figures["plume-snow-cln"].url : "", "https://snow.test").searchParams.get("v")!), "arrayBuffer")).not.toBeNull();
     expect(JSON.parse((await kv.get(dailySnowKey("2026-11-01"), "text"))!).title).toBe("Storm Underway");
     expect(state.history[0]).toMatchObject({ date: "2026-11-01", title: "Storm Underway" });
     expect(state.attempts).toEqual({ date: "2026-11-01", count: 1, calls: 2 });
@@ -488,22 +546,45 @@ describe("posting", () => {
     expect(fallbackPost.fallbackReason).toBe(`${PRIMARY_MODEL}: Model output has no title or summary`);
     expect(fellBack.dailySnow?.fallbackReason).toBe(fallbackPost.fallbackReason);
 
-    const yesterday = (await readSnapshot(kv))!;
-    yesterday.dailySnow!.current!.date = "2026-10-31";
-    await writeSnapshot(kv, yesterday);
     const failing = fakeAi(() => ({ nonsense: true }));
     const summary = await runCollection({ SNOW_KV: kv, AI: failing.ai }, { now: at("2026-11-02T13:00:00Z"), sources: [] });
     expect(summary.dailySnow?.error).toMatch(/no title or summary/);
     const state = (await readSnapshot(kv))!.dailySnow!;
-    expect(state.current!.date).toBe("2026-10-31");
+    expect(state.current!.date).toBe("2026-11-01");
     expect(state.consecutiveFailures).toBe(1);
   });
   it("skips the off-season and needs the AI binding", () => {
     const s = snap();
-    for (const p of (s.sources.nws!.payload as { points: Array<{ sixHourSnow: unknown[] }> }).points) p.sixHourSnow = [];
+    for (const p of (s.sources.nws!.payload as NwsPayload).points) { p.sixHourSnow = []; p.hourlySnow = []; }
     for (const id of ["alta", "snowbird", "solitude", "brighton"] as const) s.sources[id] = undefined;
     const { ai } = fakeAi(() => answer([]));
     expect(planDailySnow(undefined, s, { SNOW_KV: new MemoryKV(), AI: ai }, SIX_AM)).toMatchObject({ skipped: "off-season" });
     expect(planDailySnow(undefined, s, { SNOW_KV: new MemoryKV() }, SIX_AM)).toBeUndefined();
+  });
+  it("counts the forecast bar in progress at posting time as activity", () => {
+    const h = 3_600_000;
+    const quiet = () => {
+      const s = snap();
+      for (const p of (s.sources.nws!.payload as NwsPayload).points) { p.sixHourSnow = []; p.hourlySnow = []; }
+      for (const id of ["alta", "snowbird", "solitude", "brighton"] as const) s.sources[id] = undefined;
+      return s;
+    };
+    // Legacy six-hour-only snapshot: the only snow is in the bar covering now.
+    const legacy = quiet();
+    const lp = (legacy.sources.nws!.payload as NwsPayload).points[0];
+    delete lp.hourlySnow;
+    lp.sixHourSnow = [
+      { start: new Date(SIX_AM.getTime() - 5 * h).toISOString(), snowIn: 2, snowLevelFt: null },
+      { start: new Date(SIX_AM.getTime() + h).toISOString(), snowIn: 0, snowLevelFt: null },
+    ];
+    expect(dailySnowActivity(legacy, SIX_AM).worthPosting).toBe(true);
+    // A bar that ended at now is past, not ahead.
+    lp.sixHourSnow[0].start = new Date(SIX_AM.getTime() - 6 * h).toISOString();
+    expect(dailySnowActivity(legacy, SIX_AM).worthPosting).toBe(false);
+    // Hourly series: the current hour counts.
+    const hourly = quiet();
+    const now = new Date(SIX_AM.getTime() + 30 * 60_000);
+    (hourly.sources.nws!.payload as NwsPayload).points[0].hourlySnow = [{ start: SIX_AM.toISOString(), snowIn: 1 }];
+    expect(dailySnowActivity(hourly, now).worthPosting).toBe(true);
   });
 });

@@ -144,6 +144,20 @@ describe("NWS gridpoints", () => {
     expect(s.blocks.every((b) => b.tempMinF !== null && b.snowLevelMinFt !== null)).toBe(true);
     expect(s.elevationFt).toBe(9800);
   });
+  it("retains unrounded hourly allocation, reported zero, and missing coverage", () => {
+    const start = new Date("2026-11-03T12:00:00Z");
+    const summary = summarizeGrid({ properties: {
+      temperature: { values: [] },
+      snowfallAmount: { uom: "wmoUnit:mm", values: [
+        { validTime: "2026-11-03T12:00:00Z/PT6H", value: 25.4 },
+        { validTime: "2026-11-03T18:00:00Z/PT1H", value: 0 },
+        { validTime: "2026-11-03T19:00:00Z/PT1H", value: null },
+      ] },
+    } }, start);
+    expect(summary.hourlySnow).toHaveLength(7);
+    expect(summary.hourlySnow![0].snowIn).toBeCloseTo(1 / 6, 12);
+    expect(summary.hourlySnow![6]).toEqual({ start: "2026-11-03T18:00:00.000Z", snowIn: 0 });
+  });
   it("finds the next ≥1in storm with its minimum snow level", () => {
     const s = summarizeGrid(grid, FIXTURE_NOW);
     expect(s.nextStorm).not.toBeNull();

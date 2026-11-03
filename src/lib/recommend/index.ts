@@ -15,6 +15,7 @@ export function emptyState(now: Date): RecommendationState {
   return {
     current: null,
     lastAttemptAt: null,
+    lastFinishedAt: null,
     lastError: null,
     consecutiveFailures: 0,
     fingerprint: null,
@@ -75,7 +76,7 @@ export function planRecommendation(
 
   if (!digest.eligible.length) {
     const noPick = ruleNoPick(digest, now);
-    return { state: { ...state, ...keys, current: noPick, lastError: null, consecutiveFailures: 0 } };
+    return { state: { ...state, ...keys, current: noPick, lastAttemptAt: now.toISOString(), lastFinishedAt: now.toISOString(), lastError: null, consecutiveFailures: 0 } };
   }
 
   // Reserve both primary and fallback requests, including manual runs.
@@ -86,6 +87,8 @@ export function planRecommendation(
   if (!trigger) return { state };
   const calls = { date: today, count: used + 2 };
   const attempt = { lastAttemptAt: now.toISOString(), calls };
+  const startedAt = Date.now();
+  const finishedAt = () => new Date(now.getTime() + Date.now() - startedAt).toISOString();
   const run = async (): Promise<RecommendationState> => {
     try {
       const { value: r, model } = await askModel(ai, digest, state.current, env.AI_GATEWAY_ID);
@@ -102,10 +105,10 @@ export function planRecommendation(
         model,
         trigger,
       };
-      return { ...state, ...keys, ...attempt, current, lastError: null, consecutiveFailures: 0 };
+      return { ...state, ...keys, ...attempt, current, lastFinishedAt: finishedAt(), lastError: null, consecutiveFailures: 0 };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      return { ...state, ...attempt, lastError: message.slice(0, 500), consecutiveFailures: state.consecutiveFailures + 1 };
+      return { ...state, ...attempt, lastFinishedAt: finishedAt(), lastError: message.slice(0, 500), consecutiveFailures: state.consecutiveFailures + 1 };
     }
   };
   // Stored before the call, so the call counts toward the daily cap even if the run is cut off.

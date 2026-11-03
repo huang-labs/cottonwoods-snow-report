@@ -17,8 +17,10 @@ export interface DailySnowEnv extends RecommendEnv, CollectorSecrets {
 /** Archived posts and their figure stills (one write per post, plus one per image figure).
     Stored without expiry: KV keeps every post as the business archive, and /api/daily-snow serves any of them. */
 export const dailySnowKey = (date: string) => `dailysnow:v1:${date}`;
-export const dailySnowFigureKey = (date: string, id: string) => `dailysnow-fig:v1:${date}:${id}`;
-export const dailySnowFigureUrl = (date: string, id: string) => `/api/daily-snow/figure/${date}/${id}`;
+export const dailySnowFigureKey = (date: string, id: string, revision?: string) => revision
+  ? `dailysnow-fig:v2:${date}:${id}:${revision}` : `dailysnow-fig:v1:${date}:${id}`;
+export const dailySnowFigureUrl = (date: string, id: string, revision?: string) =>
+  `/api/daily-snow/figure/${date}/${id}${revision ? `?v=${revision}` : ""}`;
 const MAX_IMAGE_BYTES = 3_000_000;
 
 /** Point the archived post at `date` forward to its newer neighbor. A failure only costs that one
@@ -84,8 +86,10 @@ async function storeFigures(
             ? (await ctx.fetchBytes(c.source.url, { contentType: "image/", maxBytes: MAX_IMAGE_BYTES, browserLike: true })).buffer as ArrayBuffer
             : null;
         if (!bytes || !bytes.byteLength) return;
-        await env.SNOW_KV.put(dailySnowFigureKey(date, f.id), bytes);
-        out[f.id] = { ...f, url: dailySnowFigureUrl(date, f.id) };
+        const hash = await crypto.subtle.digest("SHA-256", bytes);
+        const revision = [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
+        await env.SNOW_KV.put(dailySnowFigureKey(date, f.id, revision), bytes);
+        out[f.id] = { ...f, url: dailySnowFigureUrl(date, f.id, revision) };
       } catch (e) {
         console.error(`dailysnow: figure ${f.id} not stored`, e);
       }

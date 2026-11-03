@@ -72,7 +72,16 @@ describe("Worker request routing", () => {
     const figure = await call("/api/daily-snow/figure/2026-11-01/stake-alta");
     expect(figure.status).toBe(200);
     expect(figure.headers.get("content-type")).toBe("image/jpeg");
-    expect(figure.headers.get("cache-control")).toContain("immutable");
+    expect(figure.headers.get("cache-control")).toBe("public, max-age=300, must-revalidate");
+    const revision = "a".repeat(64);
+    await env.SNOW_KV.put(dailySnowFigureKey(post.date, "stake-alta", revision), new Uint8Array([0xff, 0xd8, 0xff, 1]).buffer);
+    const revisedPath = `/api/daily-snow/figure/${post.date}/stake-alta?v=${revision}`;
+    const revised = await call(revisedPath);
+    expect(revised.headers.get("cache-control")).toContain("immutable");
+    expect((await revised.arrayBuffer()).byteLength).toBe(4);
+    expect((await call(revisedPath, { method: "HEAD" })).headers.get("cache-control")).toContain("immutable");
+    expect((await call(revisedPath.replace(revision, "invalid"))).status).toBe(404);
+    expect((await call(revisedPath.replace(revision, "b".repeat(64)))).status).toBe(404);
     expect((await figure.arrayBuffer()).byteLength).toBe(3);
     await env.SNOW_KV.put(key, new Uint8Array([0, 1, 2]).buffer);
     expect((await call("/api/daily-snow/figure/2026-11-01/stake-alta")).status).toBe(404);

@@ -12,7 +12,7 @@ export interface FetchContext {
   fetchText(url: string, init?: FetchOptions): Promise<string>;
   fetchJson<T = unknown>(url: string, init?: FetchOptions): Promise<T>;
   /** GET a binary body, checking its content type prefix (e.g. "image/"). */
-  fetchBytes(url: string, init?: FetchOptions & { contentType?: string; maxBytes?: number }): Promise<Uint8Array>;
+  fetchBytes(url: string, init?: FetchOptions & { contentType?: string }): Promise<Uint8Array>;
   /** Blob storage for derived artifacts (cropped plume panels); absent in unit tests of pure parsers. */
   kv?: KVLike;
   /** Payload from the last successful collection of this source, if any. */
@@ -29,6 +29,8 @@ export interface CollectorSecrets {
 export interface FetchOptions {
   headers?: Record<string, string>;
   timeoutMs?: number;
+  /** Maximum decoded response body size; defaults to 8 MB for every body type. */
+  maxBytes?: number;
   /** Use browser-like headers (some resort CDNs reject generic clients). */
   browserLike?: boolean;
 }
@@ -65,73 +67,116 @@ export function createFetchContext(
   const calls: UpstreamCall[] = [];
   const ua = `cottonwoods-snow-report/0.1${env.COLLECTOR_CONTACT ? ` (${env.COLLECTOR_CONTACT})` : ""}`;
 
-  async function raw(url: string, method: string, init: FetchOptions = {}): Promise<Response> {
+  // Cancellation is best effort: a broken producer must not keep our promise pending.
+  const cancel = (body: ReadableStream<Uint8Array> | null) => {
+    if (body && !body.locked) void body.cancel().catch(() => undefined);
+  };
+
+  async function readBytes(res: Response, signal: AbortSignal, maxBytes: number): Promise<Uint8Array> {
+    const declared = Number(res.headers.get("content-length"));
+    if (declared > maxBytes) throw new Error(`body too large (${declared} bytes)`);
+    if (!res.body) return new Uint8Array();
+    const reader = res.body.getReader();
+    const stop = () => { void reader.cancel().catch(() => undefined); };
+    signal.addEventListener("abort", stop, { once: true });
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    let finished = false;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > maxBytes) throw new Error(`body too large (${size} bytes)`);
+        chunks.push(value);
+      }
+      finished = true;
+      const bytes = new Uint8Array(size);
+      let offset = 0;
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+      return bytes;
+    } finally {
+      signal.removeEventListener("abort", stop);
+      if (!finished) stop();
+      reader.releaseLock();
+    }
+  }
+
+  async function raw<T>(
+    url: string, method: string, init: FetchOptions,
+    consume: (res: Response, signal: AbortSignal) => Promise<T>,
+  ): Promise<T> {
     const started = Date.now();
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), init.timeoutMs ?? 15_000);
+    let response: Response | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const headers: Record<string, string> = init.browserLike
       ? { ...BROWSER_HEADERS, ...init.headers }
       : { "User-Agent": ua, Accept: "application/json, text/html;q=0.9, */*;q=0.5", ...init.headers };
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        reject(new Error("timeout"));
+        controller.abort();
+      }, init.timeoutMs ?? 15_000);
+    });
     try {
-      const res = await fetchImpl(url, { method, headers, signal: controller.signal, redirect: "follow" });
-      calls.push({ url: redactUrl(url), status: res.status, ms: Date.now() - started });
-      return res;
+      return await Promise.race([
+        (async () => {
+          response = await fetchImpl(url, { method, headers, signal: controller.signal, redirect: "follow" });
+          if (controller.signal.aborted) {
+            cancel(response.body);
+            throw new Error("timeout");
+          }
+          return consume(response, controller.signal);
+        })(),
+        deadline,
+      ]);
     } catch (err) {
-      calls.push({ url: redactUrl(url), status: null, ms: Date.now() - started });
-      const msg = err instanceof Error && err.name === "AbortError" ? "timeout" : String(err);
-      throw new UpstreamError(`${method} ${redactUrl(url)} failed: ${msg}`, redactUrl(url), null);
+      if (err instanceof UpstreamError) throw err;
+      const msg = controller.signal.aborted ? "timeout" : err instanceof Error ? err.message : String(err);
+      throw new UpstreamError(`${method} ${redactUrl(url)} failed: ${msg}`, redactUrl(url), response?.status ?? null);
     } finally {
       clearTimeout(timer);
+      cancel(response?.body ?? null);
+      calls.push({ url: redactUrl(url), status: response?.status ?? null, ms: Date.now() - started });
     }
   }
 
-  async function okResponse(url: string, init?: FetchOptions) {
-    const res = await raw(url, "GET", init);
-    if (!res.ok) {
-      throw new UpstreamError(`GET ${redactUrl(url)} returned HTTP ${res.status}`, redactUrl(url), res.status);
-    }
-    return res;
+  function get<T>(url: string, init: FetchOptions = {}, consume: (bytes: Uint8Array, res: Response) => T): Promise<T> {
+    return raw(url, "GET", init, async (res, signal) => {
+      if (!res.ok) throw new UpstreamError(`GET ${redactUrl(url)} returned HTTP ${res.status}`, redactUrl(url), res.status);
+      const type = res.headers.get("content-type") ?? "";
+      const prefix = (init as FetchOptions & { contentType?: string }).contentType;
+      if (prefix && !type.startsWith(prefix)) {
+        throw new UpstreamError(`GET ${redactUrl(url)} returned ${type || "no content type"}`, redactUrl(url), res.status);
+      }
+      return consume(await readBytes(res, signal, init.maxBytes ?? 8_000_000), res);
+    });
   }
 
   return {
-    now,
-    env,
-    calls,
-    kv: extra.kv,
-    previous: extra.previous ?? null,
-    async fetchBytes(url, init) {
-      const res = await okResponse(url, init);
-      const type = res.headers.get("content-type") ?? "";
-      if (init?.contentType && !type.startsWith(init.contentType)) {
-        await res.body?.cancel();
-        throw new UpstreamError(`GET ${redactUrl(url)} returned ${type || "no content type"}`, redactUrl(url), res.status);
-      }
-      const buf = new Uint8Array(await res.arrayBuffer());
-      if (init?.maxBytes && buf.byteLength > init.maxBytes) {
-        throw new UpstreamError(`GET ${redactUrl(url)} body too large (${buf.byteLength} bytes)`, redactUrl(url), res.status);
-      }
-      return buf;
+    now, env, calls, kv: extra.kv, previous: extra.previous ?? null,
+    fetchBytes: (url, init) => get(url, init, (bytes) => bytes),
+    fetchText: (url, init) => get(url, init, (bytes) => new TextDecoder().decode(bytes)),
+    fetchJson<T>(url: string, init?: FetchOptions) {
+      return get(url, init, (bytes, res) => {
+        try {
+          return JSON.parse(new TextDecoder().decode(bytes)) as T;
+        } catch {
+          throw new UpstreamError(`GET ${redactUrl(url)} returned non-JSON body`, redactUrl(url), res.status);
+        }
+      });
     },
-    async fetchText(url, init) {
-      return (await okResponse(url, init)).text();
-    },
-    async fetchJson<T>(url: string, init?: FetchOptions) {
-      const res = await okResponse(url, init);
-      const text = await res.text();
-      try {
-        return JSON.parse(text) as T;
-      } catch {
-        throw new UpstreamError(`GET ${redactUrl(url)} returned non-JSON body`, redactUrl(url), res.status);
-      }
-    },
-    async probe(url, init) {
-      let res = await raw(url, "HEAD", init);
-      // Some camera hosts reject HEAD outright (405/403, or even 500).
+    async probe(url, init = {}) {
+      const consume = async (res: Response) => ({ status: res.status, headers: res.headers });
+      let res = await raw(url, "HEAD", init, consume);
       if (res.status >= 400) {
-        res = await raw(url, "GET", { ...init, headers: { Range: "bytes=0-0", ...init?.headers } });
-        await res.body?.cancel();
+        res = await raw(url, "GET", { ...init, headers: { Range: "bytes=0-0", ...init.headers } }, consume);
       }
-      return { status: res.status, headers: res.headers };
+      return res;
     },
   };
 }
