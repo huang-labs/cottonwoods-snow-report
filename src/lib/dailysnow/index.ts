@@ -1,6 +1,7 @@
 import { createFetchContext, type CollectorSecrets } from "../http";
 import type { RecommendEnv } from "../recommend";
 import { denverDate } from "../recommend/digest";
+import { DAILY_SNOW_PUBLIC_POSTS } from "../report";
 import type { KVLike } from "../store";
 import type { DailySnowFigure, DailySnowPost, DailySnowState, Snapshot } from "../types";
 import { buildDailyDigest, historyEntry, type FigureCandidate } from "./digest";
@@ -12,13 +13,11 @@ export interface DailySnowEnv extends RecommendEnv, CollectorSecrets {
   SNOW_KV: KVLike;
 }
 
-/** Archived posts and their figure stills (one write per post, plus one per image figure). */
+/** Archived posts and their figure stills (one write per post, plus one per image figure).
+    Stored without expiry: KV keeps every post as the business archive; the API serves only the recent ones. */
 export const dailySnowKey = (date: string) => `dailysnow:v1:${date}`;
 export const dailySnowFigureKey = (date: string, id: string) => `dailysnow-fig:v1:${date}:${id}`;
 export const dailySnowFigureUrl = (date: string, id: string) => `/api/daily-snow/figure/${date}/${id}`;
-export const DAILY_SNOW_TTL_S = 32 * 24 * 3600;
-/** Archive entries kept in the snapshot (matches the KV TTL, one post a day). */
-export const DAILY_SNOW_HISTORY = 30;
 const MAX_IMAGE_BYTES = 3_000_000;
 
 export function emptyDailySnowState(): DailySnowState {
@@ -55,7 +54,7 @@ async function storeFigures(
             ? (await ctx.fetchBytes(c.source.url, { contentType: "image/", maxBytes: MAX_IMAGE_BYTES, browserLike: true })).buffer as ArrayBuffer
             : null;
         if (!bytes || !bytes.byteLength) return;
-        await env.SNOW_KV.put(dailySnowFigureKey(date, f.id), bytes, { expirationTtl: DAILY_SNOW_TTL_S });
+        await env.SNOW_KV.put(dailySnowFigureKey(date, f.id), bytes);
         out[f.id] = { ...f, url: dailySnowFigureUrl(date, f.id) };
       } catch (e) {
         console.error(`dailysnow: figure ${f.id} not stored`, e);
@@ -132,8 +131,8 @@ export function planDailySnow(
         trigger,
         ...(r.fallbackReason ? { fallbackReason: r.fallbackReason } : {}),
       };
-      await env.SNOW_KV.put(dailySnowKey(date), JSON.stringify(post), { expirationTtl: DAILY_SNOW_TTL_S });
-      const history = [historyEntry(post), ...base.history.filter((h) => h.date !== date)].slice(0, DAILY_SNOW_HISTORY);
+      await env.SNOW_KV.put(dailySnowKey(date), JSON.stringify(post));
+      const history = [historyEntry(post), ...base.history.filter((h) => h.date !== date)].slice(0, DAILY_SNOW_PUBLIC_POSTS);
       return { ...reserved, current: post, history, lastError: null, consecutiveFailures: 0, lastFinishedAt: finishedAt() };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);

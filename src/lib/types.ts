@@ -520,7 +520,7 @@ export interface DailySnowState {
   consecutiveFailures: number;
   /** Scheduled attempts and reserved model requests per Denver day. */
   attempts: { date: string; count: number; calls: number };
-  /** Most recent posts first (at most DAILY_SNOW_HISTORY). */
+  /** Most recent posts first (at most DAILY_SNOW_PUBLIC_POSTS). */
   history: DailySnowHistoryEntry[];
 }
 

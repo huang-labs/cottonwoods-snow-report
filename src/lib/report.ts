@@ -80,6 +80,15 @@ export function publicRecommendation(state: RecommendationState | undefined, now
 /** Consecutive failed Daily Snow attempts before the post says updates are failing. */
 export const DAILY_SNOW_FAILING_AFTER = 2;
 
+/** Posts the API lists in `archive` and serves by date, newest first. Older posts stay in KV
+    (stored without expiry as the business archive) but are not public. */
+export const DAILY_SNOW_PUBLIC_POSTS = 10;
+
+/** The public archive: the most recent posts, newest first. */
+export function publicArchive(state: DailySnowState | undefined): ApiDailySnow["archive"] {
+  return (state?.history ?? []).slice(0, DAILY_SNOW_PUBLIC_POSTS).map((h) => ({ date: h.date, title: h.title }));
+}
+
 /** A Daily Snow post (current or archived) as the API serves it. */
 export function publicDailySnow(post: DailySnowPost | null | undefined, state: DailySnowState | undefined, now: Date): ApiDailySnow | null {
   if (!post) return null;
@@ -88,7 +97,7 @@ export function publicDailySnow(post: DailySnowPost | null | undefined, state: D
     ...post,
     outdated: post.date !== today,
     failing: post.date !== today && (state?.consecutiveFailures ?? 0) >= DAILY_SNOW_FAILING_AFTER,
-    archive: (state?.history ?? []).map((h) => ({ date: h.date, title: h.title })),
+    archive: publicArchive(state),
   };
 }
 
