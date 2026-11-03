@@ -20,7 +20,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => (
-    <a href={href} {...rest}>
+    <a href={href} {...rest} onClick={(event) => { event.preventDefault(); nav.pathname = href; }}>
       {children}
     </a>
   ),
@@ -120,6 +120,32 @@ describe("app shell", () => {
     // The appearance control offers light and dark.
     expect(screen.getByRole("button", { name: "Light appearance" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Dark appearance" })).toBeTruthy();
+  });
+
+  it.each(["alta", "snowbird", "solitude", "brighton"])("opens %s from the snowfall table without reloading the report", async (id) => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(REPORT));
+    const view = renderAt("/");
+    await screen.findByRole("heading", { level: 1, name: "Resort snowfall" });
+    const link = document.querySelector<HTMLAnchorElement>(`.resort-name__link[href="/${id}"]`)!;
+    // Only a router Link intercepts the browser's full-document navigation.
+    expect(fireEvent.click(link)).toBe(false);
+    expect(nav.pathname).toBe(`/${id}`);
+    view.rerender(<AppShell><SectionView id={id} /></AppShell>);
+    expect(screen.getByRole("heading", { level: 1, name: REPORT.sources[id as keyof typeof REPORT.sources].label })).toBeTruthy();
+    expect(screen.queryByText("Loading report…")).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the forecast from a resort without reloading the report", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(REPORT));
+    const view = renderAt("/alta");
+    await screen.findByRole("heading", { level: 1, name: "Alta" });
+    expect(fireEvent.click(screen.getByRole("link", { name: "Forecast ↗" }))).toBe(false);
+    expect(nav.pathname).toBe("/weather");
+    view.rerender(<AppShell><SectionView id="weather" /></AppShell>);
+    expect(screen.getByRole("heading", { level: 1, name: "Cottonwoods mountain weather" })).toBeTruthy();
+    expect(screen.queryByText("Loading report…")).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("renders every section page from real-source fixtures", async () => {

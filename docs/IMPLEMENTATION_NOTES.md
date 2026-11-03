@@ -476,3 +476,10 @@ Existing files touched (relative to main):
 - `docs/IMPLEMENTATION_NOTES.md`: decisions, validation, limitations and file scope.
 
 New files: `src/lib/og/style.tsx`, `src/lib/og/image-fonts.ts`, `src/lib/og/branded-image.tsx`, `scripts/render-share-image.ts`, `public/share-brand-v2.png`.
+
+## 2026-11-03 — Resort navigation without report reloads
+
+- **Cause:** clicking a resort name in the snowfall table used a plain anchor, unloading the document and its shared report poller. Production browser instrumentation confirmed a document unload and a fresh `/api/report` request on arrival at Alta. This recreates the initial loading screen; the resort dropdown already uses client navigation.
+- **Fix:** `RegionalPage.tsx` uses Next.js `Link` for all four resort names. `ResortReportPage.tsx` uses the same component for its Forecast link, which had the same reload behavior. Existing hash jump links and external source links keep their behavior. The shared poller, source adapters and freshness rules are unchanged. Direct visits still need the initial report request.
+- **Regression:** five app-shell tests exercise the four table links and the Forecast link through the mocked router boundary, then render the destination in the existing shell and assert no loading screen or extra report fetch. All five failed before the change and passed afterward. The browser check covers the real Next.js router, which jsdom does not mount.
+- **Verified:** 233 tests across 18 files, typecheck, static build and Worker smoke (9 pages) pass. In the built local Worker seeded through fixture collection, all four table-to-resort transitions at 1280 px and 390 px retained the document, showed no loading state, and made zero navigation-triggered report requests. The phone Forecast transition also retained the report; resort pages had no horizontal document overflow. Production KV was not written.
