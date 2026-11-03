@@ -70,7 +70,7 @@ function Point({ p, now }: { p: PointForecast; now: Date }) {
       {p.sixHourSnow.length > 0 && (
         <figure className="weather-point__chart">
           <figcaption>Snowfall forecast, next 7 days</figcaption>
-          <SnowfallChart bars={p.sixHourSnow} label={`NWS snowfall, ${p.name}`} detail />
+          <SnowfallChart bars={p.sixHourSnow} label={`NWS snowfall, ${p.name}`} />
         </figure>
       )}
       <dl className="periods">

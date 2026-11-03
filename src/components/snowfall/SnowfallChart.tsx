@@ -1,40 +1,32 @@
 import type { SixHourSnow } from "@/lib/types";
-import { dateLabel, dayLabel, snowfallDays, timeLabel } from "./model";
+import { dateLabel, dayLabel, snowfallDays, timeLabel, zonedTimeLabel } from "./model";
 import "./snowfall.css";
 
-export function SnowfallChart({ bars, label, detail = false }: { bars: SixHourSnow[]; label: string; detail?: boolean }) {
+export function SnowfallChart({ bars, label }: { bars: SixHourSnow[]; label: string }) {
   const days = snowfallDays(bars);
-  const max = Math.max(1, ...days.map(d => d.total));
+  const max = Math.max(1, ...bars.map(b => b.snowIn));
+  const slotsPerDay = Math.max(4, ...days.map(d => d.slots.length));
   if (!days.length) return <p className="muted">Snowfall forecast unavailable.</p>;
-  return <div className="snowfall" aria-label={label}>
-    <p className="snowfall__heading">Snowfall outlook · inches</p>
-    <ol className="snowfall__days" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
-      {days.map(d => <li key={d.key}>
-        <div className="snowfall__plot">
-          <strong className="snowfall__amount">{d.count ? `${d.total.toFixed(1)}″` : "—"}</strong>
-          <span className="snowfall__bar" style={{ height: `${d.total / max * 100}px` }} />
-        </div>
-        <span>{dayLabel.format(new Date(d.start))}</span>
-        <span className="snowfall__date">{dateLabel.format(new Date(d.start))}</span>
-        {d.partial && <span className="snowfall__partial">{d.count ? "partial" : "missing"}</span>}
-      </li>)}
-    </ol>
-    <p className="snowfall__note">Six-hour periods grouped by start date (Mountain Time), not midnight-to-midnight totals. Partial = fewer periods available; — = no data.</p>
-    {detail && <details className="snowfall__detail">
-      <summary>Six-hour amounts and times</summary>
-      <p className="snowfall__note">Each amount covers six hours from the time shown. Scroll for later periods.</p>
-      <div className="snowfall__scroll" tabIndex={0} role="region" aria-label="Six-hour snowfall detail">
-        <ol className="snowfall__periods">
-          {bars.map(b => <li key={b.start}>
-            <div className="snowfall__plot">
-              <strong className="snowfall__amount">{b.snowIn.toFixed(1)}″</strong>
-              <span className="snowfall__bar" style={{ height: `${b.snowIn / Math.max(1, ...bars.map(x => x.snowIn)) * 100}px` }} />
-            </div>
-            <span>{dayLabel.format(new Date(b.start))} {dateLabel.format(new Date(b.start))}</span>
-            <span className="snowfall__date">{timeLabel.format(new Date(b.start))}</span>
-          </li>)}
-        </ol>
-      </div>
-    </details>}
+  return <div className="snowfall">
+    <p className="snowfall__heading">6-hour snowfall · inches</p>
+    <div className="snowfall__scroll" tabIndex={0} role="region" aria-label={`${label}. Scroll for later periods.`}>
+      <ol className="snowfall__days" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(${slotsPerDay * 44}px, 1fr))` }}>
+        {days.map(d => <li className="snowfall__day" key={d.key}>
+          <ol className="snowfall__periods" style={{ gridTemplateColumns: `repeat(${d.slots.length}, minmax(0, 1fr))` }}>
+            {d.slots.map(b => <li className="snowfall__period" key={b.start} aria-label={`${dayLabel.format(new Date(b.start))} ${dateLabel.format(new Date(b.start))}, six hours from ${zonedTimeLabel.format(new Date(b.start))}: ${b.snowIn === null ? "not available" : `${b.snowIn.toFixed(1)} inches`}`}>
+              <div className="snowfall__plot" aria-hidden="true">
+                {b.snowIn !== null && <>
+                  <strong className="snowfall__amount">{b.snowIn.toFixed(1)}″</strong>
+                  <span className="snowfall__bar" style={{ height: `${b.snowIn / max * 100}px` }} />
+                </>}
+              </div>
+              <span className="snowfall__time" aria-hidden="true">{timeLabel.format(new Date(b.start)).replace(" AM", "a").replace(" PM", "p")}</span>
+            </li>)}
+          </ol>
+          <span className="snowfall__date">{dayLabel.format(new Date(d.start))} {dateLabel.format(new Date(d.start))}</span>
+        </li>)}
+      </ol>
+    </div>
+    <p className="snowfall__note">Times are period starts in Mountain Time. Blank slots = unavailable. Scroll for later days →</p>
   </div>;
 }
