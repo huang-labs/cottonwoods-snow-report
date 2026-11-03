@@ -184,18 +184,40 @@ describe("persistent storm observations", () => {
     expect(mergeSnapshot(latest, incoming).stormTracking?.events[0].status).toBe("closed");
   });
 
-  it("archives records once per material change, with no expiration", async () => {
+  it("archives records once per material change, for 30 days from the last change", async () => {
     const kv = new MemoryKV();
     const state = run(snapshot(0, { alta: { storm: 15 } }));
     const s = { ...snapshot(0), stormTracking: state };
-    await archiveStorms(kv, s);
+    const ttls: unknown[] = [];
+    const first = kv.put.bind(kv);
+    kv.put = async (k: string, v: string | ArrayBuffer, o?: { expirationTtl?: number }) => { ttls.push(o?.expirationTtl); return first(k, v); };
+    await archiveStorms(kv, s, at(0));
+    expect(ttls).toEqual([30 * 86_400]);
     const key = stormKey(state.events[0].id);
     expect(JSON.parse((await kv.get(key, "text"))!).resorts[0].total.amountIn).toBe(15);
     let puts = 0;
     const put = kv.put.bind(kv);
     kv.put = async (k, v) => { puts++; return put(k, v); };
-    await archiveStorms(kv, s);
+    await archiveStorms(kv, s, at(1));
     expect(puts).toBe(0);
+  });
+
+  it("does not resurrect an expired archive for an unchanged event left in the working set", async () => {
+    const kv = new MemoryKV();
+    const state = run(snapshot(0, { alta: { storm: 15 } }));
+    const s = { ...snapshot(0), stormTracking: state };
+    const updated = Date.parse(state.events[0].updatedAt);
+    const ttls: unknown[] = [];
+    const put = kv.put.bind(kv);
+    kv.put = async (k: string, v: string | ArrayBuffer, o?: { expirationTtl?: number }) => { ttls.push(o?.expirationTtl); return put(k, v); };
+    // The key is missing (expired or never written): recreate it only for the time it has left.
+    await archiveStorms(kv, s, new Date(updated + 20 * 86_400_000));
+    expect(ttls).toEqual([10 * 86_400]);
+    // Past retention with no material change: skip, even though the key is gone.
+    kv.data.clear();
+    await archiveStorms(kv, s, new Date(updated + 30 * 86_400_000));
+    expect(ttls).toHaveLength(1);
+    expect(kv.data.size).toBe(0);
   });
 
   it("does not let a stale branch close a storm when another branch observed new snow", () => {

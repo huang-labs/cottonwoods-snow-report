@@ -46,6 +46,6 @@ export interface StormCursor {
 export interface StormTrackingState {
   checkedAt: string;
   cursors: Partial<Record<PrimaryResortId, StormCursor>>;
-  /** Bounded working set; every record also has its own permanent KV archive. */
+  /** Bounded working set; every record also has its own KV archive (30-day retention). */
   events: StormRecord[];
 }
