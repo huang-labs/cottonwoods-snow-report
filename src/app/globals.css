@@ -239,19 +239,16 @@ a { color: var(--accent); }
   .snow-table .row--primary:hover .resort-name__link { color: var(--accent); }
 }
 .snow-table .metric--xl { font-size: 32px; }
-.cell-label { color: var(--muted); max-width: 17ch; line-height: 1.35; font-size: var(--fs-label); margin-top: 6px; }
-/* Rows keep one height whether or not a value has a note: every value cell reserves
-   its note line, and the row's cells share a baseline so the name, the values and
-   the report time read as one line. */
-.snow-table .cell-label:empty::before { content: "\00a0"; }
-.snow-table tbody .row--primary > :is(th, td) { vertical-align: baseline; }
 /* Phones show a headline-plus-line summary of each resort instead of the value cells. */
 .snow-table .snow-phone { display: none; }
 .report-time { font-size: var(--fs-caption); }
 .report-time__checked { color: var(--muted); font-size: var(--fs-label); }
 .report-time__failed { color: var(--bad); font-size: var(--fs-label); }
-.legend { color: var(--muted); font-size: var(--fs-caption); margin-top: calc(16px - var(--page-gap)); }
-.legend .metric__missing, .legend .metric__na { font-size: 1em; }
+/* The table's footer sits just under its last row line, which serves as its rule:
+   freshness on the left, the value legend pushed right (wrapping under it on phones). */
+.snow-foot { border-top: 0; padding-top: 0; margin-top: calc(14px - var(--page-gap)); }
+.snow-foot__legend { margin-left: auto; }
+.snow-foot__legend .metric__missing, .snow-foot__legend .metric__na { font-size: 1em; }
 
 /* AI pick: an accent line spanning its data row and reasoning row, in the bleed.
    The pseudo lives on the cells: on the <tr> itself Chromium wraps it in an
@@ -446,7 +443,6 @@ a { color: var(--accent); }
   .snow-phone__rest .snow-phone__window { color: var(--muted); }
   .snow-phone__rest .metric { display: inline; }
   .snow-phone__rest .metric__value { font-weight: 700; }
-  .snow-phone__note { color: var(--muted); font-size: var(--fs-label); margin-left: 4px; }
   .snow-table .row--recommended { border-bottom: 0; }
   .snow-table .recommendation-row { position: relative; border-bottom: 1px solid var(--line); }
   .snow-table .recommendation-row > td { display: block; padding: 0 var(--bleed) 20px; }

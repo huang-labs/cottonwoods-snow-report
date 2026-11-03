@@ -14,7 +14,9 @@ function withFreshness(states: Record<"alta" | "snowbird" | "solitude" | "bright
   return report;
 }
 
-const statusLine = () => document.querySelector(".page--regional > .source-line");
+const statusLine = () => document.querySelector(".page--regional > .snow-foot");
+/** The footer's freshness text, without the legend on its right. */
+const statusText = () => [...(statusLine()?.children ?? [])].filter((e) => !e.classList.contains("snow-foot__legend")).map((e) => e.textContent).join("|");
 
 it("keeps freshness out of the resort rows", () => {
   render(<RegionalPage now={now} report={withFreshness({ alta: "current", snowbird: "old-report", solitude: "stale", brighton: "unavailable" })} />);
@@ -26,14 +28,22 @@ it("shows one Current badge and 'All resorts reporting' when every resort is cur
   const line = statusLine();
   expect(line?.querySelectorAll(".badge")).toHaveLength(1);
   expect(line?.querySelector(".badge--current")?.textContent).toBe("Current");
-  expect(line?.textContent).toContain("All resorts reporting");
+  expect(statusText()).toBe("Current|All resorts reporting");
+});
+
+it("puts the value legend on the right of the same footer line", () => {
+  render(<RegionalPage now={now} report={withFreshness({ alta: "current", snowbird: "current", solitude: "current", brighton: "current" })} />);
+  const legend = statusLine()?.lastElementChild;
+  expect(legend?.className).toBe("snow-foot__legend");
+  expect(legend?.textContent).toContain("reported zero");
+  expect(document.querySelectorAll(".page--regional .source-line")).toHaveLength(1);
 });
 
 it("badges the worst state and names the resorts in each state", () => {
   render(<RegionalPage now={now} report={withFreshness({ alta: "current", snowbird: "old-report", solitude: "current", brighton: "old-report" })} />);
   const line = statusLine();
   expect(line?.querySelector(".badge--old-report")?.textContent).toBe("Old report");
-  expect(line?.textContent).toBe("Old reportSnowbird, BrightonCurrent: Alta, Solitude");
+  expect(statusText()).toBe("Old report|Snowbird, Brighton|Current: Alta, Solitude");
   expect(line?.textContent).toContain("Current: Alta, Solitude");
   expect(line?.textContent).not.toContain("All resorts reporting");
 });
@@ -54,5 +64,5 @@ it("marks every resort unavailable when nothing has been collected", () => {
   render(<RegionalPage now={now} report={buildReport(null, now)} />);
   const line = statusLine();
   expect(line?.querySelector(".badge--unavailable")).not.toBeNull();
-  expect(line?.textContent).toBe("UnavailableAlta, Snowbird, Solitude, Brighton");
+  expect(statusText()).toBe("Unavailable|Alta, Snowbird, Solitude, Brighton");
 });

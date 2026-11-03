@@ -248,29 +248,19 @@ it("keeps a resort's wording only where its window differs, and lists shared sou
   expect(notes).toContain("Overnight, 24 h");
 });
 
-it("names each snowfall window in the column header, noting only where a resort's window differs", () => {
+it("names each snowfall window in the column header, with no note under any value", () => {
   const { container } = render(renderSection("regional", report, FIXTURE_NOW, null));
   expect([...container.querySelectorAll(".snow-table thead th")].map((th) => th.textContent)).toEqual([
     "Resort", "Overnight / 12 h", "24 h", "48 h", "Storm", "Base", "Report time (MT)",
   ]);
   const row = (name: string) =>
     [...container.querySelectorAll(".snow-table .row--primary")].find((r) => r.querySelector(".resort-name")?.textContent === name)!;
-  const qualifiers = (name: string) => [...row(name).querySelectorAll(".cell-label")].map((s) => s.textContent);
-  // Alta's overnight column holds its 12-hour total, and says so.
-  expect(qualifiers("Alta")[0]).toBe("12 h");
+  // The column header names the window, so no note sits under any value (Alta's
+  // 12 h total is covered by "Overnight / 12 h"; Solitude's wording isn't repeated).
+  expect(row("Alta").querySelectorAll("td:not(.report-time, .snow-phone) :not(.metric, .metric *)")).toHaveLength(0);
+  expect(row("Solitude").textContent).not.toMatch(/since lifts closed/i);
   // "Snow 24 Hrs." is just the 24 h window: no source wording repeated under the value.
   expect(row("Brighton").textContent).not.toContain("Snow 24 Hrs.");
-});
-
-it("gives every snowfall value cell one note line, empty when the window matches, so rows share a height", () => {
-  const { container } = render(renderSection("regional", report, FIXTURE_NOW, null));
-  for (const tr of container.querySelectorAll(".snow-table .row--primary")) {
-    const cells = [...tr.querySelectorAll("td:not(.report-time, .snow-phone)")];
-    expect(cells).toHaveLength(5);
-    for (const td of cells) expect(td.querySelectorAll(".cell-label")).toHaveLength(1);
-  }
-  const brighton = [...container.querySelectorAll(".snow-table .row--primary")].find((r) => r.querySelector(".resort-name")?.textContent === "Brighton")!;
-  expect([...brighton.querySelectorAll(".cell-label")].every((l) => l.textContent === "")).toBe(true);
 });
 
 it("summarizes each resort for phones: 24 h headline, other windows named by the window they cover", () => {
