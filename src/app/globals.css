@@ -175,6 +175,7 @@ a { color: var(--accent); }
 .chart__axis { stroke: var(--muted); stroke-width: 1; }
 .chart__label { fill: var(--muted); font-size: 12px; }
 .chart__value { fill: var(--text); font-size: 12px; font-weight: 700; }
+.chart__value--sm { font-size: 10px; }
 .snow-level__line { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
 /* Dashed so it stays readable where the two canyons' snow levels coincide. */
 .snow-level__line--bcc { stroke-dasharray: 7 5; }

@@ -38,33 +38,43 @@ const AXIS = 24; // day labels under the axis
 
 /** NWS 6-hour snowfall bars, a day label at each Mountain Time midnight. */
 export function SnowBars({ bars, label }: { bars: SixHourSnow[]; label: string }) {
-  const h = 120;
   const maxSnow = Math.max(4, ...bars.map((b) => b.snowIn));
   return (
-    <Chart label={label} height={TOP + h + AXIS}>
+    <Chart label={label} height={TOP + 120 + AXIS}>
       {(w) => {
         const bw = w / Math.max(1, bars.length);
         const gap = bw > 12 ? 2 : 1;
+        const small = bw < 18; // narrow bars: labels stay on at a smaller size
+        const top = small ? 28 : TOP; // headroom for the staggered second label row
+        const h = small ? 112 : 120; // top + h stays 140, so the axis and day labels don't move
         return (
           <>
             {bars.map((b, i) => {
               const bh = (b.snowIn / maxSnow) * h;
+              const lift = small && bw < 15 && i % 2 ? 11 : 0; // stagger rows when labels are wider than their slot
               return (
                 <g key={b.start}>
                   {newDay(bars, i) && i * bw + 30 <= w && (
                     <>
-                      <line x1={i * bw} x2={i * bw} y1={TOP} y2={TOP + h} className="chart__grid" />
-                      <text x={i * bw + 4} y={TOP + h + 17} className="chart__label">{dayFmt.format(new Date(b.start))}</text>
+                      <line x1={i * bw} x2={i * bw} y1={top} y2={top + h} className="chart__grid" />
+                      <text x={i * bw + 4} y={top + h + 17} className="chart__label">{dayFmt.format(new Date(b.start))}</text>
                     </>
                   )}
-                  <rect x={i * bw + gap} y={TOP + h - bh} width={bw - 2 * gap} height={Math.max(bh, b.snowIn > 0 ? 2 : 0)} className="chart__bar" />
-                  {b.snowIn >= 0.5 && bw >= 18 && (
-                    <text x={i * bw + bw / 2} y={TOP + h - bh - 5} textAnchor="middle" className="chart__value">{b.snowIn.toFixed(1)}</text>
+                  <rect x={i * bw + gap} y={top + h - bh} width={bw - 2 * gap} height={Math.max(bh, b.snowIn > 0 ? 2 : 0)} className="chart__bar" />
+                  {b.snowIn >= 0.5 && (
+                    <text
+                      x={i * bw + bw / 2}
+                      y={top + h - bh - 4 - lift}
+                      textAnchor="middle"
+                      className={small ? "chart__value chart__value--sm" : "chart__value"}
+                    >
+                      {b.snowIn.toFixed(1)}
+                    </text>
                   )}
                 </g>
               );
             })}
-            <line x1={0} x2={w} y1={TOP + h} y2={TOP + h} className="chart__axis" />
+            <line x1={0} x2={w} y1={top + h} y2={top + h} className="chart__axis" />
           </>
         );
       }}
