@@ -67,6 +67,7 @@ function NavRow({ label, pathname, children }: { label: string; pathname: string
   return (
     <nav aria-label={label} className="section-nav__inner"
       data-fade-start={fade.start ? "" : undefined} data-fade-end={fade.end ? "" : undefined}>
+      <span className="section-nav__divider" aria-hidden="true" />
       <div ref={tabs} className="section-nav__tabs" data-bar={bar ? "" : undefined} data-animate={animate ? "" : undefined}
         onScroll={updateFade}>
         {children}
