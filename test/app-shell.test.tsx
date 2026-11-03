@@ -109,9 +109,14 @@ describe("app shell", () => {
     // Non-resort sections are nav links; the resorts sit behind one menu.
     const navLinks = within(screen.getByRole("navigation", { name: "Sections" }))
       .getAllByRole("link")
-      .filter((a) => !a.closest(".editorial-nav__resorts"));
+      .filter((a) => !a.closest(".section-nav__resorts"));
     expect(navLinks.map((a) => a.getAttribute("href"))).toEqual(SECTIONS.filter((s) => !s.group).map((s) => sectionHref(s.id)));
     expect(screen.getByRole("link", { name: "Snowfall" }).getAttribute("aria-current")).toBe("page");
+    // The tabs sit in their own sticky bar after the masthead, with one bar marking the current tab.
+    const tabs = document.querySelector(".section-nav__tabs")!;
+    expect(tabs.closest("header")).toBeNull();
+    expect(tabs.querySelectorAll(".section-nav__bar")).toHaveLength(1);
+    expect(tabs.hasAttribute("data-bar")).toBe(true);
     // The appearance control offers light and dark.
     expect(screen.getByRole("button", { name: "Light appearance" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Dark appearance" })).toBeTruthy();
@@ -125,9 +130,13 @@ describe("app shell", () => {
       const view = renderAt(sectionHref(SECTIONS[i].id));
       expect(await screen.findByRole("heading", { level: 1, name: title })).toBeTruthy();
       // The resorts menu names the current resort while on a resort page.
-      const menu = document.querySelector(".editorial-nav__resorts")!;
+      const menu = document.querySelector(".section-nav__resorts")!;
+      // The resorts tab carries the current-tab marker (and its blue bar) only on resort pages.
       if (SECTIONS[i].group) {
         expect(menu.querySelector("summary")?.textContent).toContain(SECTIONS[i].label);
+        expect(menu.querySelector("summary")?.hasAttribute("data-current")).toBe(true);
+      } else {
+        expect(menu.querySelector("summary")?.hasAttribute("data-current")).toBe(false);
       }
       const resortLinks = within(menu as HTMLElement).getAllByRole("link");
       expect(resortLinks.map((a) => a.getAttribute("href"))).toEqual(["/alta", "/snowbird", "/solitude", "/brighton"]);

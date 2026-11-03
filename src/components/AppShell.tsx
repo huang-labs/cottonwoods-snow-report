@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { SECTIONS, sectionHref } from "@/lib/sections";
+import { SectionNav } from "./SectionNav";
 import { DashboardContext, DataBanners, type DashboardData } from "./dashboard-context";
 import { useNow, useReport } from "./hooks";
 
@@ -27,7 +28,7 @@ function applyAppearance(value: Appearance | null) {
 }
 
 /**
- * App frame: an editorial masthead (brand, appearance control, section nav)
+ * App frame: a masthead (brand, appearance control) and sticky section tabs
  * over one routed section page. Data comes from a single shared poller.
  * Legacy `?slide=<id>` links redirect to that section's page.
  */
@@ -38,7 +39,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [appearance, setAppearance] = useState<Appearance | null>(null);
   const [systemDark, setSystemDark] = useState(false);
-  const resortMenu = useRef<HTMLDetailsElement>(null);
 
   // The pre-paint script already applied the stored choice; read it back after mount.
   useEffect(() => {
@@ -57,25 +57,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (legacy >= 0) router.replace(sectionHref(SECTIONS[legacy].id));
   }, [router]);
 
-  // Close the resorts menu on outside clicks and Escape.
-  useEffect(() => {
-    const outside = (event: PointerEvent) => {
-      if (resortMenu.current && !resortMenu.current.contains(event.target as Node)) resortMenu.current.open = false;
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && resortMenu.current?.open) {
-        resortMenu.current.open = false;
-        resortMenu.current.querySelector("summary")?.focus();
-      }
-    };
-    document.addEventListener("pointerdown", outside);
-    document.addEventListener("keydown", escape);
-    return () => {
-      document.removeEventListener("pointerdown", outside);
-      document.removeEventListener("keydown", escape);
-    };
-  }, []);
-
   function changeAppearance(mode: Appearance) {
     const next = appearance === mode ? null : mode;
     setAppearance(next);
@@ -87,7 +68,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   const data: DashboardData = { report, loadedAt, error, now };
-  const resort = SECTIONS.find((s) => s.group && sectionHref(s.id) === pathname);
   const dark = appearance ? appearance === "dark" : systemDark;
 
   return (
@@ -109,18 +89,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               ))}
             </div>
           </div>
-          <nav aria-label="Sections">
-            {SECTIONS.filter((s) => !s.group).map((s) => (
-              <Link key={s.id} href={sectionHref(s.id)} aria-current={sectionHref(s.id) === pathname ? "page" : undefined}>{s.label}</Link>
-            ))}
-            <details ref={resortMenu} key={pathname} className="editorial-nav__resorts">
-              <summary>{resort?.label ?? "Resorts"} <span className="editorial-nav__chevron" aria-hidden="true" /></summary>
-              <div>{SECTIONS.filter((s) => s.group).map((s) => (
-                <Link key={s.id} href={sectionHref(s.id)} aria-current={sectionHref(s.id) === pathname ? "page" : undefined}>{s.label}</Link>
-              ))}</div>
-            </details>
-          </nav>
         </header>
+        <SectionNav pathname={pathname} />
         <DataBanners data={data} />
         <main className="editorial-page">{children}</main>
       </div>
