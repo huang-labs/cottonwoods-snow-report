@@ -173,10 +173,10 @@ it("walks the archive through each post's neighbor links, past the recent-posts 
 });
 
 it("shows the recent posts in a left rail beside the article, today first, at most three", () => {
-  const history = [
-    { date: "2026-11-01", title: "Storm Underway" },
-    { date: "2026-10-31", title: "Storm Arrives" },
-    { date: "2026-10-30", title: "Snow Showers Return" },
+  const history: ApiDailySnow["archive"] = [
+    { date: "2026-11-01", title: "Storm Underway", phase: "storm" },
+    { date: "2026-10-31", title: "Storm Arrives", phase: "pre-storm" },
+    { date: "2026-10-30", title: "Snow Showers Return", phase: "post-storm" },
     { date: "2026-10-29", title: "A Quiet Stretch" },
     { date: "2026-10-28", title: "Storm Exiting" },
     { date: "2026-10-27", title: "Upslope Snow Continues" },
@@ -191,7 +191,14 @@ it("shows the recent posts in a left rail beside the article, today first, at mo
   // The live post is today's entry — marked active at rest — and not repeated from the archive.
   expect(entries[0].getAttribute("data-active")).toBe("true");
   expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-title")?.textContent)).toEqual(["Storm Underway", "Storm Arrives", "Snow Showers Return"]);
-  expect(entries[0].querySelector(".dailysnow__history-entry-phase")?.textContent).toBe("Storm");
+  expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-phase")?.textContent)).toEqual(["Storm", "Storm ahead", "Storm ending"]);
+});
+
+it("keeps older archive responses usable without a phase label", () => {
+  render(<DailySnowPage report={report(post)} now={now} />);
+  const entry = document.querySelectorAll(".dailysnow__history-entry")[1]!;
+  expect(entry.querySelector(".dailysnow__history-entry-title")?.textContent).toBe("Storm Arrives");
+  expect(entry.querySelector(".dailysnow__history-entry-phase")).toBeNull();
 });
 
 it("hides the rail while the live post is the only one, but keeps the archive links", () => {

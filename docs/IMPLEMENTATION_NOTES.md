@@ -2,6 +2,16 @@
 
 Findings from implementation on 2026-10-30, verified against the live sources and current docs. Where a finding refines the brief's (`IMPLEMENTATION_BRIEF.md`) preliminary reconnaissance, it is recorded here. The brief itself was revised once, for the phone/desktop-first change below.
 
+## Daily Snow history phase labels (2026-11-03)
+
+The public archive index now includes each post's stored phase at publication, so every recent-post rail entry can use the same phase label as the latest post. No phase is inferred from today's conditions or the headline. The API type keeps the field optional for older responses; missing phases simply omit the label. No storage migration, new reads, inference calls or production writes are needed.
+
+Validation: 58 Daily Snow API/collection and UI tests passed, including archive phase serialization and older responses without phases; typecheck and production build passed. Browser checks used fixture data passed through `publicDailySnow` at 1366 × 768 and 390 × 844: all three laptop entries showed their own phase without overflow; the phone rail remained hidden and archive navigation remained available. Other source feeds and the fixture stake image were not seeded; no live model run was needed.
+
+Rebased onto `main` (`964fed6`) after the archive date-navigation changes. The README conflict was resolved by retaining the new top/bottom date navigation and desktop-only history rail description alongside the phase metadata. All 60 relevant Daily Snow tests, typecheck and production build passed after the rebase; browser checks above were performed before the rebase and were not repeated.
+
+Existing files touched: `src/lib/report.ts` exposes the stored phase; `src/lib/types.ts` describes the optional API field; `test/dailysnow.test.ts` checks archive serialization; `test/dailysnow-ui.test.tsx` checks labels and compatibility; `README.md` documents the archive response; this file records the decision and validation. The component and CSS already support the labels and require no edits.
+
 ## Scope changes after v1 (2026-11-01, requested by the owner)
 
 These supersede the brief where they differ.

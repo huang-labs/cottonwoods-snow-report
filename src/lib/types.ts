@@ -559,8 +559,8 @@ export interface ApiDailySnow extends DailySnowPost {
   publicationStatus?: DailySnowPublicationStatus;
   /** Recent attempts are failing (the last good post is still shown). */
   failing: boolean;
-  /** Most recent posts, newest first (at most DAILY_SNOW_ARCHIVE_POSTS). */
-  archive: Array<{ date: string; title: string }>;
+  /** Most recent posts, newest first (at most DAILY_SNOW_ARCHIVE_POSTS); phase is optional for older responses. */
+  archive: Array<{ date: string; title: string; phase?: DailySnowPhase }>;
 }
 
 /** Each variable is percentile rows × 40 six-hour lead columns. Totals are from initialization. */

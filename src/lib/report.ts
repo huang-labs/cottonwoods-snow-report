@@ -95,7 +95,7 @@ export function publicDailySnow(post: DailySnowPost | null | undefined, state: D
     outdated: post.date !== today,
     publicationStatus: expected !== undefined && state?.current?.date === post.date ? dailySnowPublicationStatus(post.date, state, now, expected) : undefined,
     failing: post.date !== today && (state?.consecutiveFailures ?? 0) >= DAILY_SNOW_FAILING_AFTER,
-    archive: (state?.history ?? []).slice(0, DAILY_SNOW_ARCHIVE_POSTS).map((h) => ({ date: h.date, title: h.title })),
+    archive: (state?.history ?? []).slice(0, DAILY_SNOW_ARCHIVE_POSTS).map((h) => ({ date: h.date, title: h.title, phase: h.phase })),
   };
 }
 

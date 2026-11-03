@@ -393,6 +393,12 @@ describe("posting", () => {
     const state = (await readSnapshot(kv))!.dailySnow!;
     expect(state.history).toHaveLength(DAILY_SNOW_ARCHIVE_POSTS);
     expect(state.history.map((h) => h.date).slice(0, 2)).toEqual(["2026-11-01", "2026-10-31"]);
+    const archive = publicDailySnow(state.current, state, SIX_AM)!.archive;
+    expect(archive).toHaveLength(DAILY_SNOW_ARCHIVE_POSTS);
+    expect(archive.slice(0, 2)).toEqual([
+      { date: "2026-11-01", title: "Storm Underway", phase: state.current!.phase },
+      { date: "2026-10-31", title: "Earlier", phase: "quiet" },
+    ]);
   });
   it("links each post to its neighbors so the archive can be walked end to end", async () => {
     const kv = await seeded();
