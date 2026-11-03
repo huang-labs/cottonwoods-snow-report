@@ -19,7 +19,7 @@ function activeTab(tabs: HTMLElement | null): HTMLElement | null {
 }
 
 /**
- * Sticky section tabs: one row that scrolls sideways on phones, with a blue bar
+ * Section tabs: one row that scrolls sideways on phones, with a blue bar
  * under the current tab that slides between tabs. The resorts share one tab whose
  * menu is fixed-positioned so the scrolling row can't clip it.
  */

@@ -112,7 +112,7 @@ describe("app shell", () => {
       .filter((a) => !a.closest(".section-nav__resorts"));
     expect(navLinks.map((a) => a.getAttribute("href"))).toEqual(SECTIONS.filter((s) => !s.group).map((s) => sectionHref(s.id)));
     expect(screen.getByRole("link", { name: "Snowfall" }).getAttribute("aria-current")).toBe("page");
-    // The tabs sit in their own sticky bar after the masthead, with one bar marking the current tab.
+    // The tabs sit in their own bar after the masthead, with one bar marking the current tab.
     const tabs = document.querySelector(".section-nav__tabs")!;
     expect(tabs.closest("header")).toBeNull();
     expect(tabs.querySelectorAll(".section-nav__bar")).toHaveLength(1);

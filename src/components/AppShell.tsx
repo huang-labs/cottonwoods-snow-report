@@ -28,7 +28,7 @@ function applyAppearance(value: Appearance | null) {
 }
 
 /**
- * App frame: a masthead (brand, appearance control) and sticky section tabs
+ * App frame: a masthead (brand, appearance control) and section tabs
  * over one routed section page. Data comes from a single shared poller.
  * Legacy `?slide=<id>` links redirect to that section's page.
  */

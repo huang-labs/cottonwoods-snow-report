@@ -93,11 +93,11 @@ a { color: var(--accent); }
 .appearance-control button:focus-visible { outline-offset: -4px; border-radius: 6px; }
 
 /* ---- section tabs ----
-   Mobile first: one row that scrolls sideways, pinned to the top of the viewport.
+   Mobile first: one row that scrolls sideways on phones.
    The current tab is blue text over a 2px blue bar that sits on the divider and
    slides between tabs. The bar is one element placed by SectionNav; before it
    measures (or without JS), the current tab draws its own bar. */
-.section-nav { position: sticky; top: 0; z-index: 20; background: var(--bg); box-shadow: inset 0 -1px var(--line); }
+.section-nav { box-shadow: inset 0 -1px var(--line); }
 .section-nav__inner { position: relative; max-width: 1180px; margin: 0 auto; }
 .section-nav__tabs { position: relative; display: flex; gap: 20px; padding: 0 var(--gutter); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
 .section-nav__tabs::-webkit-scrollbar { display: none; }
