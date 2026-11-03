@@ -77,7 +77,6 @@ a { color: var(--accent); }
 
 /* ---- app frame and masthead ---- */
 .app { min-height: 100dvh; display: flex; flex-direction: column; }
-.loading { display: grid; place-items: center; min-height: 50vh; font-size: var(--fs-title); color: var(--muted); }
 
 .editorial-nav { max-width: 1180px; width: 100%; margin: 0 auto; padding: 24px var(--gutter) 0; }
 .editorial-nav__masthead { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 4px; }

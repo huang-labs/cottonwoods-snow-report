@@ -1,0 +1,113 @@
+import { findSection } from "@/lib/sections";
+import styles from "./loading.module.css";
+
+function Lines() {
+  return <div className={styles.lines}><div /><div /><div /></div>;
+}
+
+function Forecast() {
+  return (
+    <div className={styles.forecast}>
+      <div className={styles.summary}><Lines /></div>
+      <div className={styles.forecastTable}><Lines /><Lines /><Lines /></div>
+      <div className={styles.chart} />
+    </div>
+  );
+}
+
+/** Decorative approximations of the first screen, not copies of each page's data UI. */
+function Layout({ kind }: { kind: string }) {
+  switch (kind) {
+    case "regional":
+      return (
+        <div className={styles.snowfall}>
+          {["Alta", "Snowbird", "Solitude", "Brighton"].map((name) => (
+            <div className={styles.snowRow} key={name}>
+              <div className={styles.resortName}>{name}<div className={styles.shortLine} /></div>
+              <div className={styles.snowValues}>
+                {Array.from({ length: 5 }, (_, i) => <div key={i} />)}
+              </div>
+              <div className={styles.reportTime}><Lines /></div>
+            </div>
+          ))}
+        </div>
+      );
+    case "daily-snow":
+      return (
+        <div className={styles.article}>
+          <div className={styles.articleTitle} /><div className={styles.articleTitle} />
+          <Lines />
+          <div className={styles.articleSection}><div className={styles.shortLine} /><Lines /><Lines /></div>
+        </div>
+      );
+    case "weather":
+      return <div className={styles.columns}><Forecast /><Forecast /></div>;
+    case "plumes":
+      return (
+        <div className={styles.columns}>
+          {[0, 1, 2, 3].map((i) => (
+            <div className={styles.figure} key={i}><div className={styles.shortLine} /><div className={styles.chart} /></div>
+          ))}
+        </div>
+      );
+    case "traffic":
+      return (
+        <div className={styles.columns}>
+          {["Little Cottonwood Canyon", "Big Cottonwood Canyon"].map((name) => (
+            <div className={styles.canyon} key={name}>
+              <h2>{name}</h2>
+              <div className={styles.camera} />
+              <div className={styles.summary}><Lines /></div>
+              <Lines />
+            </div>
+          ))}
+        </div>
+      );
+    default:
+      return (
+        <div className={styles.resort}>
+          <div className={styles.jumpLinks}><div /><div /><div /></div>
+          <div className={styles.shortLine} />
+          <div className={styles.metrics}><div /><div /></div>
+          <div className={styles.history}>
+            {[0, 1, 2, 3].map((i) => <div key={i}><Lines /></div>)}
+          </div>
+          <div className={styles.articleSection}><div className={styles.shortLine} /><Lines /></div>
+        </div>
+      );
+  }
+}
+
+function pageTitle(id: string) {
+  if (id === "weather") return "Cottonwoods mountain weather";
+  if (id === "plumes") return "Utah ensemble snow plumes";
+  return findSection(id)?.title ?? "Snow report";
+}
+
+/** One entry point for initial report loads and direct Daily Snow archive loads. */
+export function ReportLoading({ sectionId }: { sectionId: string }) {
+  const title = pageTitle(sectionId);
+  return (
+    <div className={`${styles.loading} ${sectionId === "daily-snow" ? styles.reading : ""}`}>
+      <span className={styles.screenReader} role="status">Loading {title}…</span>
+      <section aria-busy="true" aria-label={title}>
+        <header className={styles.header}>
+          <h1>{title}</h1>
+          {sectionId !== "daily-snow" && <div aria-hidden="true" className={styles.subtitle}><Lines /></div>}
+        </header>
+        <div aria-hidden="true" className={styles.shapes}><Layout kind={sectionId} /></div>
+      </section>
+    </div>
+  );
+}
+
+/** A failed first request must not look like a request that is still pending. */
+export function ReportLoadError({ error }: { error: string }) {
+  return (
+    <section className={styles.error} role="status">
+      <h1>Could not load the report</h1>
+      <p>We’ll retry automatically in a few seconds.</p>
+      <p className={styles.errorDetail}>{error}</p>
+    </section>
+  );
+}
