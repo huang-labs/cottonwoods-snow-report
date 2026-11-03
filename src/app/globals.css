@@ -93,43 +93,40 @@ a { color: var(--accent); }
 .appearance-control button:focus-visible { outline-offset: -4px; border-radius: 6px; }
 
 /* ---- section tabs ----
-   Mobile first: one row that scrolls sideways on phones.
+   Mobile first: two independently scrolling rows on phones.
    The current tab is blue text over a 2px blue bar that sits on the divider and
    slides between tabs. The bar is one element placed by SectionNav; before it
    measures (or without JS), the current tab draws its own bar. */
-.section-nav { box-shadow: inset 0 -1px var(--line); }
 .section-nav__inner { position: relative; max-width: 1180px; margin: 0 auto; }
+/* Keep each divider inside the content gutters and beneath its active underline. */
+.section-nav__divider { position: absolute; left: var(--gutter); right: var(--gutter); bottom: 0; height: 1px; background: var(--line); pointer-events: none; }
 .section-nav__tabs { position: relative; display: flex; gap: 20px; padding: 0 var(--gutter); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
 .section-nav__tabs::-webkit-scrollbar { display: none; }
-/* Edge fades hint that the row scrolls; overlays, so the fixed menu isn't masked. */
+/* Each row owns its scroll hints, keeping fades clear of the other row. */
 .section-nav__inner::before, .section-nav__inner::after { content: ""; position: absolute; top: 0; bottom: 1px; width: 40px; z-index: 1; pointer-events: none; opacity: 0; transition: opacity 150ms ease; }
 .section-nav__inner::before { left: 0; background: linear-gradient(to right, var(--bg), transparent); }
 .section-nav__inner::after { right: 0; background: linear-gradient(to left, var(--bg), transparent); }
 .section-nav__inner[data-fade-start]::before, .section-nav__inner[data-fade-end]::after { opacity: 1; }
-.section-nav__tabs > a, .section-nav summary { position: relative; display: flex; align-items: center; flex-shrink: 0; min-height: 48px; padding: 0; white-space: nowrap; text-decoration: none; font-size: 15px; font-weight: 600; color: var(--muted); cursor: pointer; transition: color 150ms ease; }
-.section-nav__tabs > a:hover, .section-nav summary:hover { color: var(--text); }
-.section-nav__tabs > a[aria-current="page"], .section-nav summary[data-current] { color: var(--accent); }
-.section-nav__tabs > a:focus-visible, .section-nav summary:focus-visible { outline-offset: -4px; border-radius: 4px; }
-.section-nav__tabs:not([data-bar]) > :is(a[aria-current="page"], details > summary[data-current])::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--accent); }
+.section-nav__tabs > a, .section-nav__tabs > button { position: relative; display: flex; align-items: center; flex-shrink: 0; min-height: 48px; padding: 0; white-space: nowrap; text-decoration: none; font-size: 15px; font-weight: 600; color: var(--muted); cursor: pointer; transition: color 150ms ease; }
+.section-nav__tabs > a:hover, .section-nav__tabs > button:hover { color: var(--text); }
+.section-nav__tabs > a[aria-current="page"], .section-nav__tabs > button[data-current] { color: var(--accent); }
+.section-nav__tabs > a:focus-visible, .section-nav__tabs > button:focus-visible { outline-offset: -4px; border-radius: 4px; }
+.section-nav__tabs:not([data-bar]) > :is(a[aria-current="page"], button[data-current])::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--accent); }
 .section-nav__bar { position: absolute; left: 0; bottom: 0; width: 0; height: 2px; border-radius: 2px 2px 0 0; background: var(--accent); pointer-events: none; }
 .section-nav__tabs:not([data-bar]) > .section-nav__bar { display: none; }
 .section-nav__tabs[data-animate] > .section-nav__bar { transition: transform 220ms cubic-bezier(0.2, 0, 0, 1), width 220ms cubic-bezier(0.2, 0, 0, 1); }
 
-.section-nav__resorts { flex-shrink: 0; display: flex; }
-.section-nav summary { list-style: none; gap: 8px; }
-.section-nav summary::-webkit-details-marker { display: none; }
+.section-nav__resorts { gap: 8px; border: 0; background: none; font-family: inherit; }
 .section-nav__chevron { width: 6px; height: 6px; margin: -3px 2px 0 0; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform 150ms ease; }
-.section-nav__resorts[open] .section-nav__chevron { transform: translateY(3px) rotate(225deg); }
-/* Fixed so the scrolling tab row can't clip it; SectionNav sets top/left. */
-.section-nav__menu { position: fixed; width: 200px; z-index: 40; padding: 6px 0; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); box-shadow: 0 10px 24px #0000001a; }
-.section-nav__menu a { display: flex; align-items: center; min-height: 44px; padding: 0 16px; text-decoration: none; color: var(--text); font-size: 15px; }
-.section-nav__menu a:hover { background: var(--panel); }
-.section-nav__menu a:focus-visible { outline-offset: -2px; }
-.section-nav__menu a[aria-current="page"] { color: var(--accent); font-weight: 650; box-shadow: inset 2px 0 var(--accent); }
+.section-nav__resorts[aria-expanded="true"] .section-nav__chevron { transform: translateY(3px) rotate(225deg); }
+.section-nav__resorts[aria-disabled="true"] { cursor: default; }
+.section-nav__subnav { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows 200ms ease, opacity 200ms ease, visibility 200ms; }
+.section-nav__subnav[data-expanded] { grid-template-rows: 1fr; opacity: 1; visibility: visible; }
+.section-nav__reveal { min-height: 0; overflow: hidden; }
 
 @media (min-width: 901px) {
   .section-nav__tabs { gap: 32px; }
-  .section-nav__tabs > a, .section-nav summary { min-height: 52px; font-size: var(--fs-body); }
+  .section-nav__tabs > a, .section-nav__tabs > button { min-height: 52px; font-size: var(--fs-body); }
 }
 
 .editorial-page { max-width: 1180px; width: 100%; margin: 0 auto; padding: 24px var(--gutter) 64px; }
@@ -421,7 +418,7 @@ a { color: var(--accent); }
 
 @media (prefers-reduced-motion: reduce) {
   .snow-table .row--primary { transition: none; }
-  .section-nav__tabs[data-animate] > .section-nav__bar, .section-nav__chevron { transition: none; }
+  .section-nav__tabs[data-animate] > .section-nav__bar, .section-nav__chevron, .section-nav__subnav { transition: none; }
 }
 
 /* ---- narrow screens (phones and small tablets) ---- */
