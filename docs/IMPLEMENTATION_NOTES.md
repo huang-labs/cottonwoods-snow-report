@@ -2,6 +2,8 @@
 
 Findings from implementation on 2026-10-30, verified against the live sources and current docs. Where a finding refines the brief's (`IMPLEMENTATION_BRIEF.md`) preliminary reconnaissance, it is recorded here. The brief itself was revised once, for the phone/desktop-first change below.
 
+This file is reference material: source findings, design decisions and known limitations that the code doesn't explain. It is not a changelog. As of 2026-11-03, PRs no longer append dated entries; the PR description records each change and its validation, and lasting decisions are edited into the relevant section here or in the README. The dated sections below are kept as history and may be superseded by later code or sections.
+
 ## Scope changes after v1 (2026-11-01, requested by the owner)
 
 These supersede the brief where they differ.
