@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { runCollection } from "@/lib/collect";
 import { dailySnowFigureKey, dailySnowKey, emptyDailySnowState, planDailySnow } from "@/lib/dailysnow";
 import { buildContinuity, historyEntry } from "@/lib/dailysnow/continuity";
-import { buildDailyDigest, phaseOf, snowNext } from "@/lib/dailysnow/digest";
+import { buildDailyDigest, dailySnowActivity, phaseOf, snowNext } from "@/lib/dailysnow/digest";
 import { allowedAmounts, buildModelInput, DAILY_SNOW_TIMEOUT_MS, SYSTEM_PROMPT, validateDailySnow } from "@/lib/dailysnow/llm";
 import { IN_FLIGHT_MS, MAX_ATTEMPTS, RETRY_AFTER_MS, shouldRunDailySnow } from "@/lib/dailysnow/schedule";
 import { inchAmountsIn, ungroundedInches } from "@/lib/ai/grounding";
@@ -560,5 +560,31 @@ describe("posting", () => {
     const { ai } = fakeAi(() => answer([]));
     expect(planDailySnow(undefined, s, { SNOW_KV: new MemoryKV(), AI: ai }, SIX_AM)).toMatchObject({ skipped: "off-season" });
     expect(planDailySnow(undefined, s, { SNOW_KV: new MemoryKV() }, SIX_AM)).toBeUndefined();
+  });
+  it("counts the forecast bar in progress at posting time as activity", () => {
+    const h = 3_600_000;
+    const quiet = () => {
+      const s = snap();
+      for (const p of (s.sources.nws!.payload as NwsPayload).points) { p.sixHourSnow = []; p.hourlySnow = []; }
+      for (const id of ["alta", "snowbird", "solitude", "brighton"] as const) s.sources[id] = undefined;
+      return s;
+    };
+    // Legacy six-hour-only snapshot: the only snow is in the bar covering now.
+    const legacy = quiet();
+    const lp = (legacy.sources.nws!.payload as NwsPayload).points[0];
+    delete lp.hourlySnow;
+    lp.sixHourSnow = [
+      { start: new Date(SIX_AM.getTime() - 5 * h).toISOString(), snowIn: 2, snowLevelFt: null },
+      { start: new Date(SIX_AM.getTime() + h).toISOString(), snowIn: 0, snowLevelFt: null },
+    ];
+    expect(dailySnowActivity(legacy, SIX_AM).worthPosting).toBe(true);
+    // A bar that ended at now is past, not ahead.
+    lp.sixHourSnow[0].start = new Date(SIX_AM.getTime() - 6 * h).toISOString();
+    expect(dailySnowActivity(legacy, SIX_AM).worthPosting).toBe(false);
+    // Hourly series: the current hour counts.
+    const hourly = quiet();
+    const now = new Date(SIX_AM.getTime() + 30 * 60_000);
+    (hourly.sources.nws!.payload as NwsPayload).points[0].hourlySnow = [{ start: SIX_AM.toISOString(), snowIn: 1 }];
+    expect(dailySnowActivity(hourly, now).worthPosting).toBe(true);
   });
 });

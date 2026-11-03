@@ -201,9 +201,14 @@ export function dailySnowActivity(snapshot: Snapshot, now: Date, base = buildDig
   const recent48 = Math.max(recent, maxOf(reports.flatMap((r) => (r ? [reported(r.snowfall.h48), reported(r.snowfall.storm)] : []))));
   const anyInSeason = base.resorts.some((r) => r.inSeason);
   // Partial future coverage can establish activity, but cannot establish a total.
-  const snowAhead = (nws?.points ?? []).some((p) => (p.hourlySnow ?? p.sixHourSnow)
-    .filter((b) => Date.parse(b.start) >= now.getTime() && Date.parse(b.start) < now.getTime() + 7 * 24 * HOUR)
-    .reduce((sum, b) => sum + b.snowIn, 0) >= 1);
+  // The bar covering `now` counts in full: snow still falling is activity.
+  const t = now.getTime();
+  const snowAhead = (nws?.points ?? []).some((p) => {
+    const [bars, span] = p.hourlySnow ? [p.hourlySnow, HOUR] : [p.sixHourSnow, 6 * HOUR];
+    return bars
+      .filter((b) => Date.parse(b.start) + span > t && Date.parse(b.start) < t + 7 * 24 * HOUR)
+      .reduce((sum, b) => sum + b.snowIn, 0) >= 1;
+  });
   const worthPosting = anyInSeason || snowAhead || recent48 > 0;
   // Missing/delayed inputs cannot establish an intentional quiet-day skip. This
   // affects the public notice only; model eligibility keeps the original gate.

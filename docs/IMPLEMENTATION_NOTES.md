@@ -823,7 +823,9 @@ recovery, and archive backup/restore remain follow-ups.
   coverage and yield null until a successful NWS collection (normally within
   15 minutes). The forecast horizon may not cover a full seven days; that total
   is then unavailable. Partial future snow coverage can still establish posting
-  activity without being presented as a complete total. Measured resort windows,
+  activity without being presented as a complete total; the bar covering the
+  posting time counts in full (hourly or legacy six-hour), as before, so a
+  storm still falling keeps an otherwise off-season day eligible. Measured resort windows,
   existing NWS charts and ensemble calculations are unchanged.
 - **Figure identity:** SHA-256 of each still determines the revision stored at
   `dailysnow-fig:v2:<date>:<figure>:<sha256>` and its `?v=<sha256>` URL. Images are
@@ -848,7 +850,8 @@ recovery, and archive backup/restore remain follow-ups.
 application code (same-attempt reservation rollback for both AI features, the
 forecast-window probe, rewrite image isolation, and three stalled-body readers).
 After rebasing onto `c6e1d02` (preserving the snowfall legend/source-line
-changes and both appended note sections), **309 tests across 23 files**, `npm run typecheck`,
+changes and both appended note sections), **310 tests across 23 files** (including a regression
+for the in-progress forecast bar raised in AI review, which failed before its fix), `npm run typecheck`,
 `npm run build`, `npm run smoke`, and `git diff --check` pass. Smoke exercised
 nine static pages, navigation payloads, API methods, local KV, share PNGs/metadata
 and HEAD in workerd, using temporary local state that the script removed. No
