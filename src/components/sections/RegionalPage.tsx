@@ -68,13 +68,18 @@ function PhoneSummary({ r }: { r: ResortReport }) {
   );
 }
 
+/**
+ * Each resort's freshness is its own, so it stays in its row, but only when it
+ * needs attention: a current report shows just the name, and the report-time
+ * column carries its recency. Any other state keeps its badge.
+ */
 function Row({ source, now, recommended }: { source: ApiSource; now: Date; recommended: boolean }) {
   const r = source.payload as ResortReport | null;
   return (
     <tr className={`row--primary${recommended ? " row--recommended" : ""}`}>
       <th scope="row">
         <div className="resort-name"><a className="resort-name__link" href={sectionHref(source.id)}>{source.label}</a></div>
-        <FreshnessBadge freshness={source.freshness} />
+        {source.freshness !== "current" && <FreshnessBadge freshness={source.freshness} />}
         {recommended && <span className="badge badge--ai">AI pick</span>}
       </th>
       {COLUMNS.map((c) => {
