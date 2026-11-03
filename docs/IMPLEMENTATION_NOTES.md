@@ -326,3 +326,9 @@ The grouping helper enumerates UTC six-hour slots and assigns each to its actual
 Existing files touched: src/components/charts.tsx removes the obsolete snow renderer (snow levels unchanged); src/components/sections/WeatherPage.tsx and src/components/dailysnow/figures.tsx use the shared figure; README.md documents presentation and scrolling; this notes file records decisions. New chart, scoped CSS, grouping helper, and tests live separately. No source, storage, cron, or AI changes.
 
 Validation: 18 snowfall/Daily Snow UI tests pass, including missing periods, zero amounts, preserved individual values, and both DST transitions. Typecheck, production build and diff whitespace check pass. Browser checks at 320/390/1366px on Weather and Daily Snow confirm equal day widths, fitting amount labels and no page overflow; scrolled Daily Snow to inspect the snow-bearing periods visually. Preview uses real public NWS and saved Daily Snow data copied into local KV. Other sources were not seeded, so the missing-feed banner is expected. No production writes, real-device Safari checks, or model runs.
+
+## 2026-11-03 — Tighter mobile navigation
+
+Below 900 px the six section tabs keep their three-by-two grid (restored after the scrollable row in #30 was reverted), with less padding: links are 36 px tall instead of 44 px, the gap between the two rows is 2 px instead of 4 px, and there is less space under the masthead and the tabs. At 390 px the nav ends at 154 px from the top instead of 180 px. Desktop is unchanged. The 36 px tab height is below Apple's 44 pt guideline but each tab spans a third of the screen width, and the tabs stay well separated.
+
+Validation: browser checks at 360, 390 and 430 px (no label overflow, Resorts dropdown opens correctly) and at 1280 px (unchanged), `npm run typecheck`, `test/app-shell.test.tsx` (7 pass), production build.
