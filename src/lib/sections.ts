@@ -5,12 +5,7 @@ export interface SectionDef {
   title: string;
   /** Short label for the navbar tabs. */
   label: string;
-  /** Sections sharing a group collapse into one dropdown in the navbar. */
-  group?: SectionGroup;
 }
-
-export type SectionGroup = "resorts";
-export const GROUP_LABELS: Record<SectionGroup, string> = { resorts: "Resorts" };
 
 export const SECTIONS: SectionDef[] = [
   { id: "regional", title: "Resort snowfall", label: "Snowfall" },
@@ -18,10 +13,10 @@ export const SECTIONS: SectionDef[] = [
   { id: "weather", title: "Mountain weather", label: "Weather" },
   { id: "plumes", title: "Ensemble plumes", label: "Plumes" },
   { id: "traffic", title: "Canyon roads", label: "Roads" },
-  { id: "alta", title: "Alta", label: "Alta", group: "resorts" },
-  { id: "snowbird", title: "Snowbird", label: "Snowbird", group: "resorts" },
-  { id: "solitude", title: "Solitude", label: "Solitude", group: "resorts" },
-  { id: "brighton", title: "Brighton", label: "Brighton", group: "resorts" },
+  { id: "alta", title: "Alta", label: "Alta" },
+  { id: "snowbird", title: "Snowbird", label: "Snowbird" },
+  { id: "solitude", title: "Solitude", label: "Solitude" },
+  { id: "brighton", title: "Brighton", label: "Brighton" },
 ];
 
 /** The first section lives at `/`; the others at `/<id>`. */

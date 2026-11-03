@@ -106,11 +106,11 @@ describe("app shell", () => {
     mockApi(REPORT);
     renderAt("/");
     expect(await screen.findByRole("heading", { level: 1, name: "Resort snowfall" })).toBeTruthy();
-    // Non-resort sections are nav links; the resorts sit behind one menu.
-    const navLinks = within(screen.getByRole("navigation", { name: "Sections" }))
-      .getAllByRole("link")
-      .filter((a) => !a.closest(".section-nav__resorts"));
-    expect(navLinks.map((a) => a.getAttribute("href"))).toEqual(SECTIONS.filter((s) => !s.group).map((s) => sectionHref(s.id)));
+    // Every section, resorts included, is a tab at the same level; there is no menu.
+    const nav = screen.getByRole("navigation", { name: "Sections" });
+    const navLinks = within(nav).getAllByRole("link");
+    expect(navLinks.map((a) => a.getAttribute("href"))).toEqual(SECTIONS.map((s) => sectionHref(s.id)));
+    expect(nav.querySelector("details, summary")).toBeNull();
     expect(screen.getByRole("link", { name: "Snowfall" }).getAttribute("aria-current")).toBe("page");
     // The tabs sit in their own bar after the masthead, with one bar marking the current tab.
     const tabs = document.querySelector(".section-nav__tabs")!;
@@ -129,17 +129,11 @@ describe("app shell", () => {
     for (const [i, title] of expected.entries()) {
       const view = renderAt(sectionHref(SECTIONS[i].id));
       expect(await screen.findByRole("heading", { level: 1, name: title })).toBeTruthy();
-      // The resorts menu names the current resort while on a resort page.
-      const menu = document.querySelector(".section-nav__resorts")!;
-      // The resorts tab carries the current-tab marker (and its blue bar) only on resort pages.
-      if (SECTIONS[i].group) {
-        expect(menu.querySelector("summary")?.textContent).toContain(SECTIONS[i].label);
-        expect(menu.querySelector("summary")?.hasAttribute("data-current")).toBe(true);
-      } else {
-        expect(menu.querySelector("summary")?.hasAttribute("data-current")).toBe(false);
-      }
-      const resortLinks = within(menu as HTMLElement).getAllByRole("link");
-      expect(resortLinks.map((a) => a.getAttribute("href"))).toEqual(["/alta", "/snowbird", "/solitude", "/brighton"]);
+      // Exactly one tab, this page's, carries the current-tab marker.
+      const current = within(screen.getByRole("navigation", { name: "Sections" }))
+        .getAllByRole("link")
+        .filter((a) => a.getAttribute("aria-current") === "page");
+      expect(current.map((a) => a.textContent)).toEqual([SECTIONS[i].label]);
       if (SECTIONS[i].id === "plumes") {
         // Four cropped panels, each with a Mountain Time axis.
         expect(await screen.findAllByRole("img", { name: /times in Mountain Time/ })).toHaveLength(4);
