@@ -333,12 +333,20 @@ PR #25 removed the TV slideshow, but `AGENTS.md`, the brief, the current-state l
 
 Left in place on purpose: the legacy `?slide=<id>` redirect in `AppShell` (it is live behavior for old bookmarks, documented in the README and covered by `test/app-shell.test.tsx`), and the resort-pick prompt's "Write for a TV dashboard" line in `src/lib/recommend/llm.ts`, which needs a live model check before it changes.
 
-## 2026-11-03 — One-line snowfall values on phones
+## 2026-11-03 — Headline snowfall summary on phones
 
-The owner disliked the phone layout from PR #25: it split each resort's five values across a three-column grid of two rows. A horizontally scrolling table was tried as a replacement and also rejected. Below 900px the table is now one block per resort. The first line has the name and chips on the left and the report time on the right. The second line has all five values in the same five columns as a short header row (Overnight, 24 h, 48 h, Storm, Base), so each window reads straight down the page and nothing scrolls sideways. The overnight column is 1.5× wider than the others, which fits its header at 320px and makes room for notes such as "since lifts closed". Phones drop the "checked …" age but keep "latest check failed". The AI pick's reasoning row and accent line are unchanged.
+The owner disliked the phone layout from PR #25, which split each resort's five values across a three-column grid of two rows. Two replacements were tried and rejected: a horizontally scrolling table, and the five values on one line under short column headers. Below 900px each resort is now a block with three lines:
 
-Headers now name every window on every screen. Each window `<th>` carries its full title (`aria-label`) plus a full and a short visible label. The phone-only window label under every value (`.cell-label__window`) is removed, so a note under a value appears only where the resort's window differs from the column. Desktop rendering is unchanged.
+- the name and chips, with the report time on the right;
+- the 24 h total as a 40px headline labeled "24 h";
+- the other windows as one line of text, such as "12 h 2″ · 48 h — · Storm 15″ · Base 20″".
 
-Files touched: `src/components/sections/RegionalPage.tsx` (short column labels, window label removed), `src/app/globals.css` (phone table rules; the base `.cell-label__window` rule becomes the `.col-short` rule), `test/resort-report-ui.test.tsx` (asserts header labels instead of the phone window labels) and `README.md`.
+Each item in that line is named by the window the figure actually covers, so Alta's overnight figure reads "12 h". Solitude's note ("Since lifts closed") follows its value. When the line wraps, the separator that would start the new line is clipped: every item leads with a fixed-width "·", and the line is shifted left by one separator inside a clipped box. Phones drop the "checked …" age but keep "latest check failed". The AI pick's reasoning row and accent line are unchanged.
 
-Validation: 203 tests across 17 files, `npm run typecheck` and `npm run build` pass. Browser checks ran on the local dev server with freshly collected real resort data and a stubbed AI pick (local AI is off). At 320, 390, 600 and 900px the page has no horizontal overflow, header and value columns share identical left edges in every row, and no header or cell overflows. At 1366px the table matches main. Not run: real-device Safari and dark mode (colors are unchanged).
+The headline window is `PHONE_LEAD` in `RegionalPage.tsx`. 24 h is the one window every resort reports with the same name, so the headline doesn't change meaning from one resort to the next.
+
+On phones the summary is a visual copy in an extra `aria-hidden` cell (`.snow-phone`, hidden on desktop). The original value cells stay in the DOM, visually hidden, so screen readers still read the table once. The phone-only window label under every value (`.cell-label__window`) is removed because the summary names its own windows. Desktop rendering is unchanged.
+
+Files touched: `src/components/sections/RegionalPage.tsx` (the `PhoneSummary` cell; `cell()` also returns the window used; window label removed), `src/app/globals.css` (phone table rules), `test/resort-report-ui.test.tsx` (header labels and a phone summary test) and `README.md`.
+
+Validation: 204 tests across 17 files, `npm run typecheck` and `npm run build` pass. Browser checks ran on the local dev server with freshly collected real resort data and a stubbed AI pick (local AI is off). At 320, 390 and 900px the page has no horizontal overflow, and wrapped lines start without a stray separator. At 320px the chips wrap under the resort name. At 1366px the table matches main. Not run: real-device Safari and dark mode (colors are unchanged).

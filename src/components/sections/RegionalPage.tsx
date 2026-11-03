@@ -8,28 +8,64 @@ import { newSnowKey, SNOW_LABEL, snowQualifier } from "./resort-display";
 
 const PRIMARY: SourceId[] = ["alta", "snowbird", "solitude", "brighton"];
 
-/** `short` heads the column on phones, where five columns share the screen width. */
-const COLUMNS: Array<{ key: keyof SnowfallSet | "base"; title: string; short: string }> = [
-  { key: "overnight", title: "Overnight / 12 h", short: "Overnight" },
-  { key: "h24", title: SNOW_LABEL.h24, short: SNOW_LABEL.h24 },
-  { key: "h48", title: SNOW_LABEL.h48, short: SNOW_LABEL.h48 },
-  { key: "storm", title: SNOW_LABEL.storm, short: SNOW_LABEL.storm },
-  { key: "base", title: "Base", short: "Base" },
+type ColumnKey = keyof SnowfallSet | "base";
+
+const COLUMNS: Array<{ key: ColumnKey; title: string }> = [
+  { key: "overnight", title: "Overnight / 12 h" },
+  { key: "h24", title: SNOW_LABEL.h24 },
+  { key: "h48", title: SNOW_LABEL.h48 },
+  { key: "storm", title: SNOW_LABEL.storm },
+  { key: "base", title: "Base" },
 ];
 
+/** Phones lead with this window and list the rest on one line beneath it. */
+const PHONE_LEAD: ColumnKey = "h24";
+
 /**
- * The value for a column and the note under it. Column headers name the window on
- * every screen; the note appears only where the resort's window differs from the
- * column's, like Alta's 12 h in the overnight column or Solitude's "since lifts closed".
+ * The value for a column, the window it actually covers, and the note under it.
+ * Column headers name the window; the note appears only where the resort's window
+ * differs from the column's, like Alta's 12 h in the overnight column or
+ * Solitude's "since lifts closed".
  */
-function cell(r: ResortReport, key: (typeof COLUMNS)[number]["key"]): { m: Metric; qualifier: string | null } {
-  if (key === "base") return { m: r.base, qualifier: null };
+function cell(r: ResortReport, key: ColumnKey): { m: Metric; window: string; qualifier: string | null } {
+  if (key === "base") return { m: r.base, window: "Base", qualifier: null };
   const used = key === "overnight" ? newSnowKey(r.snowfall) : key;
   const m = r.snowfall[used];
   return {
     m,
+    window: SNOW_LABEL[used],
     qualifier: used !== key ? SNOW_LABEL[used] : m.state === "unavailable" ? null : snowQualifier(used, m.label),
   };
+}
+
+/**
+ * The phone rendering of a resort's values: the lead window as a large headline,
+ * then every other window as one line of text, each named by the window it
+ * actually covers. The table cells stay in the DOM for screen readers, so this
+ * visual copy is hidden from them.
+ */
+function PhoneSummary({ r }: { r: ResortReport }) {
+  const lead = cell(r, PHONE_LEAD);
+  return (
+    <td className="snow-phone" aria-hidden="true">
+      <div className="snow-phone__lead">
+        <MetricValue m={lead.m} size="xl" />
+        <span className="snow-phone__window">{lead.window}</span>
+        {lead.qualifier && lead.qualifier !== lead.window && <span className="snow-phone__note">{lead.qualifier}</span>}
+      </div>
+      <div className="snow-phone__rest">
+        {COLUMNS.filter((c) => c.key !== PHONE_LEAD).map((c) => {
+          const { m, window, qualifier } = cell(r, c.key);
+          return (
+            <span key={c.key} className="snow-phone__item">
+              <span className="snow-phone__window">{window}</span> <MetricValue m={m} size="sm" />
+              {qualifier && qualifier !== window && <span className="snow-phone__note">{qualifier}</span>}
+            </span>
+          );
+        })}
+      </div>
+    </td>
+  );
 }
 
 function Row({ source, now, recommended }: { source: ApiSource; now: Date; recommended: boolean }) {
@@ -56,6 +92,7 @@ function Row({ source, now, recommended }: { source: ApiSource; now: Date; recom
         <div className="report-time__checked">checked {formatAge(source.lastSuccessfulFetchAt, now)}</div>
         {source.status === "error" && <div className="report-time__failed">latest check failed</div>}
       </td>
+      {r && <PhoneSummary r={r} />}
     </tr>
   );
 }
@@ -74,10 +111,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
           <tr>
             <th scope="col">Resort</th>
             {COLUMNS.map((c) => (
-              <th scope="col" key={c.key} aria-label={c.title}>
-                <span className="col-full" aria-hidden="true">{c.title}</span>
-                <span className="col-short" aria-hidden="true">{c.short}</span>
-              </th>
+              <th scope="col" key={c.key}>{c.title}</th>
             ))}
             <th scope="col">Report time (MT)</th>
           </tr>
