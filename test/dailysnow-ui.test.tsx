@@ -147,6 +147,10 @@ it("teases the post on the Snowfall page", () => {
   const link = screen.getByRole("link", { name: "Daily Snow: Storm Underway" });
   expect(link.getAttribute("href")).toBe("/daily-snow");
   expect(link.querySelector(".badge--ai")).not.toBeNull();
+  // The teaser leads the page, above the Snowfall header.
+  const page = document.querySelector(".page--regional")!;
+  expect(page.firstElementChild).toBe(link);
+  expect(link.nextElementSibling?.className).toBe("page__header");
 });
 
 const recommendation: ApiRecommendation = {
