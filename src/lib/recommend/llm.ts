@@ -1,14 +1,9 @@
+import { inchAmountsIn, ungroundedInches } from "../ai/grounding";
+import { askWithFallback, chatInput, type AiLike, type ModelResult } from "../ai/model";
+import { clipText as clip } from "../clip";
 import type { PrimaryResortId, Recommendation } from "../types";
 import type { Digest } from "./digest";
 
-/** Minimal Workers AI binding surface (Cloudflare `Ai` satisfies it). */
-export interface AiLike {
-  run(model: string, input: Record<string, unknown>, options?: Record<string, unknown>): Promise<unknown>;
-}
-
-export const PRIMARY_MODEL = "@cf/zai-org/glm-5.3-flash";
-/** Different model family, used once if the primary fails or returns invalid output. */
-export const FALLBACK_MODEL = "@cf/openai/gpt-oss-120b";
 export const LLM_TIMEOUT_MS = 60_000;
 
 export const SYSTEM_PROMPT = `You pick which Wasatch ski resort to ski for a local who lives at the bottom of the Cottonwood Canyons, Salt Lake City, Utah.
@@ -52,8 +47,14 @@ function schema(eligible: PrimaryResortId[]) {
   };
 }
 
-export function buildUserPrompt(digest: Digest, previous: Recommendation | null): string {
+/** What the model sees of the digest: everything but the change-detection signals. */
+function modelFacts(digest: Digest): Omit<Digest, "signals"> {
   const { signals: _signals, ...facts } = digest;
+  return facts;
+}
+
+export function buildUserPrompt(digest: Digest, previous: Recommendation | null): string {
+  const facts = modelFacts(digest);
   const prev =
     previous && previous.targetDate === digest.target.date
       ? { pick: previous.pick ?? "none", plan: previous.plan, headline: previous.headline, at: previous.generatedAt }
@@ -79,26 +80,11 @@ export interface LlmPick {
   runnerUp: PrimaryResortId | null;
 }
 
-const clip = (s: unknown, n: number) => {
-  const t = typeof s === "string" ? s.replace(/\s+/g, " ").trim() : "";
-  return t.length > n ? `${t.slice(0, n - 1)}…` : t;
-};
-
-/** Extract the JSON object from a chat-completions or Workers AI `response` result. */
-export function responseJson(res: unknown): unknown {
-  const r = res as { choices?: Array<{ message?: { content?: unknown } }>; response?: unknown };
-  const content = r?.choices?.[0]?.message?.content ?? r?.response;
-  if (content && typeof content === "object") return content;
-  if (typeof content !== "string" || !content.trim()) throw new Error("Model returned no content");
-  const text = content.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start < 0 || end < start) throw new Error("Model output is not JSON");
-  return JSON.parse(text.slice(start, end + 1));
-}
-
-/** Validate model output against the eligible set; throws on anything unusable. */
-export function validatePick(raw: unknown, eligible: PrimaryResortId[]): LlmPick {
+/**
+ * Validate model output against the eligible set; throws on anything unusable.
+ * With `allowed`, inch amounts in the text must also come from the input.
+ */
+export function validatePick(raw: unknown, eligible: PrimaryResortId[], allowed?: number[]): LlmPick {
   const o = raw as Record<string, unknown>;
   if (!o || typeof o !== "object") throw new Error("Model output is not an object");
   const asPick = (v: unknown): PrimaryResortId | null | undefined =>
@@ -114,7 +100,7 @@ export function validatePick(raw: unknown, eligible: PrimaryResortId[]): LlmPick
   if (runnerUp === undefined) throw new Error("Model returned an ineligible runner-up");
   const list = (v: unknown, max: number, n: number) =>
     (Array.isArray(v) ? v : []).map((x) => clip(x, n)).filter(Boolean).slice(0, max);
-  return {
+  const out: LlmPick = {
     pick,
     plan: clip(o.plan, 110),
     headline,
@@ -122,53 +108,38 @@ export function validatePick(raw: unknown, eligible: PrimaryResortId[]): LlmPick
     caveats: list(o.caveats, 2, 120),
     runnerUp: runnerUp === pick ? null : runnerUp,
   };
+  if (allowed) {
+    const bad = ungroundedInches([out.headline, out.plan, out.summary, ...out.caveats].join("\n"), allowed);
+    if (bad.length) throw new Error(`Model output has amounts not in the data: ${bad.slice(0, 5).join(", ")}″`);
+  }
+  return out;
 }
 
 export function buildModelInput(model: string, digest: Digest, previous: Recommendation | null): Record<string, unknown> {
-  const base: Record<string, unknown> = {
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: buildUserPrompt(digest, previous) },
-    ],
-    response_format: {
-      type: "json_schema",
-      json_schema: { name: "resort_pick", strict: true, schema: schema(digest.eligible) },
-    },
+  return chatInput(model, {
+    system: SYSTEM_PROMPT,
+    user: buildUserPrompt(digest, previous),
+    schemaName: "resort_pick",
+    schema: schema(digest.eligible),
     temperature: 0.2,
-    max_tokens: 3000,
-  };
-  // GLM always reasons; "high" is a better latency/quality trade than its default "max".
-  if (model === PRIMARY_MODEL) base.reasoning_effort = "high";
-  else base.reasoning_effort = "medium";
-  return base;
-}
-
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Model timed out after ${ms / 1000} s`)), ms);
-    p.then(
-      (v) => (clearTimeout(timer), resolve(v)),
-      (e) => (clearTimeout(timer), reject(e)),
-    );
+    maxTokens: 3000,
   });
 }
 
 /** Ask the primary model, then the fallback once. Throws when both fail. */
-export async function askModel(
+export function askModel(
   ai: AiLike,
   digest: Digest,
   previous: Recommendation | null,
   gatewayId: string | undefined,
-): Promise<LlmPick & { model: string }> {
-  const errors: string[] = [];
-  for (const model of [PRIMARY_MODEL, FALLBACK_MODEL]) {
-    try {
-      const opts = gatewayId ? { gateway: { id: gatewayId, skipCache: true } } : {};
-      const res = await withTimeout(ai.run(model, buildModelInput(model, digest, previous), opts), LLM_TIMEOUT_MS);
-      return { ...validatePick(responseJson(res), digest.eligible), model };
-    } catch (e) {
-      errors.push(`${model}: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-  throw new Error(errors.join(" | "));
+): Promise<ModelResult<LlmPick>> {
+  const allowed = inchAmountsIn(modelFacts(digest));
+  return askWithFallback({
+    ai,
+    gatewayId,
+    input: (model) => buildModelInput(model, digest, previous),
+    validate: (raw) => validatePick(raw, digest.eligible, allowed),
+    timeoutMs: LLM_TIMEOUT_MS,
+    label: "recommend",
+  });
 }

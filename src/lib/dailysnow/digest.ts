@@ -18,6 +18,7 @@ import type {
   ResortReport,
   Snapshot,
 } from "../types";
+import { buildContinuity, type ContinuityDigest } from "./continuity";
 
 /**
  * Facts for the Daily Snow post. Everything the model would otherwise have to
@@ -32,8 +33,6 @@ export const POST_STORM_RECENT_IN = 4;
 export const PRE_STORM_NEXT72_IN = 3;
 /** A forecast discussion older than this is labeled stale for the model. */
 export const AFD_STALE_MS = 18 * HOUR;
-/** Recent posts sent to the model for continuity and forecast verification. */
-export const HISTORY_IN_PROMPT = 5;
 
 export interface FigureCandidate {
   figure: DailySnowFigure;
@@ -43,7 +42,7 @@ export interface FigureCandidate {
   source?: { kind: "kv"; key: string } | { kind: "url"; url: string };
 }
 
-export interface DailyDigest {
+export interface DailyDigest extends ContinuityDigest {
   ensemble?: ReturnType<typeof ensembleGuidance>;
   nowLocal: string;
   date: string;
@@ -64,8 +63,6 @@ export interface DailyDigest {
     text: Array<{ period: string; forecast: string }>;
   }>;
   discussion: { issued: string; stale: boolean; sections: AfdPayload["sections"] } | null;
-  previousPost: { date: string; title: string; summary: string } | null;
-  recentPosts: Array<Omit<DailySnowHistoryEntry, "forecast"> & { forecast: string[] }>;
   figures: Array<{ id: string; caption: string; shows: string }>;
 }
 
@@ -167,15 +164,6 @@ function figureCandidates(snapshot: Snapshot, nws: NwsPayload | null, numbers: D
   return out;
 }
 
-export function historyEntry(post: DailySnowPost): DailySnowHistoryEntry {
-  return {
-    date: post.date,
-    title: post.title,
-    phase: post.phase,
-    forecast: post.numbers.canyons.map((c) => ({ canyon: c.canyon, next24In: c.next24In, next72In: c.next72In, stormIn: c.nextStorm?.totalSnowIn ?? null })),
-  };
-}
-
 export function buildDailyDigest(snapshot: Snapshot, previous: DailySnowPost | null, history: DailySnowHistoryEntry[], now: Date): DailyBuild {
   const date = denverDate(now);
   const base = buildDigest(snapshot, snapshot.recommendation?.resortLastOperatingAt ?? {}, now);
@@ -255,16 +243,7 @@ export function buildDailyDigest(snapshot: Snapshot, previous: DailySnowPost | n
     discussion: afd
       ? { issued: localTime(afd.issuedAt, now), stale: t - Date.parse(afd.issuedAt) > AFD_STALE_MS, sections: afd.sections }
       : null,
-    previousPost: previous && previous.date !== date ? { date: previous.date, title: previous.title, summary: previous.summary } : null,
-    recentPosts: history
-      .filter((h) => h.date !== date)
-      .slice(0, HISTORY_IN_PROMPT)
-      .map((h) => ({
-        date: h.date,
-        title: h.title,
-        phase: h.phase,
-        forecast: h.forecast.map((f) => `${f.canyon}: next 24 h ${f.next24In ?? "?"}″, next 72 h ${f.next72In ?? "?"}″${f.stormIn !== null ? `, next storm ${f.stormIn}″` : ""}`),
-      })),
+    ...buildContinuity(previous, history, numbers, phase, date, now),
     figures: figures.map((f) => ({ id: f.figure.id, caption: f.figure.caption, shows: f.describe })),
   };
   const anyInSeason = base.resorts.some((r) => r.inSeason);

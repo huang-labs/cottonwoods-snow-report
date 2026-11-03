@@ -4,7 +4,8 @@ import { denverDate } from "../recommend/digest";
 import { DAILY_SNOW_ARCHIVE_POSTS } from "../report";
 import type { KVLike } from "../store";
 import type { DailySnowFigure, DailySnowLink, DailySnowPost, DailySnowState, Snapshot } from "../types";
-import { buildDailyDigest, historyEntry, type FigureCandidate } from "./digest";
+import { historyEntry } from "./continuity";
+import { buildDailyDigest, type FigureCandidate } from "./digest";
 import { askDailySnow, MAX_FIGURES } from "./llm";
 import { isSnowPlume } from "./plume";
 import { attemptsToday, DAILY_CALL_CAP, shouldRunDailySnow } from "./schedule";
@@ -43,6 +44,23 @@ export interface DailySnowPlan {
   run?: () => Promise<DailySnowState>;
   /** Why no post is written this run, when it was due. */
   skipped?: string;
+}
+
+/**
+ * Our last post before `date`, for continuity. Usually the current post; when
+ * today's post is being rewritten (a forced run), the one it links back to.
+ * Without it the post is still written, just without the previous post's text.
+ */
+async function previousPost(kv: KVLike, current: DailySnowPost | null, date: string): Promise<DailySnowPost | null> {
+  if (!current || current.date < date) return current;
+  if (!current.older) return null;
+  try {
+    const raw = await kv.get(dailySnowKey(current.older.date), "text");
+    return raw ? (JSON.parse(raw) as DailySnowPost) : null;
+  } catch (err) {
+    console.warn("daily-snow: could not read the previous post", err);
+    return null;
+  }
 }
 
 /** Copy each used image figure into KV so the post keeps this morning's still. Figures that fail are dropped. */
@@ -109,16 +127,18 @@ export function planDailySnow(
 
   const run = async (): Promise<DailySnowState> => {
     try {
-      const r = await askDailySnow(ai, build.digest, env.AI_GATEWAY_ID);
+      const previous = await previousPost(env.SNOW_KV, base.current, date);
+      const { digest, numbers, figures: candidates } = previous === base.current ? build : buildDailyDigest(snapshot, previous, base.history, now);
+      const { value: r, model, fallbackReason } = await askDailySnow(ai, digest, env.AI_GATEWAY_ID);
       const wanted = new Set(r.sections.flatMap((s) => s.paragraphs.map((p) => p.figure)).filter((f): f is string => !!f));
-      const figures = await storeFigures(build.figures.filter((c) => wanted.has(c.figure.id)), date, env, now, opts.fetchImpl);
+      const figures = await storeFigures(candidates.filter((c) => wanted.has(c.figure.id)), date, env, now, opts.fetchImpl);
       // A plume is part of the report even if the model omitted it. Prefer CLN,
       // then try another station if its frozen still is unavailable. Never invent
       // prose or values for the image; the article renders its code-written caption.
       if (!Object.keys(figures).some(isSnowPlume)) {
-        const candidates = build.figures.filter((c) => isSnowPlume(c.figure.id) && !wanted.has(c.figure.id))
+        const plumes = candidates.filter((c) => isSnowPlume(c.figure.id) && !wanted.has(c.figure.id))
           .sort((a, b) => Number(b.figure.id === "plume-snow-cln") - Number(a.figure.id === "plume-snow-cln"));
-        for (const candidate of candidates) {
+        for (const candidate of plumes) {
           const copied = await storeFigures([candidate], date, env, now, opts.fetchImpl);
           if (!copied[candidate.figure.id]) continue;
           // Reserve one of the six figure slots for the required plume.
@@ -133,16 +153,16 @@ export function planDailySnow(
       const older = base.history.find((h) => h.date < date);
       const post: DailySnowPost = {
         date,
-        phase: build.digest.phase,
+        phase: digest.phase,
         title: r.title,
         summary: r.summary,
         sections: r.sections.map((s) => ({ ...s, paragraphs: s.paragraphs.map((p) => ({ ...p, figure: p.figure && figures[p.figure] ? p.figure : null })) })),
         figures,
-        numbers: build.numbers,
+        numbers,
         generatedAt: now.toISOString(),
-        model: r.model,
+        model,
         trigger,
-        ...(r.fallbackReason ? { fallbackReason: r.fallbackReason } : {}),
+        ...(fallbackReason ? { fallbackReason } : {}),
         ...(older ? { older: { date: older.date, title: older.title } } : {}),
       };
       await env.SNOW_KV.put(dailySnowKey(date), JSON.stringify(post));

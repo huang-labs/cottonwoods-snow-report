@@ -1,14 +1,16 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { runCollection } from "@/lib/collect";
 import { dailySnowFigureKey, dailySnowKey, emptyDailySnowState, planDailySnow } from "@/lib/dailysnow";
+import { buildContinuity, historyEntry } from "@/lib/dailysnow/continuity";
 import { buildDailyDigest, phaseOf } from "@/lib/dailysnow/digest";
-import { buildModelInput, DAILY_SNOW_TIMEOUT_MS, groundNumbers, ungroundedInches, validateDailySnow } from "@/lib/dailysnow/llm";
+import { allowedAmounts, buildModelInput, DAILY_SNOW_TIMEOUT_MS, SYSTEM_PROMPT, validateDailySnow } from "@/lib/dailysnow/llm";
 import { IN_FLIGHT_MS, MAX_ATTEMPTS, RETRY_AFTER_MS, shouldRunDailySnow } from "@/lib/dailysnow/schedule";
-import { FALLBACK_MODEL, PRIMARY_MODEL } from "@/lib/recommend/llm";
+import { inchAmountsIn, ungroundedInches } from "@/lib/ai/grounding";
+import { FALLBACK_MODEL, PRIMARY_MODEL } from "@/lib/ai/model";
 import { buildReport, DAILY_SNOW_ARCHIVE_POSTS } from "@/lib/report";
 import { parseAfd } from "@/lib/sources/nwsafd";
 import { MemoryKV, readSnapshot, writeSnapshot } from "@/lib/store";
-import type { AfdPayload, DailySnowPost, DailySnowState, PlumePayload, ResortCamsPayload, Snapshot } from "@/lib/types";
+import type { AfdPayload, DailySnowHistoryEntry, DailySnowNumbers, DailySnowPost, DailySnowState, PlumePayload, ResortCamsPayload, Snapshot } from "@/lib/types";
 import { createFixtureFetch, fixture } from "./fixtureFetch";
 
 // Nov 1 2026 is the end of daylight saving time: 13:00 UTC is 6:00 AM MST.
@@ -43,13 +45,13 @@ function answer(digestFigures: string[], extra: Record<string, unknown> = {}) {
 }
 
 function fakeAi(respond: (model: string, input: Record<string, unknown>) => unknown) {
-  const calls: Array<{ model: string; schema: string }> = [];
+  const calls: Array<{ model: string; schema: string; user: string }> = [];
   return {
     calls,
     ai: {
       async run(model: string, input: Record<string, unknown>) {
         const schema = (input.response_format as { json_schema: { name: string } }).json_schema.name;
-        calls.push({ model, schema });
+        calls.push({ model, schema, user: (input.messages as Array<{ content: string }>)[1].content });
         if (schema !== "daily_snow") throw new Error("resort pick not under test");
         return { response: JSON.stringify(respond(model, input)) };
       },
@@ -108,7 +110,9 @@ describe("digest", () => {
     expect(numbers.canyons.map((c) => c.canyon)).toEqual(["LCC", "BCC"]);
     expect(numbers.canyons[0].next7dIn).toBeGreaterThanOrEqual(numbers.canyons[0].next72In!);
     expect(digest.discussion?.sections[0].name).toBe("KEY MESSAGES");
-    expect(digest.recentPosts[0].forecast[0]).toBe("LCC: next 24 h 10″, next 72 h 16″, next storm 17″");
+    // Entries stored before posting times were kept are labeled by day.
+    expect(digest.recentPosts[0].forecast[0]).toBe("LCC: 10″ in the 24 h and 16″ in the 72 h from Saturday morning; next storm 17″");
+    expect(digest.phaseChange).toBe("pre-storm (Saturday's post) → storm (today)");
     const ids = figures.map((f) => f.figure.id);
     expect(ids).toEqual(expect.arrayContaining(["nws-snow-lcc", "nws-snow-bcc", "nws-snow-level", "plume-snow-cln", "plume-slr-pkcu1", "stake-alta", "stake-snowbird"]));
     // Captions come from code; the model is told it cannot see images.
@@ -118,6 +122,67 @@ describe("digest", () => {
   it("leaves out stake cams that are not this morning's", () => {
     const ids = buildDailyDigest(snap(), null, [], SIX_AM).figures.map((f) => f.figure.id);
     expect(ids.some((id) => id.startsWith("stake-"))).toBe(false);
+  });
+});
+
+describe("continuity with earlier posts", () => {
+  // Monday 6 AM MST; Sunday's and Saturday's posts saw storms on Tue–Wed and over the weekend.
+  const MONDAY = at("2026-11-02T13:00:00Z");
+  const canyon = (canyon: "LCC" | "BCC", nextStorm: { start: string; end: string; totalSnowIn: number } | null) =>
+    ({ canyon, point: canyon, next24In: 1, next72In: 2, next7dIn: 3, nextStorm: nextStorm && { ...nextStorm, minSnowLevelFt: null }, forecastUpdatedAt: null });
+  const numbers = (lcc: Parameters<typeof canyon>[1]): DailySnowNumbers => ({
+    canyons: [canyon("LCC", lcc)],
+    resorts: [
+      { id: "alta", name: "Alta", h24: 10, storm: 15, reportTime: "2026-11-02T12:30:00Z" },
+      { id: "snowbird", name: "Snowbird", h24: null, storm: null, reportTime: null },
+      { id: "solitude", name: "Solitude", h24: 5, storm: 9, reportTime: "2026-11-02T12:00:00Z" },
+    ],
+  });
+  const entry = (date: string, postedAt: string, phase: DailySnowHistoryEntry["phase"], stormIn: number, storm: { start: string; end: string }): DailySnowHistoryEntry =>
+    ({ date, title: `Post ${date}`, phase, postedAt, forecast: [{ canyon: "LCC", next24In: 1, next72In: stormIn, stormIn, storm }] });
+  const weekend = { start: "2026-10-31T18:00:00Z", end: "2026-11-02T06:00:00Z" };
+  const midweek = { start: "2026-11-04T06:00:00Z", end: "2026-11-05T00:00:00Z" };
+  const history = [
+    entry("2026-11-01", "2026-11-01T13:04:00Z", "storm", 8.4, { start: "2026-11-01T13:00:00Z", end: "2026-11-02T05:00:00Z" }),
+    entry("2026-10-31", "2026-10-31T12:05:00Z", "pre-storm", 6, weekend),
+  ];
+
+  it("tracks the coming storm's forecast across posts, matching by storm window", () => {
+    // Saturday's post saw the same midweek storm 3 hours later; Sunday's saw a different (weekend) storm.
+    const h = [{ ...history[0] }, entry("2026-10-31", "2026-10-31T12:05:00Z", "pre-storm", 4, { start: "2026-11-04T09:00:00Z", end: "2026-11-05T03:00:00Z" })];
+    const c = buildContinuity(null, h, numbers({ ...midweek, totalSnowIn: 1.7 }), "post-storm", "2026-11-02", MONDAY);
+    expect(c.stormTrend).toEqual([{ canyon: "LCC", forecasts: [
+      "our post at Sat, Oct 31, 6:05 AM: 4″ (Wed, Nov 4, 2:00 AM to Wed, Nov 4, 8:00 PM)",
+      "today's NWS forecast: 1.7″ (11:00 PM tomorrow to Wed, Nov 4, 5:00 PM)",
+    ] }]);
+  });
+  it("compares the storm that just ended with what we forecast before and during it", () => {
+    const c = buildContinuity(null, history, numbers(null), "post-storm", "2026-11-02", MONDAY);
+    expect(c.stormTrend).toEqual([]);
+    expect(c.lastStorm).toEqual([{
+      canyon: "LCC",
+      window: "Sat, Oct 31, 12:00 PM to 10:00 PM yesterday",
+      forecasts: ["our post at Sat, Oct 31, 6:05 AM (before it began): 6″", "our post at 6:04 AM yesterday (after it began): 8.4″"],
+      reported: ["Alta: storm total 15″, 24 h 10″ (report 5:30 AM today)", "Snowbird: no storm or 24 h total reported"],
+    }]);
+    // Days later, the storm is no longer "the one that just ended".
+    expect(buildContinuity(null, history, numbers(null), "quiet", "2026-11-05", at("2026-11-05T13:00:00Z")).lastStorm).toEqual([]);
+  });
+  it("gives the last post's text and never today's own post", () => {
+    const previous = { date: "2026-11-01", title: "Storm On", summary: "Snowing.", sections: [{ id: "update", paragraphs: [{ text: "One.", figure: null }, { text: "Two.", figure: "x" }] }] } as DailySnowPost;
+    expect(buildContinuity(previous, history, numbers(null), "post-storm", "2026-11-02", MONDAY).previousPost).toEqual({ date: "2026-11-01", weekday: "Sunday", title: "Storm On", summary: "Snowing.", paragraphs: ["One.", "Two."] });
+    const rerun = buildContinuity({ ...previous, date: "2026-11-02" }, [{ ...history[0], date: "2026-11-02" }, ...history], numbers(null), "post-storm", "2026-11-02", MONDAY);
+    expect(rerun.previousPost).toBeNull();
+    expect(rerun.recentPosts.map((p) => p.date)).toEqual(["2026-11-01", "2026-10-31"]);
+  });
+  it("records the storm window and posting time in history", () => {
+    const post = { date: "2026-11-02", title: "T", phase: "quiet", generatedAt: "2026-11-02T13:01:00.000Z", numbers: numbers({ ...midweek, totalSnowIn: 1.7 }) } as DailySnowPost;
+    expect(historyEntry(post)).toEqual({ date: "2026-11-02", title: "T", phase: "quiet", postedAt: "2026-11-02T13:01:00.000Z", forecast: [{ canyon: "LCC", next24In: 1, next72In: 2, stormIn: 1.7, storm: midweek }] });
+  });
+  it("tells the model to follow on from earlier posts without reusing their amounts or titles", () => {
+    expect(SYSTEM_PROMPT).toMatch(/never quote an amount from previousPost/);
+    expect(SYSTEM_PROMPT).toMatch(/Different from every title in recentPosts/);
+    expect(SYSTEM_PROMPT).toMatch(/never compare them with each other/);
   });
 });
 
@@ -169,7 +234,22 @@ describe("validation", () => {
     // Plain "in" as the unit (gpt-oss writes "8 in (10 in in 48 h)").
     expect(ungroundedInches("Snowbird 8 in (25 in in 48 h), 3–40 in by Monday", [8, 10, 3])).toEqual([25, 40]);
     expect(ungroundedInches("Around 4 in the morning, 2 in a row", [])).toEqual([]);
-    expect(groundNumbers(digest)).toContain(2026);
+    // A temperature before a place name (GLM, 2026-11-03).
+    expect(ungroundedInches("Highs near 38 in Little Cottonwood and 41 in Big Cottonwood", [])).toEqual([]);
+  });
+  it("counts only inch amounts in the input, not elevations, temperatures, winds or the last post's text", () => {
+    const amounts = inchAmountsIn({ elevationFt: 9600, tempF: "20–30", windMph: "30 gust 45", snowIn: 4, totals: { next72In: 12.5 }, ensemble: { snowIn: [1, 3, 7] }, text: "Total accumulation 8 to 14 inches" });
+    expect(amounts.sort((a, b) => a - b)).toEqual([1, 3, 4, 7, 8, 12.5, 14]);
+    const d = buildDailyDigest(snap(), null, [], SIX_AM).digest;
+    const allowed = allowedAmounts({ ...d, previousPost: { date: "2026-10-31", weekday: "Saturday", title: "Old", summary: "We called for 77″.", paragraphs: ["Up to 88″."] } });
+    expect(allowed).not.toContain(77);
+    expect(allowed).not.toContain(88);
+    // Elevations and years are no longer amounts.
+    expect(allowed).not.toContain(2026);
+    expect(allowed.some((a) => a >= 1000)).toBe(false);
+    // A run of consecutive NWS six-hour amounts may be added up.
+    const bars = d.forecast[0].sixHourSnow.slice(0, 3).map((b) => Number(/: ([\d.]+)″/.exec(b)![1]));
+    expect(allowed).toContain(Math.round(bars.reduce((a, b) => a + b, 0) * 10) / 10);
   });
   it("accepts a well-formed post and drops unknown, repeated or misplaced parts", () => {
     const d = withData();
@@ -188,6 +268,9 @@ describe("validation", () => {
   it("rejects invented amounts and thin posts", () => {
     const d = withData();
     expect(() => validateDailySnow(answer([], { summary: "A whopping 45″ fell overnight." }), d)).toThrow(/not in the data: 45/);
+    // The last post's amounts are out of date, so quoting one is rejected too.
+    const withPrevious = { ...d, previousPost: { date: "2026-10-31", weekday: "Saturday", title: "Old", summary: "Up to 58″ by Monday.", paragraphs: [] } };
+    expect(() => validateDailySnow(answer([], { summary: "Still up to 58″ by Monday." }), withPrevious)).toThrow(/not in the data: 58/);
     expect(() => validateDailySnow(answer([], { title: "" }), d)).toThrow(/no title or summary/);
     expect(() => validateDailySnow(answer([], { sections: [] }), d)).toThrow(/sections/);
   });
@@ -300,6 +383,18 @@ describe("posting", () => {
     expect(second.older).toEqual({ date: "2026-11-01", title: "Storm Underway" });
     expect(second.newer).toBeUndefined();
     expect((await readSnapshot(kv))!.dailySnow!.current).toMatchObject({ date: "2026-11-02", older: { date: "2026-11-01" } });
+  });
+  it("gives a forced rewrite of today's post the post before it, read from the archive", async () => {
+    const kv = await seeded();
+    const titles = ["Storm Underway", "Storm Exiting", "Storm Exiting Again"];
+    const { ai, calls } = fakeAi(() => ({ ...answer(["plume-snow-cln"]), title: titles.shift()! }));
+    const env = { SNOW_KV: kv, AI: ai };
+    await runCollection(env, { now: SIX_AM, sources: [] });
+    await runCollection(env, { now: at("2026-11-02T13:00:00Z"), sources: [] });
+    await runCollection(env, { now: at("2026-11-02T15:00:00Z"), sources: [], forceDailySnow: true });
+    const prompts = calls.filter((c) => c.schema === "daily_snow").map((c) => JSON.parse(c.user.slice(c.user.indexOf("{"))));
+    expect(prompts.map((p) => p.previousPost?.title ?? null)).toEqual([null, "Storm Underway", "Storm Underway"]);
+    expect(prompts[2].recentPosts.map((p: { date: string }) => p.date)).toEqual(["2026-11-01"]);
   });
   it("drops figures whose still cannot be stored", async () => {
     const kv = new MemoryKV(); // no plume panel stored
