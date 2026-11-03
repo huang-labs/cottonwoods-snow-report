@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { clearArchivedPosts } from "@/components/dailysnow/archive";
 import { DailySnowPage, DailySnowTeaser } from "@/components/dailysnow/DailySnow";
@@ -352,4 +352,20 @@ it("draws plume figures like the plumes page: padded, Mountain Time axis, postin
   render(<DailySnowPage report={report({ ...withPlume, sections: [{ id: "update", paragraphs: [{ text: "A quiet day.", figure: null }] }] })} now={now} />);
   expect(screen.getAllByRole("img", { name: /Accumulated Snow.*times in Mountain Time/ })).toHaveLength(1);
   expect(screen.getByText("A quiet day.")).toBeTruthy();
+});
+
+it("uses the article skeleton for a pending direct archive link, then shows its failure", async () => {
+  let respond!: (response: Response) => void;
+  vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { respond = resolve; })));
+  window.history.replaceState(null, "", "/daily-snow?date=2026-10-31");
+  render(<DailySnowPage report={report(post)} now={now} />);
+  expect(screen.getByRole("status").textContent).toBe("Loading Daily Snow…");
+  expect(document.querySelector("[aria-busy=true]")).toBeTruthy();
+  expect(screen.queryByText(/posted every morning/)).toBeNull();
+  await act(async () => { respond(new Response("unavailable", { status: 503 })); });
+  expect(screen.getByRole("heading", { name: "Post not available" })).toBeTruthy();
+  expect(screen.getByText("HTTP 503")).toBeTruthy();
+  expect(document.querySelector("[aria-busy=true]")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Back to the latest post" }));
+  expect(screen.getByRole("heading", { name: "Storm Underway" })).toBeTruthy();
 });

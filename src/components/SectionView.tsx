@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReportResponse, SourceId } from "@/lib/types";
+import { ReportLoading, ReportLoadError } from "./loading/ReportLoading";
 import { useDashboard } from "./dashboard-context";
 import { DailySnowPage } from "./dailysnow/DailySnow";
 import { PlumesPage } from "./sections/PlumesPage";
@@ -29,7 +30,7 @@ export function renderSection(id: string, report: ReportResponse, now: Date, loa
 /** One section as a page. Data comes from the shell's shared poller. */
 export function SectionView({ id }: { id: string }) {
   const { report, loadedAt, error, now } = useDashboard();
-  if (!report) return <div className="loading">{error ? `Could not load report: ${error}` : "Loading report…"}</div>;
+  if (!report) return error ? <ReportLoadError error={error} /> : <ReportLoading sectionId={id} />;
   return (
     <div key={id}>
       {renderSection(id, report, now, loadedAt)}

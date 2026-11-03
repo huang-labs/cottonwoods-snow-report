@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { SectionNav } from "@/components/SectionNav";
@@ -102,11 +102,63 @@ function renderAt(path: string) {
   );
 }
 
+/** Titles are present in the skeleton too; wait for report content to settle. */
+async function loadedHeading(name: string) {
+  await waitFor(() => expect(document.querySelector("[aria-busy=true]")).toBeNull());
+  return screen.findByRole("heading", { level: 1, name });
+}
+
 describe("app shell", () => {
+  it.each(SECTIONS)("shows an accessible initial skeleton for $id, then ready content", async ({ id, title }) => {
+    let respond!: (response: Response) => void;
+    vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise<Response>((resolve) => { respond = resolve; }));
+    renderAt(sectionHref(id));
+    expect(screen.getByRole("status").textContent).toMatch(/^Loading /);
+    expect(document.querySelector("[aria-busy=true]")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain(id === "plumes" ? "plumes" : id === "weather" ? "weather" : title);
+    expect(screen.getByRole("navigation", { name: "Sections" })).toBeTruthy();
+    await act(async () => { respond(Response.json(REPORT)); });
+    expect(document.querySelector("[aria-busy=true]")).toBeNull();
+    expect(screen.queryByText(/^Loading /)).toBeNull();
+  });
+
+  it("replaces a failed initial load with retry feedback, then recovers automatically", async () => {
+    vi.useFakeTimers();
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("unavailable", { status: 503 }))
+      .mockResolvedValueOnce(Response.json(REPORT));
+    renderAt("/");
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByRole("heading", { name: "Could not load the report" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("retry automatically");
+    expect(screen.getByText("HTTP 503")).toBeTruthy();
+    expect(document.querySelector("[aria-busy=true]")).toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("heading", { name: "Resort snowfall" })).toBeTruthy();
+    expect(screen.queryByText("Could not load the report")).toBeNull();
+  });
+
+  it("keeps report content visible through a pending and failed background refresh", async () => {
+    vi.useFakeTimers();
+    let respond!: (response: Response) => void;
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json(REPORT))
+      .mockImplementation(() => new Promise<Response>((resolve) => { respond = resolve; }));
+    renderAt("/alta");
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(screen.getByRole("heading", { name: "Alta" })).toBeTruthy();
+    expect(document.querySelector("[aria-busy=true]")).toBeNull();
+    await act(async () => { respond(new Response("unavailable", { status: 503 })); });
+    expect(screen.getByRole("heading", { name: "Alta" })).toBeTruthy();
+    expect(screen.getByText(/Dashboard can’t reach its server/)).toBeTruthy();
+    expect(document.querySelector("[aria-busy=true]")).toBeNull();
+  });
+
   it("opens on the page under the editorial nav", async () => {
     mockApi(REPORT);
     renderAt("/");
-    expect(await screen.findByRole("heading", { level: 1, name: "Resort snowfall" })).toBeTruthy();
+    expect(await loadedHeading("Resort snowfall")).toBeTruthy();
     // The primary row links to sections; Resorts reveals the secondary row.
     const navLinks = within(screen.getByRole("navigation", { name: "Sections" }))
       .getAllByRole("link");
@@ -125,26 +177,26 @@ describe("app shell", () => {
   it.each(["alta", "snowbird", "solitude", "brighton"])("opens %s from the snowfall table without reloading the report", async (id) => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(REPORT));
     const view = renderAt("/");
-    await screen.findByRole("heading", { level: 1, name: "Resort snowfall" });
+    await loadedHeading("Resort snowfall");
     const link = document.querySelector<HTMLAnchorElement>(`.resort-name__link[href="/${id}"]`)!;
     // Only a router Link intercepts the browser's full-document navigation.
     expect(fireEvent.click(link)).toBe(false);
     expect(nav.pathname).toBe(`/${id}`);
     view.rerender(<AppShell><SectionView id={id} /></AppShell>);
     expect(screen.getByRole("heading", { level: 1, name: REPORT.sources[id as keyof typeof REPORT.sources].label })).toBeTruthy();
-    expect(screen.queryByText("Loading report…")).toBeNull();
+    expect(document.querySelector("[aria-busy=true]")).toBeNull();
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("opens the forecast from a resort without reloading the report", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(REPORT));
     const view = renderAt("/alta");
-    await screen.findByRole("heading", { level: 1, name: "Alta" });
+    await loadedHeading("Alta");
     expect(fireEvent.click(screen.getByRole("link", { name: "Forecast ↗" }))).toBe(false);
     expect(nav.pathname).toBe("/weather");
     view.rerender(<AppShell><SectionView id="weather" /></AppShell>);
     expect(screen.getByRole("heading", { level: 1, name: "Cottonwoods mountain weather" })).toBeTruthy();
-    expect(screen.queryByText("Loading report…")).toBeNull();
+    expect(document.querySelector("[aria-busy=true]")).toBeNull();
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -154,7 +206,7 @@ describe("app shell", () => {
     expect(SECTIONS).toHaveLength(9);
     for (const [i, title] of expected.entries()) {
       const view = renderAt(sectionHref(SECTIONS[i].id));
-      expect(await screen.findByRole("heading", { level: 1, name: title })).toBeTruthy();
+      expect(await loadedHeading(title)).toBeTruthy();
       const toggle = screen.getByRole("button", { name: "Resorts" });
       expect(toggle.hasAttribute("data-current")).toBe(Boolean(SECTIONS[i].group));
       expect(toggle.getAttribute("aria-expanded")).toBe(String(Boolean(SECTIONS[i].group)));
@@ -191,14 +243,14 @@ describe("app shell", () => {
   it("redirects legacy ?slide= links to the section page", async () => {
     mockApi(REPORT);
     renderAt("/?slide=snowbird");
-    await screen.findByRole("heading", { level: 1, name: "Resort snowfall" });
+    await loadedHeading("Resort snowfall");
     expect(nav.replace).toHaveBeenCalledWith("/snowbird");
   });
 
   it("persists the appearance choice and returns to the system default", async () => {
     mockApi(REPORT);
     renderAt("/");
-    await screen.findByRole("heading", { level: 1, name: "Resort snowfall" });
+    await loadedHeading("Resort snowfall");
     fireEvent.click(screen.getByRole("button", { name: "Dark appearance" }));
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(window.localStorage.getItem("cottonwoods-snow-report.appearance")).toBe("dark");

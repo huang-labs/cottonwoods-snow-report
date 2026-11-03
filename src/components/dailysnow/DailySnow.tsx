@@ -11,6 +11,7 @@ import { Figure } from "./figures";
 import { ArchiveNav } from "./ArchiveNav";
 import { HistoryRail } from "./HistoryRail";
 import { PHASE_LABEL, postDate } from "./labels";
+import { ReportLoading } from "../loading/ReportLoading";
 import { StatusBadge } from "../ui";
 
 const SECTION_TITLE: Record<DailySnowSectionId, string> = { update: "Today", "short-term": "Next Few Days", extended: "Extended Forecast" };
@@ -101,13 +102,15 @@ export function DailySnowPage({ report, now }: { report: ReportResponse; now: Da
     window.scrollTo?.(0, 0);
   };
 
+  if (!post && loading) return <ReportLoading sectionId="daily-snow" />;
+
   if (!post) {
     return (
       <section className="page page--dailysnow">
         <div className="dailysnow">
           <header className="dailysnow__header">
             <span className="eyebrow">Daily Snow<span className="badge badge--ai">AI</span></span>
-            <h1 className="dailysnow__title">{viewed ? (archived.error ? "Post not available" : "Loading…") : "Waiting for the first post"}</h1>
+            <h1 className="dailysnow__title">{viewed ? "Post not available" : "Waiting for the first post"}</h1>
           </header>
           <p className="muted">{archived.error ?? "An AI-written snow forecast is posted every morning at 6 AM."}</p>
           {date && <button type="button" className="dailysnow__back" onClick={() => pick(null)}>Back to the latest post</button>}

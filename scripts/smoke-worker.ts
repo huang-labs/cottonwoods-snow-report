@@ -39,7 +39,8 @@ try {
     const res = await get(path);
     assert.equal(res.status, 200, path);
     const html = await res.text();
-    assert.match(html, /Loading report/);
+    assert.match(html, /role="status">Loading /, `accessible loading status for ${path}`);
+    assert.match(html, /aria-busy="true"/, `initial skeleton for ${path}`);
     const expectedImage = path === "/daily-snow" ? "/daily-snow/opengraph-image" : "/share-brand-v2.png";
     assert.ok(html.includes(`${expectedImage}\"`), `share image for ${path}`);
     const script = /src="([^\"]*\/_next\/static\/[^\"]+\.js)"/.exec(html)?.[1];
