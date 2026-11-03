@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { clearArchivedPosts } from "@/components/dailysnow/archive";
 import { DailySnowPage } from "@/components/dailysnow/DailySnow";
 import { RegionalPage } from "@/components/sections/RegionalPage";
 import { buildReport } from "@/lib/report";
@@ -34,6 +35,7 @@ const post: ApiDailySnow = {
 const report = (dailySnow: ApiDailySnow | null) => ({ ...buildReport(null, now), dailySnow });
 afterEach(() => {
   cleanup();
+  clearArchivedPosts();
   vi.unstubAllGlobals();
   window.history.replaceState(null, "", "/");
 });
@@ -140,6 +142,71 @@ it("highlights the viewed post in the rail and keeps the archive links for phone
   expect(document.querySelectorAll(".dailysnow__history-entry[data-active]").length).toBe(1);
   // The bottom archive links stay on every view: phones navigate with them.
   expect(document.querySelector(".dailysnow__nav")).not.toBeNull();
+});
+
+it("keeps the shown post and rail on screen while the next post loads, then caches it", async () => {
+  const older: ApiDailySnow = { ...post, date: "2026-10-31", title: "Storm Arrives", outdated: true };
+  let respond!: (r: Response) => void;
+  const fetchMock = vi.fn(() => new Promise<Response>((r) => (respond = r)));
+  vi.stubGlobal("fetch", fetchMock);
+  render(<DailySnowPage report={report(post)} now={now} />);
+  const entries = () => [...document.querySelectorAll<HTMLElement>(".dailysnow__history-entry")];
+  fireEvent.click(entries()[1]!);
+  // In flight: no "Loading…" swap. The live post, rail and archive links stay; the clicked entry is already active.
+  expect(screen.getByRole("heading", { level: 1, name: "Storm Underway" })).toBeTruthy();
+  expect(screen.queryByText("Loading…")).toBeNull();
+  expect(entries()[1]!.getAttribute("data-active")).toBe("true");
+  expect(document.querySelectorAll(".dailysnow__history-entry[data-active]").length).toBe(1);
+  expect(screen.getByRole("article", { name: "Daily Snow" }).getAttribute("aria-busy")).toBe("true");
+  // The label follows the post on screen, not the pick: the live post isn't marked as archive.
+  expect(screen.queryByText(/· Archive/)).toBeNull();
+  respond(new Response(JSON.stringify(older), { headers: { "content-type": "application/json" } }));
+  expect(await screen.findByRole("heading", { level: 1, name: "Storm Arrives" })).toBeTruthy();
+  expect(screen.getByRole("article", { name: "Daily Snow" }).getAttribute("aria-busy")).toBeNull();
+  // Back and forth again: the archived post comes from memory, swapped in the same render.
+  fireEvent.click(entries()[0]!);
+  expect(screen.getByRole("heading", { level: 1, name: "Storm Underway" })).toBeTruthy();
+  fireEvent.click(entries()[1]!);
+  expect(screen.getByRole("heading", { level: 1, name: "Storm Arrives" })).toBeTruthy();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it("opens a ?date= link on the archived post without showing the live post first", async () => {
+  const older: ApiDailySnow = { ...post, date: "2026-10-31", title: "Storm Arrives", outdated: true };
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(older), { headers: { "content-type": "application/json" } })));
+  window.history.replaceState(null, "", "/daily-snow?date=2026-10-31");
+  render(<DailySnowPage report={report(post)} now={now} />);
+  expect(screen.queryByRole("heading", { level: 1, name: "Storm Underway" })).toBeNull();
+  expect(await screen.findByRole("heading", { level: 1, name: "Storm Arrives" })).toBeTruthy();
+});
+
+it("prefetches a post on hover so the pick shares the request", async () => {
+  const older: ApiDailySnow = { ...post, date: "2026-10-31", title: "Storm Arrives", outdated: true };
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify(older), { headers: { "content-type": "application/json" } }));
+  vi.stubGlobal("fetch", fetchMock);
+  render(<DailySnowPage report={report(post)} now={now} />);
+  const entry = document.querySelectorAll<HTMLElement>(".dailysnow__history-entry")[1]!;
+  fireEvent.pointerEnter(entry);
+  fireEvent.click(entry);
+  expect(await screen.findByRole("heading", { level: 1, name: "Storm Arrives" })).toBeTruthy();
+  // Hovering the live entry fetches nothing: it comes with the report.
+  fireEvent.pointerEnter(document.querySelectorAll<HTMLElement>(".dailysnow__history-entry")[0]!);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it("retries an archived post that failed to load", async () => {
+  const older: ApiDailySnow = { ...post, date: "2026-10-31", title: "Storm Arrives", outdated: true };
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(new Response("{}", { status: 503 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify(older), { headers: { "content-type": "application/json" } }));
+  vi.stubGlobal("fetch", fetchMock);
+  render(<DailySnowPage report={report(post)} now={now} />);
+  fireEvent.click(document.querySelectorAll<HTMLElement>(".dailysnow__history-entry")[1]!);
+  expect(await screen.findByText("HTTP 503")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Back to the latest post" }));
+  fireEvent.click(document.querySelectorAll<HTMLElement>(".dailysnow__history-entry")[1]!);
+  expect(await screen.findByRole("heading", { level: 1, name: "Storm Arrives" })).toBeTruthy();
+  expect(fetchMock).toHaveBeenCalledTimes(2);
 });
 
 it("teases the post on the Snowfall page", () => {

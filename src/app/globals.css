@@ -323,7 +323,9 @@ a { color: var(--accent); }
    carries a 3px left border with square left corners, so the accent bar on the
    entry whose post is on screen spans the full height of its fill. */
 .dailysnow-layout { display: flex; justify-content: center; align-items: start; gap: 40px; }
-.dailysnow-layout > .dailysnow { flex: 0 1 720px; min-width: 0; margin: 0; }
+.dailysnow-layout > .dailysnow { flex: 0 1 720px; min-width: 0; margin: 0; transition: opacity 0.15s; }
+/* The previous post stays while a picked one loads; dim it only if the load is slow. */
+.dailysnow-layout > .dailysnow[aria-busy] { opacity: 0.6; transition-delay: 0.2s; }
 .dailysnow__history { display: none; flex: 0 0 240px; position: sticky; top: 20px; max-height: calc(100dvh - 40px); overflow-y: auto; }
 .dailysnow__history-heading { margin: 0 0 8px; font-size: var(--fs-label); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .dailysnow__history-list { display: flex; flex-direction: column; gap: 2px; }
