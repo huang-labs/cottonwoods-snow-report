@@ -20,14 +20,14 @@ export const siteOpenGraph = {
 export function sectionMetadata(section: SectionDef): Metadata {
   const title = `${section.title} · ${SITE_TITLE}`;
   const description = section.id === "daily-snow" ? DAILY_SNOW_DESCRIPTION : SITE_DESCRIPTION;
-  // Nested openGraph objects replace the parent's object, including its file-based image.
+  // Nested openGraph objects replace the parent's object, including its image.
   const images = [{
-    url: section.id === "daily-snow" ? "/daily-snow/opengraph-image" : "/opengraph-image",
+    url: section.id === "daily-snow" ? "/daily-snow/opengraph-image" : "/share-brand-v2.png",
     width: 1200,
     height: 630,
     alt: section.id === "daily-snow"
       ? "Daily Snow — the latest Cottonwoods snow forecast"
-      : "Live snowfall at Alta, Snowbird, Solitude and Brighton",
+      : "Cottonwoods Snow Report — Little & Big Cottonwood Canyons",
   }];
   return {
     title: section.title,

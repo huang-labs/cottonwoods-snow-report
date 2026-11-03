@@ -40,7 +40,8 @@ try {
     assert.equal(res.status, 200, path);
     const html = await res.text();
     assert.match(html, /Loading report/);
-    assert.match(html, /property="og:image"[^>]+opengraph-image/);
+    const expectedImage = path === "/daily-snow" ? "/daily-snow/opengraph-image" : "/share-brand-v2.png";
+    assert.ok(html.includes(`${expectedImage}\"`), `share image for ${path}`);
     const script = /src="([^\"]*\/_next\/static\/[^\"]+\.js)"/.exec(html)?.[1];
     assert.ok(script, `static script for ${path}`);
     const js = await get(script);
@@ -48,10 +49,18 @@ try {
     assert.match(js.headers.get("cache-control")!, /immutable/);
     await js.arrayBuffer();
   }
+  const brand = await get("/share-brand-v2.png");
+  assert.equal(brand.status, 200);
+  assert.match(brand.headers.get("content-type")!, /^image\/png/);
+  const brandedPng = decode(new Uint8Array(await brand.arrayBuffer()));
+  assert.deepEqual([brandedPng.width, brandedPng.height], [1200, 630]);
   // Next static export uses .txt payloads for client-side navigation.
   const navigation = await get("/weather.txt");
   assert.equal(navigation.status, 200);
   assert.match(await navigation.text(), /weather/);
+  const retiredPreview = await get("/opengraph-image");
+  assert.equal(retiredPreview.status, 404);
+  await retiredPreview.arrayBuffer();
   const missing = await get("/not-a-section");
   assert.equal(missing.status, 404);
   await missing.arrayBuffer();
@@ -67,18 +76,18 @@ try {
   const method = await get("/api/report", "POST");
   assert.equal(method.status, 405);
   await method.arrayBuffer();
-  for (const path of ["/opengraph-image", "/daily-snow/opengraph-image"]) {
+  for (const path of ["/daily-snow/opengraph-image"]) {
     const image = await get(path);
     assert.equal(image.status, 200);
     assert.equal(image.headers.get("content-type"), "image/png");
     assert.equal(image.headers.get("cache-control"), "public, max-age=60");
     const png = decode(new Uint8Array(await image.arrayBuffer()));
     assert.deepEqual([png.width, png.height], [1200, 630]);
-    let bright = 0;
+    let dark = 0;
     for (let i = 0; i < png.data.length; i += png.channels) {
-      if (png.data[i] > 180 && png.data[i + 1] > 180 && png.data[i + 2] > 180) bright++;
+      if (png.data[i] < 60 && png.data[i + 1] < 80 && png.data[i + 2] < 100) dark++;
     }
-    assert.ok(bright > 5000, "share image contains rendered text");
+    assert.ok(dark > 1200 * 630 * 0.7, "share image has a dark background");
     const head = await get(path, "HEAD");
     assert.equal(head.status, 200);
     assert.equal((await head.arrayBuffer()).byteLength, 0);
@@ -92,7 +101,7 @@ try {
   const shareCheck = spawn(process.execPath, ["node_modules/tsx/dist/cli.mjs", "scripts/check-share-preview.ts", base, process.env.SITE_URL || "https://cottonwoods-snow-report.huang.mx"], { stdio: "inherit" });
   const [code] = await once(shareCheck, "exit");
   assert.equal(code, 0, "share metadata matches each section and deployment");
-  console.log("Worker smoke passed: 9 static pages, navigation payload, immutable JS, 404s, API methods, KV, both PNGs, share metadata and HEAD.");
+  console.log("Worker smoke passed: 9 static pages, navigation payload, immutable JS, 404s, API methods, KV, static and Daily Snow PNGs, share metadata and HEAD.");
 } finally {
   child.kill("SIGTERM");
   await exited;

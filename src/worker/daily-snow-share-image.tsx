@@ -1,6 +1,6 @@
 import { ImageResponse, cache as imageCache } from "@cf-wasm/og";
 import type { CollectorEnv } from "../lib/collect";
-import { SHARE_CARD_FONTS } from "../lib/og/card-image";
+import { SHARE_CARD_FONTS } from "../lib/og/image-fonts";
 import { DailySnowShareCard } from "../lib/og/daily-snow-image";
 import { readSnapshot } from "../lib/store";
 
@@ -8,7 +8,7 @@ export const alt = "Daily Snow — the latest Cottonwoods snow forecast";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const CACHE_PATH = "/__cache/daily-snow/opengraph-image/v2";
+const CACHE_PATH = "/__cache/daily-snow/opengraph-image/v4";
 
 /** Separate from the resort card so messaging apps and social sites show the daily forecast. */
 export async function dailySnowShareImage(request: Request, env: CollectorEnv, ctx: ExecutionContext) {

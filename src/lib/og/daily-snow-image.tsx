@@ -1,28 +1,32 @@
 import { clipText } from "../clip";
-import { DAILY_SNOW_DESCRIPTION, SITE_TITLE } from "../metadata";
+import { DAILY_SNOW_DESCRIPTION } from "../metadata";
 import type { DailySnowPost } from "../types";
+import { SHARE_COLORS as C, SHARE_FRAME, ShareBrand, ShareFooter } from "./style";
 
-type PreviewPost = Pick<DailySnowPost, "date" | "title" | "summary">;
+type PreviewPost = Pick<DailySnowPost, "date" | "title" | "summary" | "model">;
+const MODEL_NAME: Record<string, string> = { "glm-5.3-flash": "GLM 5.3 Flash", "gpt-oss-120b": "gpt-oss-120b" };
 
-/** Bounded copy keeps even unusually long generated posts inside the share card. */
+/** Bounded copy keeps unusually long generated posts inside the image. */
 export function DailySnowShareCard({ post }: { post: PreviewPost | null }) {
   const date = post ? new Intl.DateTimeFormat("en-US", {
     timeZone: "UTC", month: "long", day: "numeric", year: "numeric",
   }).format(new Date(`${post.date}T12:00:00Z`)) : "A fresh forecast every morning";
+  const model = post ? (MODEL_NAME[post.model.split("/").pop() ?? ""] ?? clipText(post.model, 42)) : null;
   return (
-    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", padding: "44px 56px", fontFamily: "Geist", color: "#e8eef5", background: "linear-gradient(135deg, #0b0f14, #182e44)", borderTop: "8px solid #7cc4ff" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", color: "#7cc4ff", fontSize: 28, fontWeight: 700 }}>
-        <span>DAILY SNOW</span>
-        <span style={{ fontSize: 22, color: "#8a9bb0", fontWeight: 500 }}>{date}</span>
+    <div style={{ ...SHARE_FRAME }}>
+      <ShareBrand />
+      <div style={{ display: "flex", flexShrink: 0, alignItems: "center", justifyContent: "space-between", marginTop: 28, fontSize: 22, color: C.muted }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, color: C.accent, fontWeight: 700 }}>
+          <span>DAILY SNOW</span>
+          {post && <span style={{ background: C.panel, borderRadius: 4, padding: "4px 8px", fontSize: 18 }}>AI</span>}
+        </div>
+        <span>{date}</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "center" }}>
-        <div style={{ fontSize: 58, lineHeight: 1.12, letterSpacing: -1, fontWeight: 700 }}>{clipText(post?.title ?? "Your Cottonwoods snow forecast", 115)}</div>
-        <div style={{ marginTop: 24, fontSize: 28, lineHeight: 1.35, color: "#b8c9dc" }}>{clipText(post?.summary ?? DAILY_SNOW_DESCRIPTION, 220)}</div>
+        <div style={{ fontSize: 54, lineHeight: 1.12, letterSpacing: -1.5, fontWeight: 700 }}>{clipText(post?.title ?? "Your Cottonwoods snow forecast", 100)}</div>
+        <div style={{ marginTop: 20, fontSize: 27, lineHeight: 1.35, color: C.muted }}>{clipText(post?.summary ?? DAILY_SNOW_DESCRIPTION, 180)}</div>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #34485e", paddingTop: 22, fontSize: 22, color: "#8a9bb0" }}>
-        <span>{SITE_TITLE}</span>
-        <span>Little &amp; Big Cottonwood · AI forecast</span>
-      </div>
+      <ShareFooter>{model ? `AI-generated forecast · ${model}` : "Little & Big Cottonwood Canyons"}</ShareFooter>
     </div>
   );
 }

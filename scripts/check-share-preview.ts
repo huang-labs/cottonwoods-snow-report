@@ -22,16 +22,15 @@ for (const section of SECTIONS) {
     assert.ok(tags.has(key), `${url}: missing ${key}`);
     assert.equal(new URL(tags.get(key)!).origin, expectedOrigin, `${url}: ${key} points outside this deployment`);
   }
-  if (section.id === "daily-snow") {
-    for (const key of ["og:image", "twitter:image"]) {
-      const image = new URL(tags.get(key)!);
-      assert.equal(image.pathname, "/daily-snow/opengraph-image");
-      const imageResponse = await fetch(new URL(image.pathname + image.search, base), { headers });
-      assert.equal(imageResponse.status, 200, `${key}: image status`);
-      assert.match(imageResponse.headers.get("content-type") ?? "", /^image\/png/);
-      const png = decode(new Uint8Array(await imageResponse.arrayBuffer()));
-      assert.deepEqual([png.width, png.height], [1200, 630]);
-    }
+  const expectedPath = section.id === "daily-snow" ? "/daily-snow/opengraph-image" : "/share-brand-v2.png";
+  for (const key of ["og:image", "twitter:image"]) {
+    const image = new URL(tags.get(key)!);
+    assert.equal(image.pathname, expectedPath);
+    const imageResponse = await fetch(new URL(image.pathname + image.search, base), { headers });
+    assert.equal(imageResponse.status, 200, `${key}: image status`);
+    assert.match(imageResponse.headers.get("content-type") ?? "", /^image\/png/);
+    const png = decode(new Uint8Array(await imageResponse.arrayBuffer()));
+    assert.deepEqual([png.width, png.height], [1200, 630]);
   }
   console.log(`${sectionHref(section.id)}: share URLs and images OK`);
 }

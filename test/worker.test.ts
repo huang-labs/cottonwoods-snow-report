@@ -44,7 +44,7 @@ describe("Worker request routing", () => {
     for (const path of ["/api", "/api/missing", "/api/report/extra", "/api/plume/CLN/2026110100/snow/extra"]) {
       expect((await call(path)).status).toBe(404);
     }
-    for (const path of ["/api/report", "/api/daily-snow", "/api/daily-snow/figure/2026-11-01/stake-alta", "/api/plume/CLN/2026110100/snow", "/opengraph-image", "/daily-snow/opengraph-image"]) {
+    for (const path of ["/api/report", "/api/daily-snow", "/api/daily-snow/figure/2026-11-01/stake-alta", "/api/plume/CLN/2026110100/snow", "/daily-snow/opengraph-image"]) {
       const res = await call(path, { method: "POST" });
       expect(res.status).toBe(405);
       expect(res.headers.get("allow")).toBe("GET, HEAD");
