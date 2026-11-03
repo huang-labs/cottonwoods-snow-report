@@ -19,6 +19,7 @@
     "collect:once": "tsx scripts/collect-once.ts",
     "recommend:once": "tsx scripts/recommend-once.ts",
     "dailysnow:once": "tsx scripts/dailysnow-once.ts",
+    "dailysnow:replay": "tsx scripts/dailysnow-replay.ts",
     "smoke": "tsx scripts/smoke-worker.ts"
   },
   "dependencies": {

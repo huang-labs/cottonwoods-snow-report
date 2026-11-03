@@ -518,7 +518,16 @@ export interface DailySnowHistoryEntry {
   date: string;
   title: string;
   phase: DailySnowPhase;
-  forecast: Array<{ canyon: CanyonId; next24In: number | null; next72In: number | null; stormIn: number | null }>;
+  /** When the post was written. Absent on entries stored before 2026-11-03. */
+  postedAt?: string;
+  forecast: Array<{
+    canyon: CanyonId;
+    next24In: number | null;
+    next72In: number | null;
+    stormIn: number | null;
+    /** Window of the storm `stormIn` belongs to, so later posts can match it. Absent on entries stored before 2026-11-03. */
+    storm?: { start: string; end: string } | null;
+  }>;
 }
 
 export interface DailySnowState {

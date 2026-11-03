@@ -14,7 +14,8 @@ import { addLiveEnsemble } from "./live-ensemble";
  *   --digest               print the digest instead of the request body
  */
 import { buildDigest } from "../src/lib/recommend/digest";
-import { buildModelInput, PRIMARY_MODEL } from "../src/lib/recommend/llm";
+import { PRIMARY_MODEL } from "../src/lib/ai/model";
+import { buildModelInput } from "../src/lib/recommend/llm";
 import type { ReportResponse, Snapshot } from "../src/lib/types";
 
 const arg = (name: string) => {

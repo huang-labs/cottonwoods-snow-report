@@ -1,6 +1,7 @@
 import type { Recommendation, RecommendationState, Snapshot } from "../types";
 import { buildDigest, denverDate, updateLastOperating, type Digest } from "./digest";
-import { askModel, type AiLike } from "./llm";
+import type { AiLike } from "../ai/model";
+import { askModel } from "./llm";
 import { DAILY_CALL_CAP, criticalKeyOf, fingerprintOf, shouldRun } from "./schedule";
 
 export interface RecommendEnv {
@@ -87,7 +88,7 @@ export function planRecommendation(
   const attempt = { lastAttemptAt: now.toISOString(), calls };
   const run = async (): Promise<RecommendationState> => {
     try {
-      const r = await askModel(ai, digest, state.current, env.AI_GATEWAY_ID);
+      const { value: r, model } = await askModel(ai, digest, state.current, env.AI_GATEWAY_ID);
       const current: Recommendation = {
         targetDate: digest.target.date,
         mode: digest.mode,
@@ -98,7 +99,7 @@ export function planRecommendation(
         caveats: r.caveats,
         runnerUp: r.runnerUp,
         generatedAt: now.toISOString(),
-        model: r.model,
+        model,
         trigger,
       };
       return { ...state, ...keys, ...attempt, current, lastError: null, consecutiveFailures: 0 };

@@ -5,7 +5,8 @@ import { MemoryKV, readSnapshot, writeSnapshot } from "@/lib/store";
 import { canyonTexts, classifyCanyon } from "@/lib/recommend/canyon";
 import { buildDigest, slrOf, targetFor } from "@/lib/recommend/digest";
 import { emptyState, planRecommendation } from "@/lib/recommend";
-import { askModel, FALLBACK_MODEL, PRIMARY_MODEL, responseJson, validatePick } from "@/lib/recommend/llm";
+import { FALLBACK_MODEL, PRIMARY_MODEL, responseJson } from "@/lib/ai/model";
+import { askModel, validatePick } from "@/lib/recommend/llm";
 import { criticalKeyOf, fingerprintOf, shouldRun } from "@/lib/recommend/schedule";
 import type { Recommendation, ResortReport, RoadsPayload, Snapshot, TravelTimesPayload } from "@/lib/types";
 import { createFixtureFetch } from "./fixtureFetch";
@@ -151,6 +152,11 @@ describe("model validation and persistence", () => {
     expect(() => validatePick({ pick: "alta", headline: "Alta" }, ["alta"])).toThrow();
     expect(responseJson({ response: JSON.stringify(result) })).toEqual(result);
     expect(responseJson({ choices: [{ message: { content: JSON.stringify(result) } }] })).toEqual(result);
+  });
+  it("rejects inch amounts that are not in the data", () => {
+    const allowed = [10, 15];
+    expect(validatePick({ ...result, summary: "Alta has 15″ of new snow." }, ["alta", "solitude"], allowed).summary).toBe("Alta has 15″ of new snow.");
+    expect(() => validatePick({ ...result, headline: "Alta: 40″ of powder" }, ["alta", "solitude"], allowed)).toThrow(/not in the data: 40/);
   });
   it("falls back once on invalid model output", async () => {
     const ai = { run: vi.fn().mockResolvedValueOnce({ response: "bad JSON" }).mockResolvedValueOnce({ response: result }) };

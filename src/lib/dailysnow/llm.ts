@@ -1,5 +1,6 @@
+import { askWithFallback, chatInput, type AiLike, type ModelResult } from "../ai/model";
+import { inchAmounts, inchAmountsIn, ungroundedInches } from "../ai/grounding";
 import { clipText } from "../clip";
-import { FALLBACK_MODEL, PRIMARY_MODEL, responseJson, type AiLike } from "../recommend/llm";
 import type { DailySnowParagraph, DailySnowSectionId } from "../types";
 import type { DailyDigest } from "./digest";
 
@@ -21,16 +22,23 @@ Style, modeled on a good local forecaster's daily post:
 - Write about elevation when snow levels are near the resort bases: say where amounts apply (upper mountain vs. base).
 - Snow-to-liquid ratio matters: low ratios (dense snow) pile up slowly; high ratios (12:1+) are light, blower snow.
 - Stake readings can be lower than what fell because new snow settles and early-season snow melts on contact; you may say a stake reading may undercount, never that more fell.
-- Uncertainty: describe forecast confidence from the NWS discussion's own wording, recent-post forecast changes, or current structured ensemble spread for the supplied CLN/LCC periods. Attribute each source; CLN cannot establish BCC amounts or canyon differences. Wider spread means less certainty, not a calibrated probability of a storm.
+- Uncertainty: describe forecast confidence from the NWS discussion's own wording, forecast changes in stormTrend, or current structured ensemble spread for the supplied CLN/LCC periods. Attribute each source; CLN cannot establish BCC amounts or canyon differences. Wider spread means less certainty, not a calibrated probability of a storm.
+
+Continuity with our earlier posts (each post is the next installment of the same column):
+- previousPost is our last post. Say briefly what changed since then when it matters, and don't reuse its title, opening sentence or phrasing. Its amounts are out of date: never quote an amount from previousPost.
+- phaseChange says how the storm cycle moved since that post: "pre-storm → storm" means the storm has arrived; "storm → post-storm" means it is winding down.
+- stormTrend lists the coming or current storm's total as our earlier posts and today's NWS forecast gave it. When it changed meaningfully, say whether it trended up, down or held, and attribute earlier amounts to the NWS forecast in our earlier posts.
+- lastStorm lists what our posts forecast for the storm that just ended, and what each resort reported. Say plainly whether it came in above, near or below the forecast. Resort storm totals start at each resort's own storm start, so call the comparison rough when it is close.
+- The 24 h and 72 h totals in recentPosts start at a different time in each post; never compare them with each other or with today's totals. Compare forecasts only through stormTrend and lastStorm.
 
 What to write for each phase (given as "phase"):
 - pre-storm: timing of the storm, how much water and snow is forecast, snow levels through the storm, which areas get the most.
 - storm: what is falling now, reported totals so far, snow levels, how long it lasts, more to come.
-- post-storm: reported storm totals, how they compare with what recent posts forecast (when recentPosts has a forecast for this storm), whether a little more is coming, the break ahead.
+- post-storm: reported storm totals, how they compare with what we forecast (when lastStorm is given), whether a little more is coming, the break ahead.
 - quiet: current conditions and the break, then signs of the next system.
 
 Structure:
-- title: 2–5 words, a hook for the day ("Storm Underway", "Pretty Much Done", "More Snow Chances Late Next Week"). At most 40 characters.
+- title: 2–5 words, a hook for the day ("Storm Underway", "Pretty Much Done", "More Snow Chances Late Next Week"). At most 40 characters. Different from every title in recentPosts.
 - summary: 2–3 sentences (at most 320 characters) covering the whole story.
 - sections: first "update" (when the post is mostly about current/recent weather) or "short-term" (when it is mostly about the next 1–3 days), then optionally "extended" for days 3–7 and beyond. Leave out "extended" when there is nothing useful to say beyond the short term. Each section has 1–6 paragraphs of 1–3 sentences, at most about 800 characters per paragraph; a paragraph that runs longer is cut back to its last complete sentence, so keep each idea in a sentence that can stand on its own.
 - figures: a paragraph may show one figure after it (figure id from the list given, or "none"). When it does, the paragraph usually ends by introducing it with a colon, e.g. "Snow levels fall steadily through tonight:". Use 2–${MAX_FIGURES} figures in the whole post, each at most once, where they support the text. You cannot see images; never describe what a photo or plume chart shows.
@@ -93,6 +101,7 @@ export function buildUserPrompt(digest: DailyDigest): string {
     digest.discussion
       ? `The NWS Salt Lake City forecast discussion was issued ${digest.discussion.issued}${digest.discussion.stale ? " and is OLD; prefer the gridpoint forecast" : ""}.`
       : "No NWS forecast discussion is available today; keep the extended outlook brief and based on supplied gridpoint/structured ensemble guidance, without inventing synoptic mechanisms.",
+    digest.phaseChange ? `Since our last post: ${digest.phaseChange}.` : "This is our first post; there is no earlier post to follow on from.",
     `Available figures: ${digest.figures.length ? digest.figures.map((f) => f.id).join(", ") : "none"}.`,
     "Data (JSON):",
     JSON.stringify(digest),
@@ -100,19 +109,14 @@ export function buildUserPrompt(digest: DailyDigest): string {
 }
 
 export function buildModelInput(model: string, digest: DailyDigest): Record<string, unknown> {
-  return {
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: buildUserPrompt(digest) },
-    ],
-    response_format: {
-      type: "json_schema",
-      json_schema: { name: "daily_snow", strict: true, schema: dailySnowSchema(digest.figures.map((f) => f.id)) },
-    },
+  return chatInput(model, {
+    system: SYSTEM_PROMPT,
+    user: buildUserPrompt(digest),
+    schemaName: "daily_snow",
+    schema: dailySnowSchema(digest.figures.map((f) => f.id)),
     temperature: 0.4,
-    max_tokens: DAILY_SNOW_MAX_TOKENS,
-    reasoning_effort: model === PRIMARY_MODEL ? "high" : "medium",
-  };
+    maxTokens: DAILY_SNOW_MAX_TOKENS,
+  });
 }
 
 export interface LlmDailySnow {
@@ -123,30 +127,24 @@ export interface LlmDailySnow {
 
 const clip = clipText;
 
-/** Every number that appears anywhere in the model's input. */
-export function groundNumbers(digest: DailyDigest): number[] {
-  const set = new Set<number>();
-  for (const m of JSON.stringify(digest).matchAll(/\d+(?:\.\d+)?/g)) set.add(Number(m[0]));
-  return [...set];
-}
+/** Fields whose amounts may not be quoted: the last post's text is context, and its amounts are out of date. */
+const NOT_DATA = new Set(["previousPost"]);
 
 /**
- * Inch amounts in `text` that are not within 1″ of any input number. Catches
- * invented totals ("30″" when the data tops out at 12″); exact arithmetic is
- * not checked.
+ * Inch amounts the post may contain: every inch amount in the input except the
+ * previous post's text, plus each run of consecutive NWS six-hour amounts per
+ * canyon (the prompt lets the model add those, and only those).
  */
-export function ungroundedInches(text: string, allowed: number[]): number[] {
-  const bad: number[] = [];
-  // "in" counts as a unit unless it starts a phrase ("4 in the morning", "2 in a row").
-  const re = /(\d+(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(?:″|"|”|-?inch(?:es)?\b|in\.|in\b(?!\s+(?:the|a|an|this|that|which|each|total)\b))/g;
-  for (const m of text.matchAll(re)) {
-    for (const v of [m[1], m[2]]) {
-      if (v === undefined) continue;
-      const n = Number(v);
-      if (n > 1 && !allowed.some((a) => Math.abs(a - n) <= 1)) bad.push(n);
+export function allowedAmounts(digest: DailyDigest): number[] {
+  const allowed = new Set(inchAmountsIn(digest, NOT_DATA));
+  for (const f of digest.forecast) {
+    const bars = f.sixHourSnow.map((b) => inchAmounts(b)[0] ?? 0);
+    for (let i = 0; i < bars.length; i++) {
+      let sum = 0;
+      for (let j = i; j < bars.length; j++) allowed.add(Math.round((sum += bars[j]) * 10) / 10);
     }
   }
-  return bad;
+  return [...allowed];
 }
 
 /** Validate model output; throws on anything unusable. */
@@ -184,44 +182,21 @@ export function validateDailySnow(raw: unknown, digest: DailyDigest): LlmDailySn
   }
   if (!sections.length) throw new Error("Model output has no usable sections");
 
-  const allowed = groundNumbers(digest);
+  const allowed = allowedAmounts(digest);
   const all = [title, summary, ...sections.flatMap((s) => s.paragraphs.map((p) => p.text))].join("\n");
   const bad = ungroundedInches(all, allowed);
   if (bad.length) throw new Error(`Model output has amounts not in the data: ${bad.slice(0, 5).join(", ")}″`);
   return { title, summary, sections };
 }
 
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Model timed out after ${ms / 1000} s`)), ms);
-    p.then(
-      (v) => (clearTimeout(timer), resolve(v)),
-      (e) => (clearTimeout(timer), reject(e)),
-    );
+/** Ask the primary model, then the fallback once. Throws when both fail. */
+export function askDailySnow(ai: AiLike, digest: DailyDigest, gatewayId: string | undefined): Promise<ModelResult<LlmDailySnow>> {
+  return askWithFallback({
+    ai,
+    gatewayId,
+    input: (model) => buildModelInput(model, digest),
+    validate: (raw) => validateDailySnow(raw, digest),
+    timeoutMs: DAILY_SNOW_TIMEOUT_MS,
+    label: "dailysnow",
   });
-}
-
-/**
- * Ask the primary model, then the fallback once. Throws when both fail. When
- * the fallback writes the post, `fallbackReason` says why the primary didn't.
- */
-export async function askDailySnow(
-  ai: AiLike,
-  digest: DailyDigest,
-  gatewayId: string | undefined,
-): Promise<LlmDailySnow & { model: string; fallbackReason?: string }> {
-  const errors: string[] = [];
-  for (const model of [PRIMARY_MODEL, FALLBACK_MODEL]) {
-    try {
-      const opts = gatewayId ? { gateway: { id: gatewayId, skipCache: true } } : {};
-      const res = await withTimeout(ai.run(model, buildModelInput(model, digest), opts), DAILY_SNOW_TIMEOUT_MS);
-      const post = { ...validateDailySnow(responseJson(res), digest), model };
-      return errors.length ? { ...post, fallbackReason: errors.join(" | ").slice(0, 500) } : post;
-    } catch (e) {
-      const message = `${model}: ${e instanceof Error ? e.message : String(e)}`;
-      console.warn(`dailysnow: ${message}`);
-      errors.push(message);
-    }
-  }
-  throw new Error(errors.join(" | "));
 }

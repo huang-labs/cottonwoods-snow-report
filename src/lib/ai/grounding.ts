@@ -1,0 +1,59 @@
+/**
+ * Checks that snow and liquid amounts in model prose come from the input.
+ *
+ * Only inch amounts in the input count: numeric fields named as inches
+ * (`snowIn`, `next24In`, …) and inch amounts written in source text. Elevations,
+ * temperatures, wind speeds, percentages, dates and times do not, so an
+ * invented "30″" is not excused by a 30 mph gust or a 30% chance.
+ */
+
+/**
+ * Inch amounts written in text: 12″, 3-6", 17 inches, 0.5 in. A bare "in"
+ * starting a phrase is not a unit: "4 in the morning", or before a place
+ * name, as in "highs near 38 in Little Cottonwood".
+ */
+const INCH_AMOUNT = /(\d+(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(?:″|"|”|-?inch(?:es)?\b|in\.|in\b(?!\s+(?:(?:the|a|an|this|that|which|each|total)\b|[A-Z])))/g;
+
+/** Field names holding inch amounts (both ends of a range, or the P10/P50/P90 triple, are arrays of these). */
+const INCH_FIELD = /In$/;
+
+/** Every inch amount written in `text`, both ends of a range included. */
+export function inchAmounts(text: string): number[] {
+  const out: number[] = [];
+  for (const m of text.matchAll(INCH_AMOUNT)) {
+    out.push(Number(m[1]));
+    if (m[2] !== undefined) out.push(Number(m[2]));
+  }
+  return out;
+}
+
+/**
+ * Inch amounts in `value`: numbers in inch-named fields, and inch amounts in
+ * any string. Fields in `skip` (with everything under them) are ignored.
+ */
+export function inchAmountsIn(value: unknown, skip: ReadonlySet<string> = new Set()): number[] {
+  const out = new Set<number>();
+  const walk = (v: unknown, inchField: boolean) => {
+    if (typeof v === "number") {
+      if (inchField && Number.isFinite(v)) out.add(v);
+    } else if (typeof v === "string") {
+      for (const n of inchAmounts(v)) out.add(n);
+    } else if (Array.isArray(v)) {
+      for (const x of v) walk(x, inchField);
+    } else if (v && typeof v === "object") {
+      for (const [k, x] of Object.entries(v)) if (!skip.has(k)) walk(x, INCH_FIELD.test(k));
+    }
+  };
+  walk(value, false);
+  return [...out];
+}
+
+/**
+ * Inch amounts in `text` that are not within 1″ of an allowed amount. Catches
+ * invented totals ("30″" when the data tops out at 12″). Amounts up to 1″ are
+ * not checked, and neither is arithmetic: a sum the model was allowed to make
+ * must be in `allowed`.
+ */
+export function ungroundedInches(text: string, allowed: number[]): number[] {
+  return inchAmounts(text).filter((n) => n > 1 && !allowed.some((a) => Math.abs(a - n) <= 1));
+}
