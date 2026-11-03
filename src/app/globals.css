@@ -141,6 +141,8 @@ a { color: var(--accent); }
 /* A header sits closer to what follows it than sections do to each other. */
 .page__header { display: flex; flex-direction: column; gap: 8px; margin-bottom: calc(24px - var(--page-gap)); }
 .page__sub { max-width: 72ch; font-size: var(--fs-meta); line-height: 1.6; color: var(--muted); }
+/* On desktop the intro spans the page so it reads as one line. */
+@media (min-width: 901px) { .page__sub { max-width: none; } }
 .page__sub strong { color: var(--text); font-weight: 600; }
 .page__note { font-size: var(--fs-caption); color: var(--muted); }
 
