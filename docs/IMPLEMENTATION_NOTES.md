@@ -563,99 +563,18 @@ Four live GLM 5.3 Flash generations against real production data/archives comple
 
 Browser checks used `http://localhost:8796/daily-snow` on `t3/daily-snow-storm-totals`, seeded through `runCollection` with real archived posts, public source records, copied plume panels and the final saved live model response. Inspected the actual recap at 390×844 and 1366×768 in light/dark appearance, and checked 320×740 for width. No horizontal page overflow, broken images or browser errors. Screenshots and captured third-party/model output remain outside the repository. The seeded server remains available for review because the PR preview cannot generate the new post before merge.
 
-## 2026-11-03 — Daily Snow archive navigation without flashes
-
-- **Problem (reproduced on production):** picking a post from the history rail or the archive links replaced the whole layout (rail and article) with a "Loading…" placeholder for the length of the `/api/daily-snow?date=` request (about 130 ms on production), then swapped the new post in. A `?date=` link first rendered the live post, then the placeholder, then the archived post, because the date was read in an effect after the first render.
-- **Fix:** `src/components/dailysnow/archive.ts` keeps archived posts loaded this page session in memory, shares one request per date and prefetches on hover or focus of rail entries and archive links. While a pick loads, the post already on screen stays put (rail entry highlighted immediately, article `aria-busy`, dimmed only if the load passes 200 ms). Cached posts show in the same render as the click. Entries older than five minutes (the API `max-age`) show at once and refresh in the background. Failures aren't cached, so picking that date again retries. `?date=` is read on the first render; this is safe because `DailySnowPage` only mounts in the browser after the report loads. The "· Archive" label now follows the post on screen, not the pending pick.
-- **Verified:** in Chromium against production API responses, with a local proxy adding 800 ms to archive requests, at 1280×900 and 390×844. The page went straight from the live post (busy) to the archived post with no placeholder, back-and-forth picks made no new requests, and a `?date=` link never showed the live post. A first deep-link visit still shows "Loading…" until its post arrives, because nothing is cached yet to show in its place.
-
-## 2026-11-03 — Snowfall titles
-
-- The Snowfall page header reads "Resort snowfall" (was "Regional snowfall"); the section id, route and nav label are unchanged.
-- The Daily Snow NWS snowfall figure is titled with its caption ("NWS 6-hour snowfall forecast · Alta / Snowbird (LCC)") in the chart's heading slot, replacing "6-hour snowfall · inches", and no longer repeats it below. The caption dropped the "· updated …" NWS grid time. That time was frozen into the post at generation (not live), but it named the NWS grid's issue time, which read like a page refresh time. Posts already stored with the suffix have it stripped at render. The chart's footer note is unchanged.
-
-## 2026-11-03 — Dark share previews by page role
-
-Every page except `/daily-snow`, including the homepage, shares the static branded `public/share-brand-v2.png`. Daily Snow alone has a dynamic preview of the latest stored post (also for archive query links), with its date, bounded headline/summary, AI badge and stored model attribution. Before a post exists it shows a neutral introductory fallback. Page titles/descriptions remain specific to the linked page. Both images use the site’s dark palette, pale text and blue wordmark accent, open spacing and fine rules at 1200 × 630; browser appearance settings do not change them.
-
-The branded PNG is regenerated with `npm run share:render`; its source and palette are shared with Daily Snow. A rendering test compares the committed asset with its source. The dark branded asset replaces the light version at a new versioned URL. The Daily Snow handler bumps its internal cache version, retaining host-scoped caches and existing 600/60-second TTLs. Messaging services can retain their own cached previews after deployment; replacing the branded asset requires a new filename and metadata URL. The site does not control messaging-service cache expiry.
-
-The unused dynamic snowfall renderer, data helper and `/opengraph-image` Worker route are removed. Its old URL now follows the normal static 404 path. Shared font configuration lives in `image-fonts.ts` for the branded asset generator and Daily Snow handler. No source, data freshness, storage, collection or AI inference changes.
-
-Satori mutates style objects during rendering: passing the same frame object directly caused later renders to lose header/footer content. Each image passes a fresh copy, and image tests check visible header/footer ink on repeated Daily Snow renders, dark background, dimensions, model labels and long copy. The static branded image intentionally places its large wordmark in the middle.
-
-Validation: 23 relevant tests across share images, metadata and Worker routing passed; `npm run typecheck`, `npm run build`, `npm run smoke` and `git diff --check` passed. Smoke uses a local workerd instance with empty KV: all nine exported pages reference the intended image, both static and Daily Snow PNGs decode at 1200 × 630, the retired snowfall endpoint returns 404, and navigation payloads, API methods and HEAD work. Inspected the regenerated dark branded PNG and a dark Daily Snow PNG with long copy. Not run: native iMessage/WhatsApp clients, a deployed preview or new live AI generation. No production KV writes.
-
-Existing files touched (relative to main):
-- `src/app/layout.tsx` and `src/lib/metadata.ts`: shared static image metadata with the Daily Snow override.
-- `src/lib/og/daily-snow-image.tsx`: matching forecast renderer, bounded copy and AI/model attribution.
-- `src/lib/og/card-image.tsx`, `src/lib/og/shareCard.ts` and `src/worker/share-image.tsx`: removed unused live snowfall preview code.
-- `src/worker/daily-snow-share-image.tsx`: shared font import and cache version bump.
-- `src/worker/fetch.ts` and `wrangler.jsonc`: remove obsolete Worker route and Worker-first entry.
-- `test/share-card.test.tsx`: dark/repeated Daily Snow renders, branded asset consistency and model attribution; obsolete snowfall tests removed.
-- `test/metadata.test.ts`: homepage static image and section-specific image routing.
-- `test/worker.test.ts`: remove obsolete route from the method-enforcement checks.
-- `scripts/check-share-preview.ts`: fetch and decode the intended image for every page.
-- `scripts/smoke-worker.ts`: static brand asset, retired route and metadata checks alongside Daily Snow PNG checks.
-- `package.json`: reproducible `share:render` command.
-- `README.md`: image routing, regeneration and cache operations.
-- `docs/IMPLEMENTATION_NOTES.md`: decisions, validation, limitations and file scope.
-
-New files: `src/lib/og/style.tsx`, `src/lib/og/image-fonts.ts`, `src/lib/og/branded-image.tsx`, `scripts/render-share-image.ts`, `public/share-brand-v2.png`.
-
-## 2026-11-03 — Resort navigation without report reloads
-
-- **Cause:** clicking a resort name in the snowfall table used a plain anchor, unloading the document and its shared report poller. Production browser instrumentation confirmed a document unload and a fresh `/api/report` request on arrival at Alta. This recreates the initial loading screen; the resort dropdown already uses client navigation.
-- **Fix:** `RegionalPage.tsx` uses Next.js `Link` for all four resort names. `ResortReportPage.tsx` uses the same component for its Forecast link, which had the same reload behavior. Existing hash jump links and external source links keep their behavior. The shared poller, source adapters and freshness rules are unchanged. Direct visits still need the initial report request.
-- **Regression:** five app-shell tests exercise the four table links and the Forecast link through the mocked router boundary, then render the destination in the existing shell and assert no loading screen or extra report fetch. All five failed before the change and passed afterward. The browser check covers the real Next.js router, which jsdom does not mount.
-- **Verified:** 233 tests across 18 files, typecheck, static build and Worker smoke (9 pages) pass. In the built local Worker seeded through fixture collection, all four table-to-resort transitions at 1280 px and 390 px retained the document, showed no loading state, and made zero navigation-triggered report requests. The phone Forecast transition also retained the report; resort pages had no horizontal document overflow. Production KV was not written.
-
-## 2026-11-03 — Consistent freshness and publication notices
-
-**Decision.** Keep source-specific age windows and data eligibility rules, and separate collection recency, upstream report age and editorial publication availability. This supersedes older notes describing red stale badges, amber unknown times, generic editorial “Outdated” text and a history entry called “Today”.
-
-**Source presentation.** `src/lib/freshness.ts` owns labels, explanations and tones. `StatusBadge` shares the existing chip geometry and theme tokens: green Current, amber Old report / Updates delayed, neutral Time unknown, red Unavailable / confirmed update failure, blue AI provenance. The API's existing freshness enum remains unchanged. A stale collection note no longer asserts that the source is failing: the classifier establishes elapsed time, not the cause. Confirmed failed latest attempts remain separate. The global required-feed banner groups unavailable feeds separately from delayed feeds with retained payloads. Camera stills older than 3 h use amber captions; contextual travel-time and connection explanations keep their existing placements.
-
-**Editorial notices.** The resort pick retains its target-day/12-hour limit and three-failure threshold. Either condition removes the row endorsement while keeping the reasoning; the badges say “Recommendation needs updating” and “Updates failing”. Daily Snow shows one shared “Latest edition delayed” badge in its teaser and latest article when an expected replacement misses its publication opportunity. Yesterday's edition is normal before 6 AM Denver, then pending through the existing 6–10 AM attempt window. Exhausting three attempts or the daily call budget ends that opportunity early. An in-flight final attempt remains pending through its existing lease, even after 10 AM. Editions older than yesterday stay delayed overnight. Denver calendar arithmetic handles spring and fall DST changes. Archived views keep their date and Archive label without a publication warning; the history rail says Latest plus the actual edition date.
-
-**Quiet days and API.** The existing season/recent-snow/forecast-snow gate is shared through `dailySnowActivity`, without changing model eligibility or computed facts. Only usable resort and NWS inputs can establish an intentional quiet-day publication pause; missing or delayed inputs cannot suppress the delay notice. `/api/report` adds optional `dailySnow.publicationStatus` (current/scheduled/pending/delayed/paused). Existing `outdated` and `failing` flags remain compatible, and archive responses omit the new field. This is pure classification on reads: no source calls, model requests, KV writes or schema migration. A missing first post keeps its existing empty state.
-
-**Validation.** 249 tests in 20 files pass, including new Denver midnight/window boundaries, retry and call-cap exhaustion, an attempt crossing the cutoff, prior-day failures, older editions, quiet/missing inputs, both DST changes, archive suppression, matching teaser/article badges, required-feed grouping and retained recommendation warnings. Typecheck, static build and `git diff --check` pass. The workerd smoke passes all nine pages, navigation assets, API methods, KV, both share PNGs, metadata and HEAD responses. No live model inference was run; prompts and eligibility were not retuned.
-
-Browser checks used this worktree's local Worker on port 8794 with an empty KV and local copies of the real production API report and November 1 Daily Snow archive. Delayed/missing source records and a clearly labeled retained recommendation fixture exercised warning states. No production writes were made. Checked Snowfall, Daily Snow, Alta, Roads, Weather and Plumes at 390×844 and 1366×768; Snowfall also at 320×740. Light and dark status colors were checked. No page-width overflow occurred. Fixed the phone teaser's timestamp/status alignment and allowed the longer history date to wrap as a unit. Archived figure assets were not copied into local KV; this validates the article/status layout, not local figure availability. Browser screenshots stayed outside the repository.
-
-**Existing files touched and why:**
-
-- `src/lib/report.ts`: factual delayed-collection note and optional publication classification in the report response.
-- `src/lib/types.ts`: clarify the existing stale state and add the optional editorial status type.
-- `src/lib/dailysnow/digest.ts`: share the unchanged activity gate with public publication availability; guard quiet-day claims against unusable inputs.
-- `src/lib/dailysnow/schedule.ts`: update the publication-delay comment; cadence, limits and execution are unchanged.
-- `src/components/ui.tsx`: reusable status badge and source label/tone mapping.
-- `src/components/dashboard-context.tsx`: distinguish unavailable and delayed required feeds.
-- `src/components/sections/RegionalPage.tsx`: explicit recommendation badges, preserving endorsement suppression.
-- `src/components/dailysnow/DailySnow.tsx`: identical latest-publication badge in teaser/article; preserve archive treatment.
-- `src/components/dailysnow/HistoryRail.tsx`: Latest plus edition date instead of unconditional Today.
-- `src/app/globals.css`: shared semantic tones and wrapping/alignment for editorial metadata and feed groups.
-- `src/components/sections/resort-report.css`: amber for old camera images.
-- `test/collect.test.ts`: distinguish elapsed collection age from an unverified failure cause.
-- `test/app-shell.test.tsx`: updated required-feed banner rendering.
-- `test/regional-freshness.test.tsx`: updated unknown-time wording in the existing footer grouping checks.
-- `test/recommend-ui.test.tsx`: retained recommendation warnings and absent endorsement.
-- `test/dailysnow-ui.test.tsx`: shared badges, expected publication states, archive suppression and actual latest date.
-- `test/dailysnow.test.ts`: report-level activity/publication integration and compatible old flags.
-- `README.md`: complete state/threshold/placement/effect reference, including the optional API field.
-- `docs/IMPLEMENTATION_NOTES.md`: this decision, scope and verification record.
-
-**New files:** `src/lib/freshness.ts`, `src/lib/dailysnow/publication.ts`, `test/freshness-ui.test.tsx`, `test/publication-status.test.ts`. No source adapters, source thresholds, inference schedules, storage keys or routes changed. Revert restores prior labels and publication notices without a data migration.
-
 ## 2026-11-03 — Daily Snow archive navigation above and below the article
 
-Previous/next navigation now appears above the article heading and after the AI attribution footer on every screen size. Each direction is a compact outlined date button with an arrow, a 44px minimum touch target, accent text, a hover treatment and a keyboard focus outline. Full destination titles remain in accessible names and hover titles. Only available neighbors render, and no navigation row renders when both are absent. The existing desktop history rail is unchanged; phones have no history list or disclosure.
+Previous/next navigation now appears above the article heading and after the AI attribution footer on every screen size. Each direction is a plain-text date control with a muted arrow, a 44px minimum touch target, accent text, an underline on hover and a keyboard focus outline. Full destination titles remain in accessible names and hover titles. Only available neighbors render, and no navigation row renders when both are absent. The existing desktop history rail is unchanged; phones have no history list or disclosure.
 
-**Design decision:** browser trials compared navigation above the heading versus after the summary. Above the heading reads as page navigation; below the summary interrupts the transition into the forecast. Dates keep the row short compared with full destination titles. Previous and next stay together rather than splitting directions across the page. Both rows use the same component and appearance on mobile/desktop: the top supports browsing without scrolling through an article, and the bottom supports continuing after reading. Light outlines improve recognition without a filled panel competing with the headline.
+**Design decision:** browser trials compared navigation above the heading versus after the summary. Above the heading reads as page navigation; below the summary interrupts the transition into the forecast. Dates keep the row short compared with full destination titles. Previous and next stay together rather than splitting directions across the page. Both rows use the same component and appearance on mobile/desktop: the top supports browsing without scrolling through an article, and the bottom supports continuing after reading. After mobile review, the outlined treatment was removed: plain blue dates and muted arrows match the original text-link feel. Horizontal padding and box chrome are gone; the gap below the top row is 8px rather than 20px, moving the heading up 12px.
 
 This supersedes this PR's earlier mobile tabs, stacked list and collapsible history experiments. Rebased onto `origin/main` at `25cbd40`, retaining the Latest/date labels, publication warnings, source statuses and archive cache/prefetch/loading behavior. Neighbor resolution and `?date=` navigation are unchanged; older posts still fall back to the archive index. No storage, API, source, scheduling or model changes.
 
 **Validation:** all 251 tests across 20 files, typecheck, static build and `git diff --check` pass. Tests cover both rows' order and matching destinations, index fallback, explicit neighbors beyond the recent index, missing neighbors and empty navigation, plus existing archive loading/cache/error behavior. Chromium via agent-browser on previously seeded real November 1/2 posts checked 390px and 1366px, top and bottom navigation, query-string return to latest, scroll-to-top, unchanged desktop rail, mobile rail hidden, and dark mode. Controls measured 44px tall. At 320px a temporary DOM-only cloned button checked two controls on one line with no horizontal overflow; the two-direction data case is covered in the UI tests. The local report has delayed resort/plume feeds; the Daily Snow articles are populated. Not run: real-device Safari or live model inference. No production writes.
 
 **Files touched relative to main:** `src/components/dailysnow/DailySnow.tsx` (render shared navigation in both positions), `src/app/globals.css` (scoped control styling), `test/dailysnow-ui.test.tsx` (navigation behavior/order and meaningful single-index-entry fixture), README (navigation placement), and these notes. New file: `src/components/dailysnow/ArchiveNav.tsx` (existing neighbor resolution and prefetch handlers, shared rendering). The history rail, labels and archive loader match main.
+
+**Plain-text follow-up:** 22 Daily Snow UI tests, typecheck, static build and diff checks pass. Chromium at 390px and 1366px confirms borderless text controls; 320px with a temporary cloned second control has no overflow. Dark mode checked at 390px. Touch areas remain 44px tall. This follow-up changes only scoped navigation styles and these notes; README navigation placement remains accurate.
+
+**Rebase validation:** rebased onto `origin/main` at `4cbea56` (storm observation memory), preserving its README/storage/lifecycle notes, recap rendering and source-wording changes. All 285 tests across 21 files, typecheck, static build and diff checks passed after resolution. No new browser or live model run was needed for the documentation conflicts.
