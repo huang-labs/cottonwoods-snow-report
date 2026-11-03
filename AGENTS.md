@@ -1,13 +1,13 @@
 # Working in this repository
 
-The owner builds this dashboard with several AI agents working on features in parallel. They decide product and design direction, review changes on a running server, and merge PRs. These notes cover how to work alongside them. [README.md](README.md) covers the system itself.
+The owner builds this dashboard with several AI agents working on features in parallel. They decide product and design direction, review changes on PR preview deployments, and merge PRs. These notes cover how to work alongside them. [README.md](README.md) covers the system itself.
 
 ## How the owner works
 
 - **Plan, then build.** A new feature usually starts with "design this and give me a plan". Answer with a design grounded in the code and in any reference material they attach: what it does, where and how it shows, what it touches, and a short list of open decisions, each with your recommendation. Don't write code until they say go; then ship it as one PR.
 - **References show intent, not a spec.** Sample posts, screenshots or "like the recommendation box" convey structure, tone and labeling. Adapt them to this product rather than copying them literally (a card's styling doesn't belong on a full page), and never reproduce a third party's content or persona.
 - **Keep features contained.** Expect "is this clean, does it touch the rest of the codebase?" Prefer new modules and additive, optional types over edits to shared code; don't refactor existing features unless asked. List every existing file you touch and why.
-- **Review happens on a running server with real data.** Keep the dev server running and say what to reload. An empty state (for example, no AI output yet) isn't a review: explain why it's empty and offer to show real output locally, such as by generating it with the real code path and seeding local KV. PR previews share production KV, so ask before writing anything there.
+- **Review happens on the PR preview.** Whenever the owner asks for a change, open a PR (or push to the task's existing PR) and report its URL. The deploy workflow comments the Worker preview link on the PR and refreshes it on every push, so the PR is the one place the owner reviews. Previews read production KV and run no crons, so an empty state (for example, AI output production hasn't generated yet) isn't a review: explain why it's empty and offer to show real output on a local server seeded through the real code path. Ask before writing anything to production KV.
 - **Feedback comes in short rounds** ("drop that box", "put this first", "this is misaligned"). Apply each round fully: code, tests, README/notes and the PR description, then push and say what changed. When asked for a design sanity check, look in a real browser at phone and laptop widths and report anything else you notice.
 - **Diagnose exactly.** When something fails, find the specific cause before reporting it: check auth state, retry, and separate auth errors from timeouts or rate limits. Say plainly what you verified and what is still a guess.
 - **Production operations on request.** The owner may ask you to run production tasks (for example, forcing a Daily Snow post). Use the documented procedure and their existing credentials, keep any temporary secret enabled only for the operation, delete it right after, then verify the result and that the temporary access is closed. Ask before production writes they didn't request.
@@ -34,7 +34,7 @@ The resort pick (`src/lib/recommend/`) and Daily Snow (`src/lib/dailysnow/`) set
 ## Local collaboration
 
 - [README.md](README.md) is the source of truth for setup, collection and seeding, AI access and deployment; `package.json` has the current commands.
-- Give each running worktree its own free port (`npm run dev -- --port <port>`). Report the URL and branch served, and keep the server running while iterating with the owner. Stop only this task's server when restarting it.
+- Run a local dev server for your own checks, or for the owner only when they ask for one or the preview can't show the change (such as unseeded AI output). Give each running worktree its own free port (`npm run dev -- --port <port>`), report the URL and branch served, and stop only this task's server when restarting it.
 - A fresh worktree has its own dependencies, ignored configuration and local Cloudflare KV state. An empty report may mean it needs seeding: use the documented workflow and confirm the requested pages have data. Keep local setup and scratch files out of commits.
 
 ## PRs and docs
