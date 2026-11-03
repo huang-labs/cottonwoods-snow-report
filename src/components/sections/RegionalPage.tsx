@@ -76,16 +76,20 @@ const STATUS_TEXT: Record<Freshness, string> = {
  * The table's footer: freshness on the left, the value legend on the right, like
  * the other pages' source lines. Each resort is classified separately, so the badge
  * shows the worst state and labels the resorts in it; any other states follow, each
- * with its own label.
+ * with its own label. When every resort is current, the line gives the oldest of
+ * their last successful checks, as other pages' source lines give theirs.
  */
-function SnowTableFoot({ sources }: { sources: ApiSource[] }) {
+function SnowTableFoot({ sources, now }: { sources: ApiSource[]; now: Date }) {
   const worst = SEVERITY.find((f) => sources.some((s) => s.freshness === f)) ?? "current";
+  const oldestCheck = sources.map((s) => s.lastSuccessfulFetchAt).sort()[0] ?? null;
   const groups = SEVERITY.map((f) => ({ f, names: sources.filter((s) => s.freshness === f).map((s) => s.label) })).filter((g) => g.names.length);
   return (
     <div className="source-line snow-foot">
       <FreshnessBadge freshness={worst} />
       {worst === "current" ? (
-        <span>All resorts reporting</span>
+        <span>
+          Last successful check: <strong>{formatAge(oldestCheck, now)}</strong>
+        </span>
       ) : (
         groups.map(({ f, names }, i) => (
           <span key={f}>
@@ -143,7 +147,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
             {COLUMNS.map((c) => (
               <th scope="col" key={c.key}>{c.title}</th>
             ))}
-            <th scope="col">Report time (MT)</th>
+            <th scope="col" className="report-time">Report time (MT)</th>
           </tr>
         </thead>
         <tbody>
@@ -169,7 +173,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
           ))}
         </tbody>
       </table>
-      <SnowTableFoot sources={PRIMARY.map((id) => report.sources[id])} />
+      <SnowTableFoot sources={PRIMARY.map((id) => report.sources[id])} now={now} />
     </section>
   );
 }

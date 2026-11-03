@@ -242,6 +242,10 @@ a { color: var(--accent); }
 /* Phones show a headline-plus-line summary of each resort instead of the value cells. */
 .snow-table .snow-phone { display: none; }
 .report-time { font-size: var(--fs-caption); }
+/* Right-aligned, so the report times end on the same edge as the footer legend.
+   The hidden phone-summary cell follows it in each row, so it takes the last
+   cell's page-edge padding itself. */
+.snow-table .report-time { text-align: right; padding-right: var(--bleed); }
 .report-time__checked { color: var(--muted); font-size: var(--fs-label); }
 .report-time__failed { color: var(--bad); font-size: var(--fs-label); }
 /* The table's footer sits just under its last row line, which serves as its rule:

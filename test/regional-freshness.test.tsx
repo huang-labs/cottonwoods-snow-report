@@ -23,14 +23,18 @@ it("keeps freshness out of the resort rows", () => {
   expect(document.querySelector(".snow-table .badge:not(.badge--ai)")).toBeNull();
 });
 
-it("shows one Current badge and 'All resorts reporting' when every resort is current", () => {
-  render(<RegionalPage now={now} report={withFreshness({ alta: "current", snowbird: "current", solitude: "current", brighton: "current" })} />);
+it("shows one Current badge and the oldest last successful check when every resort is current", () => {
+  const report = withFreshness({ alta: "current", snowbird: "current", solitude: "current", brighton: "current" });
+  report.sources.alta.lastSuccessfulFetchAt = "2026-12-01T14:59:00Z";
+  report.sources.snowbird.lastSuccessfulFetchAt = "2026-12-01T14:56:00Z";
+  report.sources.solitude.lastSuccessfulFetchAt = "2026-12-01T14:58:00Z";
+  report.sources.brighton.lastSuccessfulFetchAt = "2026-12-01T14:57:00Z";
+  render(<RegionalPage now={now} report={report} />);
   const line = statusLine();
   expect(line?.querySelectorAll(".badge")).toHaveLength(1);
   expect(line?.querySelector(".badge--current")?.textContent).toBe("Current");
-  expect(statusText()).toBe("Current|All resorts reporting");
+  expect(statusText()).toBe("Current|Last successful check: 4 min ago");
 });
-
 it("puts the value legend on the right of the same footer line", () => {
   render(<RegionalPage now={now} report={withFreshness({ alta: "current", snowbird: "current", solitude: "current", brighton: "current" })} />);
   const legend = statusLine()?.lastElementChild;
@@ -45,7 +49,7 @@ it("badges the worst state and names the resorts in each state", () => {
   expect(line?.querySelector(".badge--old-report")?.textContent).toBe("Old report");
   expect(statusText()).toBe("Old report|Snowbird, Brighton|Current: Alta, Solitude");
   expect(line?.textContent).toContain("Current: Alta, Solitude");
-  expect(line?.textContent).not.toContain("All resorts reporting");
+  expect(line?.textContent).not.toContain("Last successful check");
 });
 
 it("orders mixed problems from most to least severe", () => {
