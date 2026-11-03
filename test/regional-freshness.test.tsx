@@ -41,6 +41,7 @@ it("puts the value legend on the right of the same footer line", () => {
   const legend = statusLine()?.lastElementChild;
   expect(legend?.className).toBe("snow-foot__legend");
   expect(legend?.textContent).toContain("reported zero");
+  expect(legend?.textContent).not.toContain("·");
   expect(document.querySelectorAll(".page--regional .source-line")).toHaveLength(1);
 });
 

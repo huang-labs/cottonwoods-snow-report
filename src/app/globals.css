@@ -254,7 +254,7 @@ a { color: var(--accent); }
 /* The table's footer sits just under its last row line, which serves as its rule:
    freshness on the left, the value legend pushed right (wrapping under it on phones). */
 .snow-foot { border-top: 0; padding-top: 0; margin-top: calc(14px - var(--page-gap)); }
-.snow-foot__legend { margin-left: auto; }
+.snow-foot__legend { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px 16px; }
 .snow-foot__legend .metric__missing, .snow-foot__legend .metric__na { font-size: 1em; }
 
 /* AI pick: an accent line spanning its data row and reasoning row, in the bleed.

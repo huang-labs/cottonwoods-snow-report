@@ -86,7 +86,9 @@ function SnowTableFoot({ sources, now }: { sources: ApiSource[]; now: Date }) {
         ))
       )}
       <span className="snow-foot__legend">
-        <span className="metric__value metric__value--zero">0″</span> reported zero · <span className="metric__missing">not reported</span> field empty in source · <span className="metric__na">—</span> not provided by source
+        <span><span className="metric__value metric__value--zero">0″</span> reported zero</span>
+        <span><span className="metric__missing">not reported</span> field empty in source</span>
+        <span><span className="metric__na">—</span> not provided by source</span>
       </span>
     </div>
   );
