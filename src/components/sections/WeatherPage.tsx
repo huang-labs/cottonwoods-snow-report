@@ -1,6 +1,6 @@
 import type { ApiSource, NwsPayload, PointForecast } from "@/lib/types";
 import { formatDenver } from "@/lib/time";
-import { SnowfallChart } from "../snowfall/SnowfallChart";
+import { SNOWFALL_UNITS, SnowfallChart } from "../snowfall/SnowfallChart";
 import { SourceLine, Unavailable } from "../ui";
 
 const fmt = (v: number | null, suffix = "") => (v === null ? "—" : `${v}${suffix}`);
@@ -69,8 +69,11 @@ function Point({ p, now }: { p: PointForecast; now: Date }) {
       </div>
       {p.sixHourSnow.length > 0 && (
         <figure className="weather-point__chart">
-          <figcaption>Snowfall forecast, next 7 days</figcaption>
-          <SnowfallChart bars={p.sixHourSnow} label={`NWS snowfall, ${p.name}`} />
+          <figcaption>
+            <span>Snowfall forecast, next 7 days</span>
+            <span>{SNOWFALL_UNITS}</span>
+          </figcaption>
+          <SnowfallChart bars={p.sixHourSnow} label={`NWS snowfall, ${p.name}`} units={false} />
         </figure>
       )}
       <dl className="periods">

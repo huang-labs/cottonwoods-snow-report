@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { snowfallDays, zonedTimeLabel } from "@/components/snowfall/model";
-import { SnowfallChart } from "@/components/snowfall/SnowfallChart";
+import { SNOWFALL_UNITS, SnowfallChart } from "@/components/snowfall/SnowfallChart";
 const bar = (start: string, snowIn = 0.1) => ({ start, snowIn, snowLevelFt: null });
 afterEach(cleanup);
 it("pads partial days and missing dates without synthesizing zeros or summing periods", () => {
@@ -27,6 +27,12 @@ it("renders each amount once, retains blank slots, and exposes a focusable singl
   expect(container.querySelector('details')).toBeNull();
   expect(screen.getByRole('region').tabIndex).toBe(0);
   expect(screen.getAllByLabelText(/not available/)).toHaveLength(10);
+});
+it("shows the units heading unless the caller's caption carries it", () => {
+  const { container, rerender } = render(<SnowfallChart bars={[bar('2026-11-02T18:00:00Z')]} label="Forecast" />);
+  expect(container.querySelector('.snowfall__heading')?.textContent).toBe(SNOWFALL_UNITS);
+  rerender(<SnowfallChart bars={[bar('2026-11-02T18:00:00Z')]} label="Forecast" units={false} />);
+  expect(container.querySelector('.snowfall__heading')).toBeNull();
 });
 it("handles an unavailable forecast", () => {
   render(<SnowfallChart bars={[]} label="Forecast" />);

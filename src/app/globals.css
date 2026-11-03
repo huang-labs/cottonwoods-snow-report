@@ -356,7 +356,7 @@ a { color: var(--accent); }
 .wx-table tbody th { padding-left: 0; text-align: left; color: var(--muted); font-weight: 500; font-size: var(--fs-caption); }
 .wx-table__snow td { color: var(--accent); font-weight: 750; font-size: var(--fs-title); }
 .weather-point__chart { margin: 0; }
-.weather-point__chart figcaption { margin-bottom: 4px; font-size: var(--fs-caption); color: var(--muted); }
+.weather-point__chart figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; margin-bottom: 12px; font-size: var(--fs-caption); color: var(--muted); }
 .periods { margin: 0; display: grid; gap: 8px; font-size: var(--fs-meta); }
 .periods dt { font-weight: 700; display: inline; }
 .periods dd { margin: 0; display: inline; color: var(--muted); }

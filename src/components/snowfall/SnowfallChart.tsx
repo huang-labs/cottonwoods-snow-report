@@ -2,13 +2,16 @@ import type { SixHourSnow } from "@/lib/types";
 import { dateLabel, dayLabel, snowfallDays, timeLabel, zonedTimeLabel } from "./model";
 import "./snowfall.css";
 
-export function SnowfallChart({ bars, label }: { bars: SixHourSnow[]; label: string }) {
+export const SNOWFALL_UNITS = "6-hour snowfall · inches";
+
+/** Pass `units={false}` when the surrounding caption already shows {@link SNOWFALL_UNITS}. */
+export function SnowfallChart({ bars, label, units = true }: { bars: SixHourSnow[]; label: string; units?: boolean }) {
   const days = snowfallDays(bars);
   const max = Math.max(1, ...bars.map(b => b.snowIn));
   const slotsPerDay = Math.max(4, ...days.map(d => d.slots.length));
   if (!days.length) return <p className="muted">Snowfall forecast unavailable.</p>;
   return <div className="snowfall">
-    <p className="snowfall__heading">6-hour snowfall · inches</p>
+    {units && <p className="snowfall__heading">{SNOWFALL_UNITS}</p>}
     <div className="snowfall__scroll" tabIndex={0} role="region" aria-label={`${label}. Scroll for later periods.`}>
       <ol className="snowfall__days" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(${slotsPerDay * 44}px, 1fr))` }}>
         {days.map(d => <li className="snowfall__day" key={d.key}>
