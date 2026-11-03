@@ -1,9 +1,10 @@
 import { Fragment } from "react";
-import type { ApiSource, Freshness, Metric, ReportResponse, ResortReport, SnowfallSet, SourceId } from "@/lib/types";
+import type { ApiSource, Metric, ReportResponse, ResortReport, SnowfallSet, SourceId } from "@/lib/types";
 import { sectionHref } from "@/lib/sections";
 import { formatAge, formatDenver } from "@/lib/time";
 import { DailySnowTeaser } from "../dailysnow/DailySnow";
-import { FreshnessBadge, MetricValue } from "../ui";
+import { FRESHNESS_TEXT, FreshnessBadge, MetricValue } from "../ui";
+import { summarizeFreshness } from "./freshness-summary";
 import { newSnowKey, SNOW_LABEL } from "./resort-display";
 
 const PRIMARY: SourceId[] = ["alta", "snowbird", "solitude", "brighton"];
@@ -60,18 +61,6 @@ function PhoneSummary({ r }: { r: ResortReport }) {
   );
 }
 
-/** Most to least severe, so the footer badge shows the worst resort's state. */
-const SEVERITY: Freshness[] = ["unavailable", "stale", "old-report", "time-unknown", "current"];
-
-/** How each state reads in the footer's list of resorts. */
-const STATUS_TEXT: Record<Freshness, string> = {
-  unavailable: "Unavailable",
-  stale: "Source failing",
-  "old-report": "Old report",
-  "time-unknown": "Report time unknown",
-  current: "Current",
-};
-
 /**
  * The table's footer: freshness on the left, the value legend on the right, like
  * the other pages' source lines. Each resort is classified separately, so the badge
@@ -80,9 +69,7 @@ const STATUS_TEXT: Record<Freshness, string> = {
  * their last successful checks, as other pages' source lines give theirs.
  */
 function SnowTableFoot({ sources, now }: { sources: ApiSource[]; now: Date }) {
-  const worst = SEVERITY.find((f) => sources.some((s) => s.freshness === f)) ?? "current";
-  const oldestCheck = sources.map((s) => s.lastSuccessfulFetchAt).sort()[0] ?? null;
-  const groups = SEVERITY.map((f) => ({ f, names: sources.filter((s) => s.freshness === f).map((s) => s.label) })).filter((g) => g.names.length);
+  const { worst, groups, oldestCheck } = summarizeFreshness(sources);
   return (
     <div className="source-line snow-foot">
       <FreshnessBadge freshness={worst} />
@@ -91,10 +78,10 @@ function SnowTableFoot({ sources, now }: { sources: ApiSource[]; now: Date }) {
           Last successful check: <strong>{formatAge(oldestCheck, now)}</strong>
         </span>
       ) : (
-        groups.map(({ f, names }, i) => (
-          <span key={f}>
-            {i > 0 && `${STATUS_TEXT[f]}: `}
-            <strong>{names.join(", ")}</strong>
+        groups.map(({ freshness, labels }, i) => (
+          <span key={freshness}>
+            {i > 0 && `${FRESHNESS_TEXT[freshness]}: `}
+            <strong>{labels.join(", ")}</strong>
           </span>
         ))
       )}

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { RegionalPage } from "@/components/sections/RegionalPage";
+import { summarizeFreshness } from "@/components/sections/freshness-summary";
 import { buildReport } from "@/lib/report";
 import type { Freshness, ReportResponse } from "@/lib/types";
 
@@ -69,4 +70,25 @@ it("marks every resort unavailable when nothing has been collected", () => {
   const line = statusLine();
   expect(line?.querySelector(".badge--unavailable")).not.toBeNull();
   expect(statusText()).toBe("Unavailable|Alta, Snowbird, Solitude, Brighton");
+});
+
+describe("summarizeFreshness", () => {
+  const src = (label: string, freshness: Freshness, lastSuccessfulFetchAt: string | null = "2026-12-01T14:58:00Z") => ({ label, freshness, lastSuccessfulFetchAt });
+
+  it("reports current with no groups beyond Current when every source is current", () => {
+    const s = summarizeFreshness([src("A", "current", "2026-12-01T14:58:00Z"), src("B", "current", "2026-12-01T14:51:00Z")]);
+    expect(s.worst).toBe("current");
+    expect(s.groups).toEqual([{ freshness: "current", labels: ["A", "B"] }]);
+    expect(s.oldestCheck).toBe("2026-12-01T14:51:00Z");
+  });
+
+  it("orders groups worst first and keeps source order within a group", () => {
+    const s = summarizeFreshness([src("A", "time-unknown"), src("B", "old-report"), src("C", "stale"), src("D", "old-report")]);
+    expect(s.worst).toBe("stale");
+    expect(s.groups.map((g) => [g.freshness, g.labels])).toEqual([["stale", ["C"]], ["old-report", ["B", "D"]], ["time-unknown", ["A"]]]);
+  });
+
+  it("has no oldest check when a source was never collected", () => {
+    expect(summarizeFreshness([src("A", "current"), src("B", "unavailable", null)]).oldestCheck).toBeNull();
+  });
 });
