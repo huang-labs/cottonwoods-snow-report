@@ -6,6 +6,7 @@ import { DailySnowPage, DailySnowTeaser } from "@/components/dailysnow/DailySnow
 import { RegionalPage } from "@/components/sections/RegionalPage";
 import { buildReport } from "@/lib/report";
 import type { ApiDailySnow, ApiRecommendation } from "@/lib/types";
+import type { StormRecord } from "@/lib/dailysnow/storm-types";
 
 const now = new Date("2026-11-01T15:00:00Z");
 const post: ApiDailySnow = {
@@ -33,6 +34,37 @@ const post: ApiDailySnow = {
   archive: [{ date: "2026-11-01", title: "Storm Underway" }, { date: "2026-10-31", title: "Storm Arrives" }],
 };
 const report = (dailySnow: ApiDailySnow | null) => ({ ...buildReport(null, now), dailySnow });
+
+it("shows a frozen storm recap with qualified rolling observations, missing totals, and source times", () => {
+  const observation = { amountIn: 15, window: "storm" as const, reportTime: "2026-11-01T12:00:00Z", collectedAt: "2026-11-01T13:00:00Z", sourceUrl: "https://www.alta.com/" };
+  const storm: StormRecord = {
+    id: "storm", firstObservedAt: observation.reportTime, lastSnowAt: observation.reportTime, updatedAt: observation.collectedAt,
+    status: "wrapping-up", closedAt: null, closureReason: null,
+    resorts: [
+      { id: "alta", name: "Alta", total: { ...observation, previousAmountIn: 16 }, rolling: null },
+      { id: "snowbird", name: "Snowbird", total: null, rolling: { ...observation, window: "48h", sourceUrl: "https://www.snowbird.com/" } },
+      { id: "brighton", name: "Brighton", total: null, rolling: null },
+    ],
+  };
+  const withStorm = { ...post, stormRecap: storm, figures: { ...post.figures, "storm-recap": { id: "storm-recap", kind: "storm-recap" as const, caption: "Storm recap", storm } } };
+  render(<DailySnowPage report={report(withStorm)} now={now} />);
+  const table = within(screen.getByRole("table", { name: "Observations for this storm" }));
+  expect(table.getByText("Earlier 48 h observation", { exact: false })).toBeTruthy();
+  expect(table.getByText(/Full storm total unavailable · Checked/)).toBeTruthy();
+  expect(table.getByText("Source revised from 16″")).toBeTruthy();
+  expect(table.getByText("— · Storm total unavailable")).toBeTruthy();
+  expect(table.getAllByText(/Report Today 5:00 AM/i)).toHaveLength(2);
+  expect(table.getByRole("link", { name: "Alta" }).getAttribute("href")).toBe("https://www.alta.com/");
+  expect(document.querySelectorAll(".dailysnow-storm")).toHaveLength(1);
+});
+
+it("attributes the NWS clearly in older saved prose and teaser summaries", () => {
+  const old = { ...post, summary: "The discussion expects snow.", sections: [{ id: "update" as const, paragraphs: [{ text: "According to the discussion, snow ends today.", figure: null }] }] };
+  render(<><DailySnowPage report={report(old)} now={now} /><DailySnowTeaser post={old} now={now} /></>);
+  expect(screen.getAllByText("The NWS expects snow.")).toHaveLength(2);
+  expect(screen.getByText("According to the NWS, snow ends today.")).toBeTruthy();
+  expect(document.body.textContent).not.toMatch(/discussion/i);
+});
 afterEach(() => {
   cleanup();
   clearArchivedPosts();

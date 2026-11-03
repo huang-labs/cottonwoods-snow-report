@@ -128,9 +128,15 @@ export function planDailySnow(
   const run = async (): Promise<DailySnowState> => {
     try {
       const previous = await previousPost(env.SNOW_KV, base.current, date);
-      const { digest, numbers, figures: candidates } = previous === base.current ? build : buildDailyDigest(snapshot, previous, base.history, now);
+      // Collection may have merged newer source/storm records before this call.
+      const { digest, numbers, stormRecap, figures: candidates } = buildDailyDigest(snapshot, previous, base.history, now);
       const { value: r, model, fallbackReason } = await askDailySnow(ai, digest, env.AI_GATEWAY_ID);
       const wanted = new Set(r.sections.flatMap((s) => s.paragraphs.map((p) => p.figure)).filter((f): f is string => !!f));
+      // A storm recap must accompany its event facts, even if prose omits it.
+      if (stormRecap) {
+        if (wanted.size >= MAX_FIGURES && !wanted.has("storm-recap")) wanted.delete([...wanted].at(-1)!);
+        wanted.add("storm-recap");
+      }
       const figures = await storeFigures(candidates.filter((c) => wanted.has(c.figure.id)), date, env, now, opts.fetchImpl);
       // A plume is part of the report even if the model omitted it. Prefer CLN,
       // then try another station if its frozen still is unavailable. Never invent
@@ -143,7 +149,7 @@ export function planDailySnow(
           if (!copied[candidate.figure.id]) continue;
           // Reserve one of the six figure slots for the required plume.
           if (Object.keys(figures).length >= MAX_FIGURES) {
-            const lastOptional = [...wanted].reverse().find((id) => figures[id]);
+            const lastOptional = [...wanted].reverse().find((id) => id !== "storm-recap" && figures[id]);
             if (lastOptional) delete figures[lastOptional];
           }
           Object.assign(figures, copied);
@@ -159,6 +165,7 @@ export function planDailySnow(
         sections: r.sections.map((s) => ({ ...s, paragraphs: s.paragraphs.map((p) => ({ ...p, figure: p.figure && figures[p.figure] ? p.figure : null })) })),
         figures,
         numbers,
+        ...(stormRecap ? { stormRecap } : {}),
         generatedAt: now.toISOString(),
         model,
         trigger,

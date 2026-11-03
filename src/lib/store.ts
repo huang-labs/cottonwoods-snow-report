@@ -1,4 +1,5 @@
 import type { Snapshot, SourceId, SourceRecord } from "./types";
+import { mergeStormTracking } from "./dailysnow/storms";
 
 /** Minimal KV surface used here (Cloudflare KVNamespace satisfies it). */
 export interface KVLike {
@@ -64,6 +65,8 @@ export function mergeSnapshot(latest: Snapshot | null, incoming: Snapshot): Snap
   if (recommendation) merged.recommendation = recommendation;
   const dailySnow = newerState(latest.dailySnow, incoming.dailySnow);
   if (dailySnow) merged.dailySnow = dailySnow;
+  const stormTracking = mergeStormTracking(latest.stormTracking, incoming.stormTracking);
+  if (stormTracking) merged.stormTracking = stormTracking;
   return merged;
 }
 
@@ -75,9 +78,11 @@ export function mergeSnapshot(latest: Snapshot | null, incoming: Snapshot): Snap
  * residual window, which is accepted rather than serialized with a lock KV
  * cannot make atomic.
  */
-export async function writeSnapshot(kv: KVLike, snapshot: Snapshot): Promise<void> {
+export async function writeSnapshot(kv: KVLike, snapshot: Snapshot): Promise<Snapshot> {
   const latest = await readSnapshot(kv);
-  await kv.put(SNAPSHOT_KEY, JSON.stringify(mergeSnapshot(latest, snapshot)));
+  const merged = mergeSnapshot(latest, snapshot);
+  await kv.put(SNAPSHOT_KEY, JSON.stringify(merged));
+  return merged;
 }
 
 /**

@@ -315,6 +315,9 @@ a { color: var(--accent); }
 .dailysnow-totals__cell { position: relative; display: block; padding-left: 6px; }
 .dailysnow-totals__bar { position: absolute; left: 0; top: 1px; bottom: 1px; background: color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 3px; }
 .dailysnow-totals__cell > span:last-child { position: relative; font-weight: 700; }
+.dailysnow-storm tbody th { width: 25%; vertical-align: top; }
+.dailysnow-storm td { width: auto; }
+.dailysnow-storm__note { display: block; font-size: var(--fs-caption); }
 .dailysnow__footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--fs-caption); line-height: 1.6; }
 .dailysnow__nav { display: flex; justify-content: space-between; gap: 8px 24px; margin-top: 8px; flex-wrap: wrap; }
 .dailysnow__nav button, .dailysnow__back { background: transparent; border: 0; padding: 12px 0; color: var(--accent); cursor: pointer; text-align: left; font-size: var(--fs-meta); font-weight: 650; }

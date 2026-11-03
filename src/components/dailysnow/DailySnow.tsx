@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { formatDenver } from "@/lib/time";
 import { isSnowPlume } from "@/lib/dailysnow/plume";
+import { readerWording } from "@/lib/dailysnow/wording";
 import type { ApiDailySnow, DailySnowSectionId, ReportResponse } from "@/lib/types";
 import { prefetchArchivedPost, useArchivedPost } from "./archive";
 import { Figure } from "./figures";
@@ -47,8 +48,9 @@ function Article({ post }: { post: ApiDailySnow }) {
           <h2>{SECTION_TITLE[s.id]}</h2>
           {s.paragraphs.map((p, i) => (
             <div key={i}>
-              <p>{p.text}</p>
+              <p>{readerWording(p.text)}</p>
               {p.figure && post.figures[p.figure] && <Figure figure={post.figures[p.figure]} postedAt={post.generatedAt} />}
+              {s === post.sections[0] && i === 0 && post.figures["storm-recap"] && !referenced.has("storm-recap") && <Figure figure={post.figures["storm-recap"]} postedAt={post.generatedAt} />}
             </div>
           ))}
         </section>
@@ -61,7 +63,7 @@ function Article({ post }: { post: ApiDailySnow }) {
 function Footer({ post }: { post: ApiDailySnow }) {
   return (
     <p className="dailysnow__footer">
-      AI-generated from NWS forecasts and discussion, University of Utah plumes and resort reports · {modelName(post.model)}. Check official forecasts and avalanche conditions before heading out.
+      AI-generated from NWS forecasts, University of Utah plumes and resort reports · {modelName(post.model)}. Check official forecasts and avalanche conditions before heading out.
     </p>
   );
 }
@@ -135,8 +137,8 @@ export function DailySnowPage({ report, now }: { report: ReportResponse; now: Da
         <article className="dailysnow" aria-label="Daily Snow" aria-busy={loading || undefined}>
           <header className="dailysnow__header">
             <Eyebrow post={post} now={now} archived={post.date !== current?.date} />
-            <h1 className="dailysnow__title">{post.title}</h1>
-            <p className="dailysnow__summary">{post.summary}</p>
+            <h1 className="dailysnow__title">{readerWording(post.title)}</h1>
+            <p className="dailysnow__summary">{readerWording(post.summary)}</p>
           </header>
           <Article post={post} />
           <Footer post={post} />
@@ -155,8 +157,8 @@ export function DailySnowTeaser({ post, now }: { post: ApiDailySnow | null | und
       <span className="eyebrow">
         Daily Snow<span className="badge badge--ai">AI</span> · {postDate(post.date)}
       </span>
-      <strong className="dailysnow-teaser__title">{post.title}</strong>
-      <span className="dailysnow-teaser__summary">{post.summary}</span>
+      <strong className="dailysnow-teaser__title">{readerWording(post.title)}</strong>
+      <span className="dailysnow-teaser__summary">{readerWording(post.summary)}</span>
       <span className="dailysnow-teaser__more">Read →</span>
       <span className="dailysnow-teaser__time">Posted {formatDenver(post.generatedAt, now)}<PublicationNotice post={post} /></span>
     </Link>

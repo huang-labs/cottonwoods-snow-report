@@ -1,3 +1,5 @@
+import type { StormRecord, StormTrackingState } from "./dailysnow/storm-types";
+
 /**
  * Normalized report contract shared by the collector (scheduled Worker), the
  * API route, and the client app shell.
@@ -65,6 +67,8 @@ export interface Snapshot {
   recommendation?: RecommendationState;
   /** AI Daily Snow post and its scheduling state. Absent until the AI binding is configured. */
   dailySnow?: DailySnowState;
+  /** Observation-based storm memory, updated by collection even without AI. */
+  stormTracking?: StormTrackingState;
 }
 
 export type SourceId =
@@ -450,6 +454,7 @@ export type DailySnowFigure = { id: string; caption: string } & (
   | { kind: "snow-bars"; canyon: CanyonId; bars: SixHourSnow[] }
   | { kind: "snow-level"; series: Array<{ canyon: CanyonId; points: Array<{ start: string; ft: number }> }> }
   | { kind: "totals"; rows: Array<{ name: string; h24: number | null; h48: number | null; storm: number | null }> }
+  | { kind: "storm-recap"; storm: StormRecord }
   | {
       kind: "image";
       /** Same-origin URL of the still copied into KV at posting time. */
@@ -484,7 +489,7 @@ export interface DailySnowNumbers {
     nextStorm: NextStorm | null;
     forecastUpdatedAt: string | null;
   }>;
-  resorts: Array<{ id: PrimaryResortId; name: string; h24: number | null; storm: number | null; reportTime: string | null }>;
+  resorts: Array<{ id: PrimaryResortId; name: string; h24: number | null; storm: number | null; reportTime: string | null; h48?: number | null; seasonIn?: number | null }>;
 }
 
 export interface DailySnowPost {
@@ -496,6 +501,8 @@ export interface DailySnowPost {
   sections: Array<{ id: DailySnowSectionId; paragraphs: DailySnowParagraph[] }>;
   figures: Record<string, DailySnowFigure>;
   numbers: DailySnowNumbers;
+  /** Immutable edition-specific copy, shared by the prose digest and recap figure. */
+  stormRecap?: StormRecord;
   generatedAt: string;
   model: string;
   trigger: string;
