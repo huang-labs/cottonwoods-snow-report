@@ -172,7 +172,7 @@ it("walks the archive through each post's neighbor links, past the recent-posts 
   expect(window.location.search).toBe("");
 });
 
-it("shows the recent posts in a left rail beside the article, today first, at most three", () => {
+it("shows the recent posts in a left rail beside the article, latest first, at most five", () => {
   const history = [
     { date: "2026-11-01", title: "Storm Underway" },
     { date: "2026-10-31", title: "Storm Arrives" },
@@ -187,10 +187,10 @@ it("shows the recent posts in a left rail beside the article, today first, at mo
   // Counts posts, not days: a day without a post must not make the heading wrong.
   expect(rail.querySelector(".dailysnow__history-heading")?.textContent).toBe("Recent posts");
   const entries = [...rail.querySelectorAll(".dailysnow__history-entry")];
-  expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-date")?.textContent)).toEqual(["Latest · Sun, Nov 1", "Sat, Oct 31", "Fri, Oct 30"]);
+  expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-date")?.textContent)).toEqual(["Latest · Sun, Nov 1", "Sat, Oct 31", "Fri, Oct 30", "Thu, Oct 29", "Wed, Oct 28"]);
   // The live post is today's entry — marked active at rest — and not repeated from the archive.
   expect(entries[0].getAttribute("data-active")).toBe("true");
-  expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-title")?.textContent)).toEqual(["Storm Underway", "Storm Arrives", "Snow Showers Return"]);
+  expect(entries.map((e) => e.querySelector(".dailysnow__history-entry-title")?.textContent)).toEqual(["Storm Underway", "Storm Arrives", "Snow Showers Return", "A Quiet Stretch", "Storm Exiting"]);
   expect(entries[0].querySelector(".dailysnow__history-entry-phase")?.textContent).toBe("Storm");
 });
 
