@@ -400,3 +400,9 @@ Validation: 213 tests across 18 files and `npm run typecheck` pass. In Chromium,
 - 390px: 3, 3 and 2 lines.
 
 Local KV had no plume data, so the Plumes intro was measured by injecting worst-case text ("Wed, Nov 26, 12:00 PM MT"). Not run: `npm run build`, real-device Safari.
+
+## 2026-11-03 — Single-row masthead on phones
+
+Below 900px the brand used to break "Snow Report" onto a second, smaller line. It now stays on one line next to the appearance buttons, as on desktop: the brand doesn't wrap, and its size scales with the viewport (`clamp(16px, 5.5vw, 23px)`) so the whole name fits even at 320px. To leave the brand more room, the phone masthead also tightens the appearance control: buttons 40px → 34px wide (still 44px tall), brand-to-control gap 16px → 12px, and a -8px right margin so the moon icon's edge sits on the 20px gutter. Only the narrow-screen masthead rules in `src/app/globals.css` changed.
+
+Checked with headless Chromium (brand font size, gap from brand to sun icon, masthead height): 320px 17.6px, 23px, 44px; 360px 19.8px, 36px; 375px 20.6px, 40px; 430px and 768px 23px; 1280px unchanged at 26px and 48px. On phones the icons are 16px apart (22px on desktop) and the moon's right edge is 20px from the screen edge. The brand is never clipped and the page never scrolls sideways. Not run: real-device Safari.

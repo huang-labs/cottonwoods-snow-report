@@ -418,9 +418,10 @@ a { color: var(--accent); }
 /* ---- narrow screens (phones and small tablets) ---- */
 @media (max-width: 900px) {
   .editorial-nav { padding-top: 16px; }
-  .editorial-nav__masthead { padding-bottom: 0; }
-  .editorial-nav__brand { font-size: 23px; }
-  .editorial-nav__brand span { display: block; font-size: 15px; margin-top: 3px; letter-spacing: -0.4px; }
+  .editorial-nav__masthead { gap: 12px; padding-bottom: 0; }
+  .editorial-nav__brand { min-width: 0; white-space: nowrap; font-size: clamp(16px, 5.5vw, 23px); letter-spacing: -0.6px; }
+  .appearance-control { margin-right: -8px; }
+  .appearance-control button { width: 34px; }
   .editorial-page { padding-top: 28px; padding-bottom: 40px; }
 
   .weather-grid, .plume-grid, .roads, .parking__grid { grid-template-columns: minmax(0, 1fr); }
