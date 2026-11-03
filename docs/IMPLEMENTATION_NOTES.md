@@ -660,6 +660,8 @@ high-effort review in 99 s with the enlarged budget (publication disabled).
 The regenerated key was installed as the repository's `OPENROUTER_API_KEY` and
 used successfully for that run. No application tests or browser checks were
 rerun for this configuration-only follow-up.
+The live review also prompted explicit `pull-requests: read` permission for the
+routing job's PR API reads; the review job retains its scoped write permission.
 
 **Files touched in this follow-up:** `.pr_agent.toml` sets reasoning and budgets;
 `.github/workflows/review.yml` removes per-model effort selection and increases
