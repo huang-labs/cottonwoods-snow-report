@@ -208,9 +208,8 @@ a { color: var(--accent); }
 }
 .snow-table .metric--xl { font-size: 32px; }
 .cell-label { color: var(--muted); max-width: 17ch; line-height: 1.35; font-size: var(--fs-label); margin-top: 6px; }
-.cell-label > span { display: block; }
-/* Column headers name the window on wide screens; phones hide them, so the cell does. */
-.cell-label > .cell-label__window { display: none; }
+/* Phones show a headline-plus-line summary of each resort instead of the value cells. */
+.snow-table .snow-phone { display: none; }
 .report-time { font-size: var(--fs-caption); }
 .report-time__checked { color: var(--muted); font-size: var(--fs-label); }
 .report-time__failed { color: var(--bad); font-size: var(--fs-label); }
@@ -386,18 +385,32 @@ a { color: var(--accent); }
   .plume-grid { grid-template-rows: none; grid-auto-flow: row; }
   .plume--full { grid-row: auto; }
 
-  /* Snowfall table → full-width stacked resort blocks: name and chips on one line,
-     then a three-column metric grid, then the report time. No horizontal scrolling. */
-  .snow-table, .snow-table tbody, .snow-table tbody tr { display: block; }
+  /* Snowfall table → one block per resort: name, chips and report time on the first
+     line, the 24 h total as a headline, then the other windows as one line of text.
+     The value cells stay for screen readers; the summary is their visual copy. */
+  .snow-table, .snow-table tbody, .snow-table tr { display: block; }
   .snow-table thead { display: none; }
-  .snow-table .row--primary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 12px; padding: 20px var(--bleed); border-bottom: 1px solid var(--line); }
+  .snow-table .row--primary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; padding: 16px var(--bleed); border-bottom: 1px solid var(--line); }
   .snow-table tbody tr.row--primary > :is(th, td) { border: 0; padding: 0; }
-  .snow-table .row--primary > th { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-  .snow-table .row--primary > th .resort-name { margin: 0 4px 0 0; }
+  .snow-table .row--primary > th { grid-row: 1; grid-column: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  .snow-table .row--primary > th .resort-name { margin: 0 2px 0 0; }
   .snow-table .row--primary > th .badge { margin: 0; }
-  .snow-table .metric--xl { font-size: 26px; }
-  .snow-table .cell-label > .cell-label__window { display: block; }
-  .snow-table .report-time { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+  .snow-table .report-time { grid-row: 1; grid-column: 2; align-self: center; text-align: right; white-space: nowrap; }
+  .snow-table .report-time__checked { display: none; }
+  .snow-table .row--primary > td:not(.report-time, .snow-phone) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .snow-table .snow-phone { display: block; grid-row: 2; grid-column: 1 / -1; overflow: hidden; }
+  .snow-phone__lead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+  .snow-phone__lead .metric--xl { font-size: 40px; }
+  .snow-phone__lead > .snow-phone__window { color: var(--muted); font-size: var(--fs-meta); font-weight: 600; }
+  /* Every item leads with a separator; the line is shifted left by one separator
+     and clipped, so the separator that starts each wrapped line is hidden. */
+  .snow-phone__rest { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 0; margin: 8px 0 0 -20px; font-size: var(--fs-meta); }
+  .snow-phone__item { white-space: nowrap; }
+  .snow-phone__item::before { content: "·"; display: inline-block; width: 20px; text-align: center; color: var(--muted); }
+  .snow-phone__rest .snow-phone__window { color: var(--muted); }
+  .snow-phone__rest .metric { display: inline; }
+  .snow-phone__rest .metric__value { font-weight: 700; }
+  .snow-phone__note { color: var(--muted); font-size: var(--fs-label); margin-left: 4px; }
   .snow-table .row--recommended { border-bottom: 0; }
   .snow-table .recommendation-row { position: relative; border-bottom: 1px solid var(--line); }
   .snow-table .recommendation-row > td { display: block; padding: 0 var(--bleed) 20px; }

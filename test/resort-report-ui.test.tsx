@@ -248,19 +248,33 @@ it("keeps a resort's wording only where its window differs, and lists shared sou
   expect(notes).toContain("Overnight, 24 h");
 });
 
-it("labels snowfall table cells by window, noting only where a resort's window differs", () => {
+it("names each snowfall window in the column header, noting only where a resort's window differs", () => {
   const { container } = render(renderSection("regional", report, FIXTURE_NOW, null));
+  expect([...container.querySelectorAll(".snow-table thead th")].map((th) => th.textContent)).toEqual([
+    "Resort", "Overnight / 12 h", "24 h", "48 h", "Storm", "Base", "Report time (MT)",
+  ]);
   const row = (name: string) =>
     [...container.querySelectorAll(".snow-table .row--primary")].find((r) => r.querySelector(".resort-name")?.textContent === name)!;
-  const qualifiers = (name: string) =>
-    [...row(name).querySelectorAll(".cell-label > span:not(.cell-label__window)")].map((s) => s.textContent);
+  const qualifiers = (name: string) => [...row(name).querySelectorAll(".cell-label")].map((s) => s.textContent);
   // Alta's overnight column holds its 12-hour total, and says so.
   expect(qualifiers("Alta")[0]).toBe("12 h");
   // "Snow 24 Hrs." is just the 24 h window: no source wording repeated under the value.
   expect(row("Brighton").textContent).not.toContain("Snow 24 Hrs.");
-  expect([...row("Brighton").querySelectorAll(".cell-label__window")].map((s) => s.textContent)).toEqual([
-    "Overnight", "24 h", "48 h", "Storm", "Base",
+});
+
+it("summarizes each resort for phones: 24 h headline, other windows named by the window they cover", () => {
+  const { container } = render(renderSection("regional", report, FIXTURE_NOW, null));
+  const summary = (name: string) =>
+    [...container.querySelectorAll(".snow-table .row--primary")].find((r) => r.querySelector(".resort-name")?.textContent === name)!
+      .querySelector(".snow-phone")!;
+  // A visual copy of the value cells, so screen readers read the table once.
+  expect(summary("Alta").getAttribute("aria-hidden")).toBe("true");
+  expect(summary("Alta").querySelector(".snow-phone__lead .snow-phone__window")!.textContent).toBe("24 h");
+  // Alta's overnight figure is its 12 h total, so the line says 12 h rather than Overnight.
+  expect([...summary("Alta").querySelectorAll(".snow-phone__rest .snow-phone__window")].map((w) => w.textContent)).toEqual([
+    "12 h", "48 h", "Storm", "Base",
   ]);
+  expect(summary("Alta").querySelectorAll(".snow-phone__rest .snow-phone__note")).toHaveLength(0);
 });
 
 it("shows main travel routes per canyon and reveals every segment on request", () => {
