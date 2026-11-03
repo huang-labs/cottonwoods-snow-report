@@ -208,9 +208,9 @@ a { color: var(--accent); }
 }
 .snow-table .metric--xl { font-size: 32px; }
 .cell-label { color: var(--muted); max-width: 17ch; line-height: 1.35; font-size: var(--fs-label); margin-top: 6px; }
-.cell-label > span { display: block; }
-/* Column headers name the window on wide screens; phones hide them, so the cell does. */
-.cell-label > .cell-label__window { display: none; }
+/* Column headers name every window, so a cell only notes where its resort differs.
+   Phones use the short header labels to fit five columns. */
+.snow-table .col-short { display: none; }
 .report-time { font-size: var(--fs-caption); }
 .report-time__checked { color: var(--muted); font-size: var(--fs-label); }
 .report-time__failed { color: var(--bad); font-size: var(--fs-label); }
@@ -386,18 +386,27 @@ a { color: var(--accent); }
   .plume-grid { grid-template-rows: none; grid-auto-flow: row; }
   .plume--full { grid-row: auto; }
 
-  /* Snowfall table → full-width stacked resort blocks: name and chips on one line,
-     then a three-column metric grid, then the report time. No horizontal scrolling. */
-  .snow-table, .snow-table tbody, .snow-table tbody tr { display: block; }
-  .snow-table thead { display: none; }
-  .snow-table .row--primary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 12px; padding: 20px var(--bleed); border-bottom: 1px solid var(--line); }
+  /* Snowfall table → one block per resort: name, chips and report time on the first
+     line, then all five values on one line in the header's five columns, so each
+     window reads straight down the page. No horizontal scrolling. */
+  .snow-table, .snow-table thead, .snow-table tbody, .snow-table tr { display: block; }
+  .snow-table thead tr,
+  .snow-table .row--primary { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(4, minmax(0, 1fr)); column-gap: 8px; padding-inline: var(--bleed); }
+  .snow-table thead tr { padding-block: 10px; border-bottom: 1px solid var(--line); }
+  .snow-table thead th { padding: 0; border: 0; font-size: 11px; letter-spacing: 0; }
+  .snow-table thead th:is(:first-child, :last-child) { display: none; }
+  .snow-table .col-full { display: none; }
+  .snow-table .col-short { display: inline; }
+  .snow-table .row--primary { row-gap: 10px; padding-block: 16px; border-bottom: 1px solid var(--line); }
   .snow-table tbody tr.row--primary > :is(th, td) { border: 0; padding: 0; }
-  .snow-table .row--primary > th { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-  .snow-table .row--primary > th .resort-name { margin: 0 4px 0 0; }
+  .snow-table .row--primary > th { grid-row: 1; grid-column: 1 / 3; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  .snow-table .row--primary > th .resort-name { margin: 0 2px 0 0; }
   .snow-table .row--primary > th .badge { margin: 0; }
-  .snow-table .metric--xl { font-size: 26px; }
-  .snow-table .cell-label > .cell-label__window { display: block; }
-  .snow-table .report-time { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+  .snow-table .row--primary > td { min-width: 0; }
+  .snow-table .metric--xl { font-size: 24px; }
+  .snow-table .cell-label { margin-top: 4px; }
+  .snow-table .report-time { grid-row: 1; grid-column: 3 / -1; justify-self: end; align-self: center; text-align: right; white-space: nowrap; }
+  .snow-table .report-time__checked { display: none; }
   .snow-table .row--recommended { border-bottom: 0; }
   .snow-table .recommendation-row { position: relative; border-bottom: 1px solid var(--line); }
   .snow-table .recommendation-row > td { display: block; padding: 0 var(--bleed) 20px; }

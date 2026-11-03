@@ -8,27 +8,26 @@ import { newSnowKey, SNOW_LABEL, snowQualifier } from "./resort-display";
 
 const PRIMARY: SourceId[] = ["alta", "snowbird", "solitude", "brighton"];
 
-const COLUMNS: Array<{ key: keyof SnowfallSet | "base"; title: string }> = [
-  { key: "overnight", title: "Overnight / 12 h" },
-  { key: "h24", title: SNOW_LABEL.h24 },
-  { key: "h48", title: SNOW_LABEL.h48 },
-  { key: "storm", title: SNOW_LABEL.storm },
-  { key: "base", title: "Base" },
+/** `short` heads the column on phones, where five columns share the screen width. */
+const COLUMNS: Array<{ key: keyof SnowfallSet | "base"; title: string; short: string }> = [
+  { key: "overnight", title: "Overnight / 12 h", short: "Overnight" },
+  { key: "h24", title: SNOW_LABEL.h24, short: SNOW_LABEL.h24 },
+  { key: "h48", title: SNOW_LABEL.h48, short: SNOW_LABEL.h48 },
+  { key: "storm", title: SNOW_LABEL.storm, short: SNOW_LABEL.storm },
+  { key: "base", title: "Base", short: "Base" },
 ];
 
 /**
- * The value for a column and the label under it. The window label shows only on
- * phones (where the column headers are hidden); a qualifier shows everywhere when
- * the resort's window differs from the column's, like Alta's 12 h in the overnight
- * column or Solitude's "since lifts closed".
+ * The value for a column and the note under it. Column headers name the window on
+ * every screen; the note appears only where the resort's window differs from the
+ * column's, like Alta's 12 h in the overnight column or Solitude's "since lifts closed".
  */
-function cell(r: ResortReport, key: (typeof COLUMNS)[number]["key"]): { m: Metric; label: string; qualifier: string | null } {
-  if (key === "base") return { m: r.base, label: "Base", qualifier: null };
+function cell(r: ResortReport, key: (typeof COLUMNS)[number]["key"]): { m: Metric; qualifier: string | null } {
+  if (key === "base") return { m: r.base, qualifier: null };
   const used = key === "overnight" ? newSnowKey(r.snowfall) : key;
   const m = r.snowfall[used];
   return {
     m,
-    label: SNOW_LABEL[used],
     qualifier: used !== key ? SNOW_LABEL[used] : m.state === "unavailable" ? null : snowQualifier(used, m.label),
   };
 }
@@ -44,14 +43,11 @@ function Row({ source, now, recommended }: { source: ApiSource; now: Date; recom
       </th>
       {COLUMNS.map((c) => {
         if (!r) return <td key={c.key} className="muted">—</td>;
-        const { m, label, qualifier } = cell(r, c.key);
+        const { m, qualifier } = cell(r, c.key);
         return (
           <td key={c.key}>
             <MetricValue m={m} size="xl" />
-            <div className="cell-label">
-              {label !== qualifier && <span className="cell-label__window">{label}</span>}
-              {qualifier && <span>{qualifier}</span>}
-            </div>
+            {qualifier && <div className="cell-label">{qualifier}</div>}
           </td>
         );
       })}
@@ -78,7 +74,10 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
           <tr>
             <th scope="col">Resort</th>
             {COLUMNS.map((c) => (
-              <th scope="col" key={c.key}>{c.title}</th>
+              <th scope="col" key={c.key} aria-label={c.title}>
+                <span className="col-full" aria-hidden="true">{c.title}</span>
+                <span className="col-short" aria-hidden="true">{c.short}</span>
+              </th>
             ))}
             <th scope="col">Report time (MT)</th>
           </tr>
