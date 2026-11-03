@@ -349,5 +349,8 @@ describe("archive bootstrap and attribution", () => {
     ["According to the discussion, snow ends.", "According to the NWS, snow ends."],
     ["The NWS discussion expects snow.", "The NWS expects snow."],
     ["Dry today. The forecast discussion expects snow tomorrow.", "Dry today. The NWS expects snow tomorrow."],
+    ["The NWS Area Forecast Discussion keeps snow going.", "The NWS keeps snow going."],
+    ["NWS's discussion favors Alta.", "The NWS favors Alta."],
+    ["There was a discussion of totals.", "There was a discussion of totals."],
   ])("attributes %s in plain language", (input, expected) => expect(readerWording(input)).toBe(expected));
 });
