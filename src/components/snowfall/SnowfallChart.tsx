@@ -4,14 +4,17 @@ import "./snowfall.css";
 
 export const SNOWFALL_UNITS = "6-hour snowfall · inches";
 
-/** Pass `units={false}` when the surrounding caption already shows {@link SNOWFALL_UNITS}. */
-export function SnowfallChart({ bars, label, units = true }: { bars: SixHourSnow[]; label: string; units?: boolean }) {
+/**
+ * Pass `units={false}` when the surrounding caption already shows {@link SNOWFALL_UNITS},
+ * or `title` to head the chart with that text instead.
+ */
+export function SnowfallChart({ bars, label, units = true, title }: { bars: SixHourSnow[]; label: string; units?: boolean; title?: string }) {
   const days = snowfallDays(bars);
   const max = Math.max(1, ...bars.map(b => b.snowIn));
   const slotsPerDay = Math.max(4, ...days.map(d => d.slots.length));
   if (!days.length) return <p className="muted">Snowfall forecast unavailable.</p>;
   return <div className="snowfall">
-    {units && <p className="snowfall__heading">{SNOWFALL_UNITS}</p>}
+    {(title || units) && <p className="snowfall__heading">{title ?? SNOWFALL_UNITS}</p>}
     <div className="snowfall__scroll" tabIndex={0} role="region" aria-label={`${label}. Scroll for later periods.`}>
       <ol className="snowfall__days" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(${slotsPerDay * 44}px, 1fr))` }}>
         {days.map(d => <li className="snowfall__day" key={d.key}>

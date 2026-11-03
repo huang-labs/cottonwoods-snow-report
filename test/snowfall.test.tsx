@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { snowfallDays, zonedTimeLabel } from "@/components/snowfall/model";
 import { SNOWFALL_UNITS, SnowfallChart } from "@/components/snowfall/SnowfallChart";
+import { Figure } from "@/components/dailysnow/figures";
 const bar = (start: string, snowIn = 0.1) => ({ start, snowIn, snowLevelFt: null });
 afterEach(cleanup);
 it("pads partial days and missing dates without synthesizing zeros or summing periods", () => {
@@ -33,6 +34,15 @@ it("shows the units heading unless the caller's caption carries it", () => {
   expect(container.querySelector('.snowfall__heading')?.textContent).toBe(SNOWFALL_UNITS);
   rerender(<SnowfallChart bars={[bar('2026-11-02T18:00:00Z')]} label="Forecast" units={false} />);
   expect(container.querySelector('.snowfall__heading')).toBeNull();
+  rerender(<SnowfallChart bars={[bar('2026-11-02T18:00:00Z')]} label="Forecast" title="NWS 6-hour snowfall forecast · Alta / Snowbird (LCC)" />);
+  expect(container.querySelector('.snowfall__heading')?.textContent).toBe("NWS 6-hour snowfall forecast · Alta / Snowbird (LCC)");
+});
+it("titles a Daily Snow snowfall figure with its caption, without the stored grid time", () => {
+  const figure = { id: "nws-snow-lcc", kind: "snow-bars" as const, canyon: "LCC" as const, bars: [bar('2026-11-02T18:00:00Z')], caption: "NWS 6-hour snowfall forecast · Alta / Snowbird (LCC) · updated Mon 9:12 PM" };
+  const { container } = render(<Figure figure={figure} postedAt="2026-11-03T13:00:00Z" />);
+  expect(container.querySelector('.snowfall__heading')?.textContent).toBe("NWS 6-hour snowfall forecast · Alta / Snowbird (LCC)");
+  expect(container.querySelector('figcaption')).toBeNull();
+  expect(screen.getByText(/Times are period starts in Mountain Time/)).toBeTruthy();
 });
 it("handles an unavailable forecast", () => {
   render(<SnowfallChart bars={[]} label="Forecast" />);
