@@ -43,6 +43,74 @@ The shared pieces live in `src/lib/ai/`: `model.ts` builds the request body, run
   - **Storm memory** (`src/lib/dailysnow/storms.ts`): collection tracks observed storms across days, even without AI. Reported storm totals survive upstream zero resets; earlier rolling observations retain their original window and times, never become full-storm totals, and are never added together. A source counter restarting within an event is kept as a separate segment with the full-event amount marked unknown. The recap and figure use the same record frozen with the edition. The tracker wraps up after 12 hours without an increase when the next 18 forecast hours are dry (<0.5″ in each canyon), closes after 24 such hours, and leaves the article's recap context 36 hours after closure. Snow in the near-term forecast bridges lulls; 48 hours without new evidence closes tracking with an explicit unconfirmed-end reason. Repeated old totals cannot reopen a storm. These are editorial grouping rules, not measured meteorological onset/end times.
   - Storage: the current post is in the snapshot; each post is archived at `dailysnow:v1:<date>` with its image stills at `dailysnow-fig:v1:<date>:<figure>`, with no expiry. Optional `stormTracking` in the snapshot holds source cursors and the three most recent events; each event is also archived without expiry at `dailysnow-storm:v1:<id>`, written only on material changes. New posts embed optional `stormRecap` data; their recap figures also freeze that data, so later observations do not alter an earlier edition. Initial collection bootstraps from at most five editions within 72 hours, using their structured observations rather than AI prose; existing posts need no migration. KV keeps every post as the business archive (roughly 10–20 KB per post plus about 100 KB per image still, up to six). `GET /api/daily-snow?date=YYYY-MM-DD` serves any stored post. Each post stores links to its neighbors (`older` when it is written, `newer` added when the next post is written), so the previous/next buttons walk back through every post ever made. The desktop history rail stays visible; phones use the date buttons without a history list or disclosure. Each response's `archive` lists only the 10 most recent posts (`DAILY_SNOW_ARCHIVE_POSTS`, the snapshot index), which the history rail draws from. To list the whole archive, use `cf kv keys list --prefix dailysnow:v1:`. `GET /api/daily-snow/figure/<date>/<figure>` serves a post's stills.
 
+## AI code review
+
+GitHub Actions runs **one advisory PR-Agent review per eligible PR event**, paid
+from OpenRouter credits. Coding agents apply exactly one author label. The
+reviewer is chosen from the other two families using the PR number (even/odd),
+so pushes and retries keep the same reviewer while both alternatives are used
+across PRs:
+
+| Author label | Even PR number | Odd PR number |
+| --- | --- | --- |
+| `author:codex` | Claude Opus 5.5 | GLM 5.3 |
+| `author:claude` | GPT-6.1 Sol | GLM 5.3 |
+| `author:glm` | Claude Opus 5.5 | GPT-6.1 Sol |
+
+Default OpenRouter model IDs are `anthropic/claude-opus-5.5`,
+`openai/gpt-6.1-sol`, and `z-ai/glm-5.3`. Optional repository variables
+`AI_REVIEW_CLAUDE_MODEL`, `AI_REVIEW_GPT_MODEL`, and `AI_REVIEW_GLM_MODEL` override
+them with an explicit model from the same vendor (without the `openrouter/`
+prefix). Auto routers, cross-vendor overrides and model fallbacks are disabled.
+OpenRouter may switch hosting providers serving the selected model.
+
+Setup requires a dedicated OpenRouter key in the repository Actions secret
+`OPENROUTER_API_KEY`. Set the key's credit limit/reset period in OpenRouter to
+bound spending; the workflow does not change billing limits. No Cloudflare
+credentials or coding subscriptions are used for reviews. Requests disclose PR
+diffs, PR metadata and trusted repository context to OpenRouter and the selected
+provider; account privacy settings govern their handling.
+
+Reviews run on open, reopen, ready-for-review, pushes and author-label changes.
+Drafts, forks, Dependabot and bot events are skipped. Missing/conflicting labels
+produce a configuration notice without inference. A collaborator with current
+write/maintain/admin permission can post exactly `/review` to rerun. Arguments,
+`/improve`, ordinary comments and other commands are ignored. Closed PRs cannot
+be reviewed. For another coding family or mixed authorship, choose the author
+label with the owner before requesting a review.
+
+The marked **AI code review** comment is updated in place with the selected
+model, reviewed commit, findings with code links, reported token usage, and any
+omitted/partial coverage. Initial publication uses summary findings rather than
+inline threads. A failure is reported separately from a review with no findings;
+the workflow fails on inference/runtime errors, but findings are advisory. Keep
+this workflow optional in branch protection: it never auto-approves, changes
+code or blocks merges based on model opinion. Review jobs have 15 minutes, a
+32,000-token context budget, an 8,192-token output cap, one transient-error retry,
+and no large-PR chunking. GLM uses high reasoning effort; the others use medium.
+Token limits are not dollar caps, and cancellation cannot refund a running call.
+
+The workflow executes tooling/config from the trusted PR base commit (default
+branch for `/review`), never PR-head code. PR-Agent fetches the live diff and
+default-branch AGENTS.md through GitHub's API. Branch configuration and command
+overrides cannot change its model or endpoint. A head/base/author-label change
+during inference discards the result. The runtime image is pinned in
+`scripts/ci-review/review.mjs`; update its digest deliberately and rerun the
+routing tests plus live model validation. Preview and review comments have
+separate identities, so deployments cannot overwrite reviews.
+
+**Activation:** the setup PR can run routing tests, but automatically reviews
+only after trusted tooling exists on its base branch. After merging, open or
+update a labeled PR, or post `/review`. Existing PRs need a new event. The
+initial setup PR reports this bootstrap limitation explicitly.
+
+Run CI-tooling tests with `node --test scripts/ci-review/*.test.mjs` (no npm
+dependencies required). Missing secret, credit/authentication errors, provider
+rate limits and timeouts appear in the review status; raw provider logs are
+kept out of PR comments and Actions output. Retry with `/review` after fixing
+configuration. Automatic reviews use the full current diff, not incremental
+finding state; a concern can therefore recur until addressed.
+
 ## Local development
 
 Requires Node 20+ (tested with Node 24.12).

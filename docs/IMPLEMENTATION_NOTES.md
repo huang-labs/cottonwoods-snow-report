@@ -578,3 +578,52 @@ This supersedes this PR's earlier mobile tabs, stacked list and collapsible hist
 **Plain-text follow-up:** 22 Daily Snow UI tests, typecheck, static build and diff checks pass. Chromium at 390px and 1366px confirms borderless text controls; 320px with a temporary cloned second control has no overflow. Dark mode checked at 390px. Touch areas remain 44px tall. This follow-up changes only scoped navigation styles and these notes; README navigation placement remains accurate.
 
 **Rebase validation:** rebased onto `origin/main` at `4cbea56` (storm observation memory), preserving its README/storage/lifecycle notes, recap rendering and source-wording changes. All 285 tests across 21 files, typecheck, static build and diff checks passed after resolution. No new browser or live model run was needed for the documentation conflicts.
+## 2026-11-03 — One independent PR-Agent reviewer through OpenRouter
+
+**Decision.** Use a three-model pool but exactly one reviewer per PR event. The
+author label (`author:codex`, `author:claude`, `author:glm`) excludes that family;
+PR-number parity selects between the remaining families in Claude, Codex, GLM
+order. Selection remains stable on pushes. Defaults are Claude Opus 5.5,
+GPT-6.1 Sol, and GLM 5.3, verified against the OpenRouter catalog. Same-vendor
+repository variables can change explicit model IDs. Model fallbacks and auto
+routers are disabled; provider failover for the selected model remains allowed.
+
+**Boundary.** The workflow executes base-commit tooling/config, reads the live
+diff and default-branch AGENTS.md via GitHub's API, and discards results if head,
+base, or author labels change. It runs no PR-head code in the privileged job.
+The PR-Agent CLI image is pinned by multi-platform digest. One publisher owns a
+marked comment; structured findings have model/commit attribution, coverage,
+token usage and code links. No inline threads, auto-approval, model-driven merge
+gate, PR description rewriting, incremental finding state, or code edits.
+Comment commands are exact `/review` requests checked against current write
+permissions before entering concurrency and again before execution.
+
+**Costs and failures.** Reviews use OpenRouter credits and a dedicated
+`OPENROUTER_API_KEY` repository secret. The owner controls the key's spending cap
+in OpenRouter. The 32k context budget, 8k output cap, one transient retry, no
+chunking and 15-minute job timeout limit work but are not a dollar cap. GLM uses
+high reasoning effort because its catalog does not support medium; Opus/GPT use
+medium. Missing/ambiguous labels spend no credits; provider/runtime failures are
+explicit and never reported as clean reviews. Raw provider logs are not
+published. Cancelling a superseded request cannot refund completed inference.
+
+**Activation and limitations.** The setup PR's base lacks the new trusted
+tooling, so automatic inference activates after merge. The bootstrap check
+reports that limitation. Existing PRs need a push, author-label event or manual
+command. Diff review is bounded context, not full-repository agent exploration.
+Summaries can repeat unresolved findings on later full-diff reviews. GitHub API
+reads are not atomic with comment publication, so the displayed commit is the
+authority for what was reviewed.
+
+**Validation so far.** 24 CI-tooling tests, all 249 application tests across 20
+files, typecheck, actionlint 1.7.12 on both workflows, and `git diff --check` pass.
+Live model and publication checks are recorded below when completed. Application
+build/browser checks are not required for these CI-only changes.
+
+**Existing files touched and why:** `AGENTS.md` adds the author-label rule;
+`README.md` documents operations and limits; `.github/workflows/deploy.yml`
+targets only the bot's Preview comment instead of its latest comment, preventing
+preview uploads from overwriting an AI review; this file records decisions and
+validation. New files are `.github/workflows/review.yml`, `.pr_agent.toml`, and
+`scripts/ci-review/{review.mjs,review.test.mjs}`. Reverting disables reviews and
+restores the prior preview publisher; spent inference credits are not refunded.

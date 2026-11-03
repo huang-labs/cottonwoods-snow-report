@@ -1,0 +1,92 @@
+name: AI review
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize, labeled, unlabeled]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  authorize:
+    if: >-
+      github.event.sender.type != 'Bot' &&
+      ((github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        !github.event.pull_request.draft &&
+        (github.event.action != 'labeled' && github.event.action != 'unlabeled' ||
+         startsWith(github.event.label.name, 'author:'))) ||
+       (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+        github.event.comment.body == '/review'))
+    runs-on: ubuntu-latest
+    outputs:
+      allowed: ${{ steps.permission.outputs.allowed }}
+    steps:
+      - uses: actions/github-script@v8
+        id: permission
+        with:
+          script: |
+            if (context.eventName === 'pull_request') {
+              core.setOutput('allowed', 'true');
+              return;
+            }
+            const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+              ...context.repo, username: context.payload.comment.user.login
+            });
+            core.setOutput('allowed', ['admin', 'maintain', 'write'].includes(data.permission) ? 'true' : 'false');
+
+  test:
+    if: >-
+      github.event_name == 'pull_request' &&
+      (github.event.action != 'labeled' && github.event.action != 'unlabeled' ||
+       startsWith(github.event.label.name, 'author:'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: node --test scripts/ci-review/*.test.mjs
+
+  review:
+    # Permission checks happen before concurrency, so unauthorized commands cannot cancel a review.
+    needs: authorize
+    if: needs.authorize.outputs.allowed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: ai-review-${{ github.event.pull_request.number || github.event.issue.number }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # Execute only trusted base/default-branch tooling; PR code is read through the API.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Check trusted tooling is installed
+        id: bootstrap
+        run: |
+          if [ -f scripts/ci-review/review.mjs ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::AI review activates after this setup PR is merged; trusted base tooling is not installed yet."
+          fi
+      - name: Review with one independent model
+        if: steps.bootstrap.outputs.ready == 'true'
+        run: node scripts/ci-review/review.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AI_REVIEW_CLAUDE_MODEL: ${{ vars.AI_REVIEW_CLAUDE_MODEL }}
+          AI_REVIEW_GPT_MODEL: ${{ vars.AI_REVIEW_GPT_MODEL }}
+          AI_REVIEW_GLM_MODEL: ${{ vars.AI_REVIEW_GLM_MODEL }}
