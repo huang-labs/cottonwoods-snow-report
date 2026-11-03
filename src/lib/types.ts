@@ -190,6 +190,11 @@ export interface PlumeChart {
   /** Accumulated snow + SLR panels; null when cropping failed (see cropError). */
   panels: PlumePanel[] | null;
   cropError: string | null;
+  /** When the panels were stored (restarts their TTL); absent in older payloads. */
+  panelsStoredAt?: string | null;
+  /** Consecutive failed crops of this run, and when the last one failed. */
+  cropAttempts?: number;
+  cropFailedAt?: string | null;
 }
 
 export interface PlumePayload {

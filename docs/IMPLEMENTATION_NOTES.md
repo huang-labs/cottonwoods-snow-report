@@ -877,3 +877,45 @@ upstream/model requests, paid inference or production operations were run.
 
 **New files:** `test/http.test.ts` and `test/publication-merge.test.ts` cover
 response budgets/cancellation and AI publication interleavings respectively.
+
+## 2026-11-03 — Plume panel recovery
+
+Follows "Artifact recovery" in the data architecture audit above. Stored panels
+have a 4-day TTL, but same-run reuse only checked the upstream chart, so a run
+that stayed current (an upstream stall) could leave the snapshot pointing at
+expired panels, and a failed crop was never retried until the image URL changed.
+
+- **Refresh:** each chart records optional `panelsStoredAt`. When the same run is
+  still published 3 days after cropping (one day before expiry), the collector
+  re-crops it, which rewrites the same keys with a fresh TTL and the same bytes.
+  Older payloads without the field use the run's initialization time, which is
+  never later than the actual crop, so they refresh early rather than late.
+- **Bounded retry:** optional `cropAttempts` and `cropFailedAt` count consecutive
+  failures for one run. Retries run at most hourly and three times per run, then
+  stop until a new run appears; success resets the count. A failed refresh keeps
+  the still-live panels; once they would have expired, the chart drops them and
+  records the error, so the page shows the original chart.
+- **Readers:** `plumePanelsLive` (`src/lib/plumePanels.ts`, client-safe) gates the
+  Plumes page and Daily Snow figure candidates, covering a last-good payload that
+  outlives its panels while collection is failing. The fallback caption now says
+  "cropped panels unavailable" rather than "cropping failed", since expiry is not
+  a crop failure.
+- **Cost:** no extra KV reads; a long-lived run costs one extra download and crop
+  per station every 3 days.
+
+Not handled: if the upstream image itself disappears while collection is
+failing, the full-chart fallback (a hotlink) breaks too; that case was already
+true before this change. A one-hour retry window means a fix upstream may take
+up to an hour to show.
+
+Validation: 316 tests across 24 files (six new: refresh timing, legacy refresh, retry
+backoff and cap, failed-refresh expiry, the TTL boundary, and the page fallback),
+`npm run typecheck`, `npm run build` and `git diff --check` pass. No browser
+check: layout is unchanged; only the fallback caption text changed. No live
+upstream requests or production writes.
+
+**Existing files touched:** `src/lib/sources/plumes.ts` (refresh/retry),
+`src/lib/types.ts` (three optional `PlumeChart` fields), `src/lib/store.ts` (TTL
+constant re-exported from the new module), `src/components/sections/PlumesPage.tsx`
+(expiry guard, caption), `src/lib/dailysnow/digest.ts` (skip expired candidates),
+`README.md`.

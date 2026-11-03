@@ -1,4 +1,5 @@
 import type { ApiSource, PlumeChart, PlumePanel, PlumePayload } from "@/lib/types";
+import { plumePanelsLive } from "@/lib/plumePanels";
 import { formatDenver } from "@/lib/time";
 import { PlumePanelSvg } from "../PlumePanelSvg";
 import { SourceLine, Unavailable } from "../ui";
@@ -32,7 +33,7 @@ function FullChart({ chart, product }: { chart: PlumeChart; product: string }) {
   return (
     <figure className="plume plume--full">
       <figcaption className="plume__title">
-        {chart.stationName} · <span className="source-line__error">cropping failed, showing the original chart (times in UTC)</span>
+        {chart.stationName} · <span className="source-line__error">cropped panels unavailable, showing the original chart (times in UTC)</span>
       </figcaption>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={chart.imageUrl} alt={`${product} plume for ${chart.stationName}, run ${chart.runCode}`} />
@@ -56,7 +57,8 @@ export function PlumesPage({ source, now }: { source: ApiSource; now: Date }) {
         // One column per station (snow on top, SLR below): the grid flows by column.
         <div className="plume-grid">
           {p.charts.flatMap((c) =>
-            c.panels?.length
+            // A last-good payload can outlive its stored panels if collection stalls.
+            c.panels?.length && plumePanelsLive(c, now)
               ? c.panels.map((panel) => <Panel key={`${c.stationCode}-${panel.id}`} chart={c} panel={panel} now={now} />)
               : [<FullChart key={c.stationCode} chart={c} product={p.product} />],
           )}

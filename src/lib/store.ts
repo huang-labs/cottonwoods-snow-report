@@ -113,7 +113,7 @@ export async function writeSnapshot(kv: KVLike, snapshot: Snapshot): Promise<Sna
  */
 export const plumePanelKey = (station: string, runCode: string, panel: string) =>
   `plume-panel:v1:${station}:${runCode}:${panel}`;
-export const PLUME_PANEL_TTL_S = 4 * 24 * 3600;
+export { PLUME_PANEL_TTL_S } from "./plumePanels";
 
 /** In-memory KV for tests and the one-off local collection script. */
 export class MemoryKV implements KVLike {
