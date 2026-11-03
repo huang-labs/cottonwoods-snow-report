@@ -400,3 +400,9 @@ Validation: 213 tests across 18 files and `npm run typecheck` pass. In Chromium,
 - 390px: 3, 3 and 2 lines.
 
 Local KV had no plume data, so the Plumes intro was measured by injecting worst-case text ("Wed, Nov 26, 12:00 PM MT"). Not run: `npm run build`, real-device Safari.
+
+## 2026-11-03 — Single-row masthead on phones
+
+Below 900px the brand used to break "Snow Report" onto a second, smaller line. It now stays on one line next to the appearance buttons, as on desktop: the brand doesn't wrap, and its size scales with the viewport (`clamp(16px, 5.1vw, 23px)`) so the whole name fits even at 320px. Only the narrow-screen brand rules in `src/app/globals.css` changed.
+
+Checked with headless Chromium (brand font size, gap to the sun icon, masthead height): 320px 16.3px, 21px gap, 44px; 360px 18.4px, 35px; 375px 19.1px, 41px; 430px 21.9px, 61px; 768px 23px; 1280px unchanged at 26px and 48px. The brand is never clipped and the page never scrolls sideways. Not run: real-device Safari.
