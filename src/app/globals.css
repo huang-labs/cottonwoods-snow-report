@@ -240,6 +240,11 @@ a { color: var(--accent); }
 }
 .snow-table .metric--xl { font-size: 32px; }
 .cell-label { color: var(--muted); max-width: 17ch; line-height: 1.35; font-size: var(--fs-label); margin-top: 6px; }
+/* Rows keep one height whether or not a value has a note: every value cell reserves
+   its note line, and the row's cells share a baseline so the name, the values and
+   the report time read as one line. */
+.snow-table .cell-label:empty::before { content: "\00a0"; }
+.snow-table tbody .row--primary > :is(th, td) { vertical-align: baseline; }
 /* Phones show a headline-plus-line summary of each resort instead of the value cells. */
 .snow-table .snow-phone { display: none; }
 .report-time { font-size: var(--fs-caption); }

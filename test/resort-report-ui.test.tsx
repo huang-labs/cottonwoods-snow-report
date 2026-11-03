@@ -262,6 +262,17 @@ it("names each snowfall window in the column header, noting only where a resort'
   expect(row("Brighton").textContent).not.toContain("Snow 24 Hrs.");
 });
 
+it("gives every snowfall value cell one note line, empty when the window matches, so rows share a height", () => {
+  const { container } = render(renderSection("regional", report, FIXTURE_NOW, null));
+  for (const tr of container.querySelectorAll(".snow-table .row--primary")) {
+    const cells = [...tr.querySelectorAll("td:not(.report-time, .snow-phone)")];
+    expect(cells).toHaveLength(5);
+    for (const td of cells) expect(td.querySelectorAll(".cell-label")).toHaveLength(1);
+  }
+  const brighton = [...container.querySelectorAll(".snow-table .row--primary")].find((r) => r.querySelector(".resort-name")?.textContent === "Brighton")!;
+  expect([...brighton.querySelectorAll(".cell-label")].every((l) => l.textContent === "")).toBe(true);
+});
+
 it("summarizes each resort for phones: 24 h headline, other windows named by the window they cover", () => {
   const { container } = render(renderSection("regional", report, FIXTURE_NOW, null));
   const summary = (name: string) =>

@@ -114,12 +114,13 @@ function Row({ source, now, recommended }: { source: ApiSource; now: Date; recom
         {recommended && <span className="badge badge--ai">AI pick</span>}
       </th>
       {COLUMNS.map((c) => {
-        if (!r) return <td key={c.key} className="muted">—</td>;
+        // Every value cell keeps its note line, empty or not, so all rows share one height.
+        if (!r) return <td key={c.key} className="muted">—<div className="cell-label" /></td>;
         const { m, qualifier } = cell(r, c.key);
         return (
           <td key={c.key}>
             <MetricValue m={m} size="xl" />
-            {qualifier && <div className="cell-label">{qualifier}</div>}
+            <div className="cell-label">{qualifier}</div>
           </td>
         );
       })}
