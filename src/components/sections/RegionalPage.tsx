@@ -3,8 +3,9 @@ import type { ApiSource, Metric, ReportResponse, ResortReport, SnowfallSet, Sour
 import { sectionHref } from "@/lib/sections";
 import { formatAge, formatDenver } from "@/lib/time";
 import { DailySnowTeaser } from "../dailysnow/DailySnow";
-import { FreshnessBadge, MetricValue } from "../ui";
-import { newSnowKey, SNOW_LABEL, snowQualifier } from "./resort-display";
+import { FRESHNESS_TEXT, FreshnessBadge, MetricValue } from "../ui";
+import { summarizeFreshness } from "./freshness-summary";
+import { newSnowKey, SNOW_LABEL } from "./resort-display";
 
 const PRIMARY: SourceId[] = ["alta", "snowbird", "solitude", "brighton"];
 
@@ -22,20 +23,14 @@ const COLUMNS: Array<{ key: ColumnKey; title: string }> = [
 const PHONE_LEAD: ColumnKey = "h24";
 
 /**
- * The value for a column, the window it actually covers, and the note under it.
- * Column headers name the window; the note appears only where the resort's window
- * differs from the column's, like Alta's 12 h in the overnight column or
- * Solitude's "since lifts closed".
+ * The value for a column and the window it actually covers. Column headers name the
+ * window ("Overnight / 12 h" covers Alta's 12 h total), so the table shows no note
+ * under a value; the phone summary names each figure by its own window.
  */
-function cell(r: ResortReport, key: ColumnKey): { m: Metric; window: string; qualifier: string | null } {
-  if (key === "base") return { m: r.base, window: "Base", qualifier: null };
+function cell(r: ResortReport, key: ColumnKey): { m: Metric; window: string } {
+  if (key === "base") return { m: r.base, window: "Base" };
   const used = key === "overnight" ? newSnowKey(r.snowfall) : key;
-  const m = r.snowfall[used];
-  return {
-    m,
-    window: SNOW_LABEL[used],
-    qualifier: used !== key ? SNOW_LABEL[used] : m.state === "unavailable" ? null : snowQualifier(used, m.label),
-  };
+  return { m: r.snowfall[used], window: SNOW_LABEL[used] };
 }
 
 /**
@@ -51,20 +46,49 @@ function PhoneSummary({ r }: { r: ResortReport }) {
       <div className="snow-phone__lead">
         <MetricValue m={lead.m} size="xl" />
         <span className="snow-phone__window">{lead.window}</span>
-        {lead.qualifier && lead.qualifier !== lead.window && <span className="snow-phone__note">{lead.qualifier}</span>}
       </div>
       <div className="snow-phone__rest">
         {COLUMNS.filter((c) => c.key !== PHONE_LEAD).map((c) => {
-          const { m, window, qualifier } = cell(r, c.key);
+          const { m, window } = cell(r, c.key);
           return (
             <span key={c.key} className="snow-phone__item">
               <span className="snow-phone__window">{window}</span> <MetricValue m={m} size="sm" />
-              {qualifier && qualifier !== window && <span className="snow-phone__note">{qualifier}</span>}
             </span>
           );
         })}
       </div>
     </td>
+  );
+}
+
+/**
+ * The table's footer: freshness on the left, the value legend on the right, like
+ * the other pages' source lines. Each resort is classified separately, so the badge
+ * shows the worst state and labels the resorts in it; any other states follow, each
+ * with its own label. When every resort is current, the line gives the oldest of
+ * their last successful checks, as other pages' source lines give theirs.
+ */
+function SnowTableFoot({ sources, now }: { sources: ApiSource[]; now: Date }) {
+  const { worst, groups, oldestCheck } = summarizeFreshness(sources);
+  return (
+    <div className="source-line snow-foot">
+      <FreshnessBadge freshness={worst} />
+      {worst === "current" ? (
+        <span>
+          Last successful check: <strong>{formatAge(oldestCheck, now)}</strong>
+        </span>
+      ) : (
+        groups.map(({ freshness, labels }, i) => (
+          <span key={freshness}>
+            {i > 0 && `${FRESHNESS_TEXT[freshness]}: `}
+            <strong>{labels.join(", ")}</strong>
+          </span>
+        ))
+      )}
+      <span className="snow-foot__legend">
+        <span className="metric__value metric__value--zero">0″</span> reported zero · <span className="metric__missing">not reported</span> field empty in source · <span className="metric__na">—</span> not provided by source
+      </span>
+    </div>
   );
 }
 
@@ -74,16 +98,13 @@ function Row({ source, now, recommended }: { source: ApiSource; now: Date; recom
     <tr className={`row--primary${recommended ? " row--recommended" : ""}`}>
       <th scope="row">
         <div className="resort-name"><a className="resort-name__link" href={sectionHref(source.id)}>{source.label}</a></div>
-        <FreshnessBadge freshness={source.freshness} />
         {recommended && <span className="badge badge--ai">AI pick</span>}
       </th>
       {COLUMNS.map((c) => {
         if (!r) return <td key={c.key} className="muted">—</td>;
-        const { m, qualifier } = cell(r, c.key);
         return (
           <td key={c.key}>
-            <MetricValue m={m} size="xl" />
-            {qualifier && <div className="cell-label">{qualifier}</div>}
+            <MetricValue m={cell(r, c.key).m} size="xl" />
           </td>
         );
       })}
@@ -103,7 +124,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
     <section className="page page--regional">
       <header className="page__header">
         <h1>Regional snowfall</h1>
-        <p className="page__sub">Resort-reported totals in the same windows for every resort. Each resort measures at its own site and time, so totals aren’t strictly comparable; a note under a value marks where a resort’s window differs.</p>
+        <p className="page__sub">Resort-reported totals in the same windows for every resort. Each resort measures at its own site and time, so totals aren’t strictly comparable.</p>
       </header>
       <DailySnowTeaser post={report.dailySnow} now={now} />
       <table className="snow-table">
@@ -113,7 +134,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
             {COLUMNS.map((c) => (
               <th scope="col" key={c.key}>{c.title}</th>
             ))}
-            <th scope="col">Report time (MT)</th>
+            <th scope="col" className="report-time">Report time (MT)</th>
           </tr>
         </thead>
         <tbody>
@@ -139,9 +160,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
           ))}
         </tbody>
       </table>
-      <p className="legend">
-        <span className="metric__value metric__value--zero">0″</span> reported zero · <span className="metric__missing">not reported</span> field empty in source · <span className="metric__na">—</span> not provided by source
-      </p>
+      <SnowTableFoot sources={PRIMARY.map((id) => report.sources[id])} now={now} />
     </section>
   );
 }

@@ -1,7 +1,7 @@
 import type { ApiSource, Freshness, LiftStatus, Metric, Notice } from "@/lib/types";
 import { formatAge, formatDenver } from "@/lib/time";
 
-const FRESHNESS_TEXT: Record<Freshness, string> = {
+export const FRESHNESS_TEXT: Record<Freshness, string> = {
   current: "Current",
   "old-report": "Old report",
   "time-unknown": "Report time unknown",
