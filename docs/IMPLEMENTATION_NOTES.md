@@ -316,13 +316,3 @@ The owner wants the prev/next links under a post to walk back through every post
 Existing posts: KV sets the expiry on each write, so posts written before this change keep their 32-day expiry (2 posts and 1 still in production on 2026-11-03, expiring in early December), and the owner chose to let them expire. One exception: the first post after deploy links the latest existing post forward, and that rewrite has no expiry, so that one post is kept. The chain then ends there; the posts before it are reachable through the archive list until they leave the 10-post window or expire.
 
 Existing files touched for this: `src/lib/dailysnow/index.ts` (no expiry on writes, neighbor links, index cap), `src/lib/report.ts` (the archive cap), `src/lib/types.ts` (`DailySnowLink`, optional `older`/`newer` on posts, doc comments), `src/components/dailysnow/DailySnow.tsx` (`ArchiveNav` follows the links; `pick` normalizes the live date), `README.md` (storage, KV operations), and tests in `test/worker.test.ts`, `test/dailysnow.test.ts` and `test/dailysnow-ui.test.tsx`.
-
-## 2026-11-03 — Single-row mobile navigation
-
-The section nav stays in one horizontally scrollable flex row below the 900px breakpoint, replacing the three-column grid. Links keep their full labels and touch targets. The Resorts dropdown anchors to the header on narrow screens, outside the scroll container's clipping boundary; desktop positioning stays as before.
-
-Existing files touched: `src/app/globals.css` (narrow-screen nav rules only), `docs/IMPLEMENTATION_NOTES.md` (this decision and validation). No setup, routes, storage, or operations changed.
-
-Validation: 7 app-shell tests pass, `npm run typecheck`, `npm run build`. Browser checks on the exported app served by local Wrangler, with all 12 sources collected successfully into local KV: single row and no page overflow at 320px and 390px, working horizontal scrolling, Resorts dropdown visible and clickable below the row, successful navigation to Alta, and desktop layout at 1366px. Reapplying the old grid in-browser reproduced two rows at 390px. Not run: real-device Safari or production deployment.
-
-Follow-up: hide the mobile nav's native scrollbar with `scrollbar-width: none` and the WebKit scrollbar pseudo-element while retaining `overflow-x: auto`. At 390px, browser verification confirms both scrollbar styles are hidden and the row still scrolls 158px without page overflow. The 7 app-shell tests, typecheck, build, and diff whitespace check pass again.

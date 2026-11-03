@@ -373,16 +373,11 @@ a { color: var(--accent); }
 
 /* ---- narrow screens (phones and small tablets) ---- */
 @media (max-width: 900px) {
-  .editorial-nav { position: relative; padding-top: 16px; }
+  .editorial-nav { padding-top: 16px; }
   .editorial-nav__masthead { padding-bottom: 14px; }
   .editorial-nav__brand { font-size: 23px; }
   .editorial-nav__brand span { display: block; font-size: 15px; margin-top: 3px; letter-spacing: -0.4px; }
-  .editorial-nav nav { flex-wrap: nowrap; gap: 8px; overflow-x: auto; scrollbar-width: none; }
-  .editorial-nav nav::-webkit-scrollbar { display: none; }
-  .editorial-nav nav > a, .editorial-nav__resorts { flex: 0 0 auto; white-space: nowrap; }
-  /* Anchor the dropdown to the header so the scrolling row cannot clip it. */
-  .editorial-nav__resorts { position: static; }
-  .editorial-nav__resorts > div { right: var(--gutter); top: 100%; }
+  .editorial-nav nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 8px; }
   .editorial-nav nav > a, .editorial-nav summary { font-size: 15px; padding: 8px; }
   .editorial-page { padding-top: 28px; padding-bottom: 40px; }
 
