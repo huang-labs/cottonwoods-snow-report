@@ -5,10 +5,10 @@ import { buildDailyDigest, phaseOf } from "@/lib/dailysnow/digest";
 import { buildModelInput, DAILY_SNOW_TIMEOUT_MS, groundNumbers, ungroundedInches, validateDailySnow } from "@/lib/dailysnow/llm";
 import { IN_FLIGHT_MS, MAX_ATTEMPTS, RETRY_AFTER_MS, shouldRunDailySnow } from "@/lib/dailysnow/schedule";
 import { FALLBACK_MODEL, PRIMARY_MODEL } from "@/lib/recommend/llm";
-import { buildReport, DAILY_SNOW_INDEX_POSTS } from "@/lib/report";
+import { buildReport, DAILY_SNOW_ARCHIVE_POSTS } from "@/lib/report";
 import { parseAfd } from "@/lib/sources/nwsafd";
 import { MemoryKV, readSnapshot, writeSnapshot } from "@/lib/store";
-import type { AfdPayload, DailySnowState, PlumePayload, ResortCamsPayload, Snapshot } from "@/lib/types";
+import type { AfdPayload, DailySnowPost, DailySnowState, PlumePayload, ResortCamsPayload, Snapshot } from "@/lib/types";
 import { createFixtureFetch, fixture } from "./fixtureFetch";
 
 // Nov 1 2026 is the end of daylight saving time: 13:00 UTC is 6:00 AM MST.
@@ -276,15 +276,30 @@ describe("posting", () => {
     };
     // A full index of earlier posts: the new post pushes the oldest out of the snapshot (not out of KV).
     const snapshot = (await readSnapshot(kv))!;
-    const history = Array.from({ length: DAILY_SNOW_INDEX_POSTS }, (_, i) => ({ date: `2026-10-${String(31 - i).padStart(2, "0")}`, title: "Earlier", phase: "quiet" as const, forecast: [] }));
+    const history = Array.from({ length: DAILY_SNOW_ARCHIVE_POSTS }, (_, i) => ({ date: `2026-10-${String(31 - i).padStart(2, "0")}`, title: "Earlier", phase: "quiet" as const, forecast: [] }));
     await writeSnapshot(kv, { ...snapshot, dailySnow: { ...emptyDailySnowState(), history } });
     const { ai } = fakeAi(() => answer(["plume-snow-cln"]));
     await runCollection({ SNOW_KV: kv, AI: ai }, { now: SIX_AM, sources: [] });
     expect(options.length).toBeGreaterThanOrEqual(2); // the post and its plume still
     expect(options.every((o) => o === undefined)).toBe(true);
     const state = (await readSnapshot(kv))!.dailySnow!;
-    expect(state.history).toHaveLength(DAILY_SNOW_INDEX_POSTS);
+    expect(state.history).toHaveLength(DAILY_SNOW_ARCHIVE_POSTS);
     expect(state.history.map((h) => h.date).slice(0, 2)).toEqual(["2026-11-01", "2026-10-31"]);
+  });
+  it("links each post to its neighbors so the archive can be walked end to end", async () => {
+    const kv = await seeded();
+    const titles = ["Storm Underway", "Storm Exiting"];
+    const { ai } = fakeAi(() => ({ ...answer(["plume-snow-cln"]), title: titles.shift()! }));
+    const env = { SNOW_KV: kv, AI: ai };
+    await runCollection(env, { now: SIX_AM, sources: [] });
+    await runCollection(env, { now: at("2026-11-02T13:00:00Z"), sources: [], forceDailySnow: true });
+    const read = async (date: string) => JSON.parse((await kv.get(dailySnowKey(date), "text"))!) as DailySnowPost;
+    const [first, second] = [await read("2026-11-01"), await read("2026-11-02")];
+    expect(first.older).toBeUndefined();
+    expect(first.newer).toEqual({ date: "2026-11-02", title: "Storm Exiting" });
+    expect(second.older).toEqual({ date: "2026-11-01", title: "Storm Underway" });
+    expect(second.newer).toBeUndefined();
+    expect((await readSnapshot(kv))!.dailySnow!.current).toMatchObject({ date: "2026-11-02", older: { date: "2026-11-01" } });
   });
   it("drops figures whose still cannot be stored", async () => {
     const kv = new MemoryKV(); // no plume panel stored

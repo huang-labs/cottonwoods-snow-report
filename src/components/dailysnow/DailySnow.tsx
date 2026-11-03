@@ -59,16 +59,17 @@ function Footer({ post }: { post: ApiDailySnow }) {
   );
 }
 
-/** Previous/next post links. Uses ?date= so the static section page needs no extra routes. */
+/** Previous/next post links. Uses ?date= so the static section page needs no extra routes. Each post
+    links its neighbors, so these walk the whole archive; the recent-posts list covers older posts
+    written before the links existed. */
 function ArchiveNav({ post, onPick }: { post: ApiDailySnow; onPick: (date: string | null) => void }) {
-  const dates = post.archive.map((a) => a.date);
-  const i = dates.indexOf(post.date);
-  const older = i >= 0 ? post.archive[i + 1] : post.archive.find((a) => a.date < post.date);
-  const newer = i > 0 ? post.archive[i - 1] : null;
+  const i = post.archive.findIndex((a) => a.date === post.date);
+  const older = post.older ?? (i >= 0 ? post.archive[i + 1] : post.archive.find((a) => a.date < post.date));
+  const newer = post.newer ?? (i > 0 ? post.archive[i - 1] : null);
   return (
     <nav className="dailysnow__nav" aria-label="Daily Snow archive">
       {older ? <button type="button" onClick={() => onPick(older.date)}>← {postDate(older.date)}: {older.title}</button> : <span />}
-      {newer && <button type="button" onClick={() => onPick(i === 1 ? null : newer.date)}>{postDate(newer.date)}: {newer.title} →</button>}
+      {newer && <button type="button" onClick={() => onPick(newer.date)}>{postDate(newer.date)}: {newer.title} →</button>}
     </nav>
   );
 }
@@ -105,7 +106,8 @@ export function DailySnowPage({ report, now }: { report: ReportResponse; now: Da
   const archived = useArchivedPost(viewed);
   const post = viewed ? archived.post : current;
 
-  const pick = (d: string | null) => {
+  const pick = (picked: string | null) => {
+    const d = picked === current?.date ? null : picked; // the live post has no ?date=
     setDate(d);
     const url = new URL(window.location.href);
     if (d) url.searchParams.set("date", d);

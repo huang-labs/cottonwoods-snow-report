@@ -80,6 +80,24 @@ it("opens an archived post and returns to the latest", async () => {
   expect(window.location.search).toBe("");
 });
 
+it("walks the archive through each post's neighbor links, past the recent-posts list", async () => {
+  // The live post's older neighbor isn't in the archive list; only its own link reaches it.
+  const live: ApiDailySnow = { ...post, archive: [{ date: "2026-11-01", title: "Storm Underway" }], older: { date: "2026-09-15", title: "Early Season Dusting" } };
+  const old: ApiDailySnow = { ...post, date: "2026-09-15", title: "Early Season Dusting", outdated: true, archive: live.archive, older: { date: "2026-09-10", title: "First Flakes" }, newer: { date: "2026-11-01", title: "Storm Underway" } };
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify(old), { headers: { "content-type": "application/json" } }));
+  vi.stubGlobal("fetch", fetchMock);
+  render(<DailySnowPage report={report(live)} now={now} />);
+  const nav = () => within(document.querySelector<HTMLElement>(".dailysnow__nav")!);
+  fireEvent.click(nav().getByRole("button", { name: /Early Season Dusting/ }));
+  expect(await screen.findByRole("heading", { level: 1, name: "Early Season Dusting" })).toBeTruthy();
+  expect(fetchMock).toHaveBeenCalledWith("/api/daily-snow?date=2026-09-15");
+  expect(nav().getByRole("button", { name: /First Flakes/ })).toBeTruthy();
+  // The newer link back to the live post drops ?date= rather than linking today's date.
+  fireEvent.click(nav().getByRole("button", { name: /Storm Underway/ }));
+  await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "Storm Underway" })).toBeTruthy());
+  expect(window.location.search).toBe("");
+});
+
 it("shows the recent posts in a left rail beside the article, today first, at most three", () => {
   const history = [
     { date: "2026-11-01", title: "Storm Underway" },

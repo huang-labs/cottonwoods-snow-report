@@ -80,21 +80,19 @@ export function publicRecommendation(state: RecommendationState | undefined, now
 /** Consecutive failed Daily Snow attempts before the post says updates are failing. */
 export const DAILY_SNOW_FAILING_AFTER = 2;
 
-/** Recent posts indexed in the snapshot, and the `archive` list on each /api/daily-snow response
-    (so the prev/next links keep walking back). Every post stays in KV regardless. */
-export const DAILY_SNOW_INDEX_POSTS = 10;
-/** The `archive` list on /api/report, which every open page polls: just what the history rail shows. */
-export const DAILY_SNOW_REPORT_POSTS = 3;
+/** Recent posts indexed in the snapshot and listed in every response's `archive`. Navigation
+    doesn't depend on it: each post links its neighbors, and every post stays in KV. */
+export const DAILY_SNOW_ARCHIVE_POSTS = 10;
 
-/** A Daily Snow post (current or archived) as the API serves it, with the `archiveSize` most recent posts. */
-export function publicDailySnow(post: DailySnowPost | null | undefined, state: DailySnowState | undefined, now: Date, archiveSize = DAILY_SNOW_INDEX_POSTS): ApiDailySnow | null {
+/** A Daily Snow post (current or archived) as the API serves it. */
+export function publicDailySnow(post: DailySnowPost | null | undefined, state: DailySnowState | undefined, now: Date): ApiDailySnow | null {
   if (!post) return null;
   const today = denverDate(now);
   return {
     ...post,
     outdated: post.date !== today,
     failing: post.date !== today && (state?.consecutiveFailures ?? 0) >= DAILY_SNOW_FAILING_AFTER,
-    archive: (state?.history ?? []).slice(0, archiveSize).map((h) => ({ date: h.date, title: h.title })),
+    archive: (state?.history ?? []).slice(0, DAILY_SNOW_ARCHIVE_POSTS).map((h) => ({ date: h.date, title: h.title })),
   };
 }
 
@@ -135,6 +133,6 @@ export function buildReport(snapshot: Snapshot | null, now: Date = new Date(), d
     sources,
     requiredMissing,
     recommendation: publicRecommendation(snapshot?.recommendation, now),
-    dailySnow: publicDailySnow(snapshot?.dailySnow?.current, snapshot?.dailySnow, now, DAILY_SNOW_REPORT_POSTS),
+    dailySnow: publicDailySnow(snapshot?.dailySnow?.current, snapshot?.dailySnow, now),
   };
 }

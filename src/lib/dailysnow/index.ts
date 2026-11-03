@@ -1,9 +1,9 @@
 import { createFetchContext, type CollectorSecrets } from "../http";
 import type { RecommendEnv } from "../recommend";
 import { denverDate } from "../recommend/digest";
-import { DAILY_SNOW_INDEX_POSTS } from "../report";
+import { DAILY_SNOW_ARCHIVE_POSTS } from "../report";
 import type { KVLike } from "../store";
-import type { DailySnowFigure, DailySnowPost, DailySnowState, Snapshot } from "../types";
+import type { DailySnowFigure, DailySnowLink, DailySnowPost, DailySnowState, Snapshot } from "../types";
 import { buildDailyDigest, historyEntry, type FigureCandidate } from "./digest";
 import { askDailySnow, MAX_FIGURES } from "./llm";
 import { isSnowPlume } from "./plume";
@@ -19,6 +19,18 @@ export const dailySnowKey = (date: string) => `dailysnow:v1:${date}`;
 export const dailySnowFigureKey = (date: string, id: string) => `dailysnow-fig:v1:${date}:${id}`;
 export const dailySnowFigureUrl = (date: string, id: string) => `/api/daily-snow/figure/${date}/${id}`;
 const MAX_IMAGE_BYTES = 3_000_000;
+
+/** Point the archived post at `date` forward to its newer neighbor. A failure only costs that one
+    "newer" link (the page falls back to the archive list), so it never fails the new post. */
+async function linkNewer(kv: KVLike, date: string, newer: DailySnowLink): Promise<void> {
+  try {
+    const raw = await kv.get(dailySnowKey(date), "text");
+    if (!raw) return;
+    await kv.put(dailySnowKey(date), JSON.stringify({ ...(JSON.parse(raw) as DailySnowPost), newer }));
+  } catch (err) {
+    console.warn("daily-snow: could not link the previous post forward", err);
+  }
+}
 
 export function emptyDailySnowState(): DailySnowState {
   return { current: null, lastAttemptAt: null, lastFinishedAt: null, lastError: null, consecutiveFailures: 0, attempts: { date: "", count: 0, calls: 0 }, history: [] };
@@ -118,6 +130,7 @@ export function planDailySnow(
           break;
         }
       }
+      const older = base.history.find((h) => h.date < date);
       const post: DailySnowPost = {
         date,
         phase: build.digest.phase,
@@ -130,9 +143,11 @@ export function planDailySnow(
         model: r.model,
         trigger,
         ...(r.fallbackReason ? { fallbackReason: r.fallbackReason } : {}),
+        ...(older ? { older: { date: older.date, title: older.title } } : {}),
       };
       await env.SNOW_KV.put(dailySnowKey(date), JSON.stringify(post));
-      const history = [historyEntry(post), ...base.history.filter((h) => h.date !== date)].slice(0, DAILY_SNOW_INDEX_POSTS);
+      if (older) await linkNewer(env.SNOW_KV, older.date, { date, title: post.title });
+      const history = [historyEntry(post), ...base.history.filter((h) => h.date !== date)].slice(0, DAILY_SNOW_ARCHIVE_POSTS);
       return { ...reserved, current: post, history, lastError: null, consecutiveFailures: 0, lastFinishedAt: finishedAt() };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);

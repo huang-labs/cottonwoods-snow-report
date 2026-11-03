@@ -501,6 +501,16 @@ export interface DailySnowPost {
   trigger: string;
   /** Set when the fallback model wrote the post: why the primary model failed. */
   fallbackReason?: string;
+  /** The post before this one, set when it is written. With `newer`, chains every post for the prev/next links. */
+  older?: DailySnowLink;
+  /** The post after this one, added to this post when that one is written. Absent on the latest post. */
+  newer?: DailySnowLink;
+}
+
+/** A neighboring post, for archive navigation. */
+export interface DailySnowLink {
+  date: string;
+  title: string;
 }
 
 /** Compact record of a past post: archive navigation and forecast verification. */
@@ -520,7 +530,7 @@ export interface DailySnowState {
   consecutiveFailures: number;
   /** Scheduled attempts and reserved model requests per Denver day. */
   attempts: { date: string; count: number; calls: number };
-  /** Most recent posts first (at most DAILY_SNOW_INDEX_POSTS). */
+  /** Most recent posts first (at most DAILY_SNOW_ARCHIVE_POSTS). */
   history: DailySnowHistoryEntry[];
 }
 
@@ -529,7 +539,7 @@ export interface ApiDailySnow extends DailySnowPost {
   outdated: boolean;
   /** Recent attempts are failing (the last good post is still shown). */
   failing: boolean;
-  /** Most recent posts, newest first (3 on /api/report, 10 on /api/daily-snow). */
+  /** Most recent posts, newest first (at most DAILY_SNOW_ARCHIVE_POSTS). */
   archive: Array<{ date: string; title: string }>;
 }
 

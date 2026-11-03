@@ -4,7 +4,7 @@ import type { CollectSummary } from "@/lib/collect";
 import type { WorkerEnv } from "@/worker/env";
 import { MemoryKV, readSnapshot, writeSnapshot } from "@/lib/store";
 import { dailySnowFigureKey, dailySnowKey, emptyDailySnowState } from "@/lib/dailysnow";
-import { DAILY_SNOW_INDEX_POSTS, DAILY_SNOW_REPORT_POSTS } from "@/lib/report";
+import { DAILY_SNOW_ARCHIVE_POSTS } from "@/lib/report";
 import type { ApiDailySnow, DailySnowHistoryEntry, DailySnowPost } from "@/lib/types";
 import { createFixtureFetch, FIXTURE_NOW } from "./fixtureFetch";
 
@@ -80,7 +80,7 @@ describe("Worker request routing", () => {
     expect(env.ASSETS.fetch).not.toHaveBeenCalled();
   });
 
-  it("serves any stored post by date, and caps the archive lists (10 per post, 3 in the report)", async () => {
+  it("serves any stored post by date, and caps both archive lists at the same recent window", async () => {
     const { env, call } = setup();
     // Twelve stored posts, newest first; the snapshot indexes them all (as before the cap shrank).
     const posts: DailySnowPost[] = Array.from({ length: 12 }, (_, i) => {
@@ -95,9 +95,9 @@ describe("Worker request routing", () => {
     await writeSnapshot(env.SNOW_KV, { schemaVersion: 1, writtenAt: FIXTURE_NOW.toISOString(), sources: {}, dailySnow: { ...emptyDailySnowState(), current: posts[0], history } });
 
     const report = (await (await call("/api/report")).json()) as { dailySnow: ApiDailySnow };
-    expect(report.dailySnow.archive.map((a) => a.date)).toEqual(posts.slice(0, DAILY_SNOW_REPORT_POSTS).map((p) => p.date));
+    expect(report.dailySnow.archive.map((a) => a.date)).toEqual(posts.slice(0, DAILY_SNOW_ARCHIVE_POSTS).map((p) => p.date));
     const second = (await (await call(`/api/daily-snow?date=${posts[1].date}`)).json()) as ApiDailySnow;
-    expect(second.archive).toHaveLength(DAILY_SNOW_INDEX_POSTS);
+    expect(second.archive).toHaveLength(DAILY_SNOW_ARCHIVE_POSTS);
     // Old links keep working: the oldest post is outside every list but still served.
     const oldest = await call(`/api/daily-snow?date=${posts.at(-1)!.date}`);
     expect(oldest.status).toBe(200);

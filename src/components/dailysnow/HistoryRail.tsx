@@ -2,8 +2,7 @@
 import type { ApiDailySnow, DailySnowPhase } from "@/lib/types";
 import { PHASE_LABEL, postDate } from "./labels";
 
-/** How many posts the rail shows: the live post plus the archive before it. /api/report sends
-    exactly this many (DAILY_SNOW_REPORT_POSTS), so raising it means raising that too. */
+/** How many posts the rail shows: the live post plus the archive before it. */
 const HISTORY_COUNT = 3;
 
 type Entry = { date: string; title: string; phase?: DailySnowPhase; live: boolean };
