@@ -1,3 +1,5 @@
+import { dailySnowActivity } from "./dailysnow/digest";
+import { dailySnowPublicationStatus } from "./dailysnow/publication";
 import { SOURCES } from "./sources";
 import { CRON_INTERVAL_MS, type SourceDefinition } from "./sources/types";
 import { denverDate, targetFor } from "./recommend/digest";
@@ -33,7 +35,7 @@ export function classify(
   if (sinceSuccess > staleAfterMs(def)) {
     return {
       freshness: "stale",
-      note: `Collection failing${rec.consecutiveFailures ? ` (${rec.consecutiveFailures} consecutive failures)` : ""}; showing last successful data`,
+      note: "No successful check within the expected collection window; showing last successful data",
     };
   }
   if (def.reportMaxAgeMs === null) {
@@ -85,12 +87,13 @@ export const DAILY_SNOW_FAILING_AFTER = 2;
 export const DAILY_SNOW_ARCHIVE_POSTS = 10;
 
 /** A Daily Snow post (current or archived) as the API serves it. */
-export function publicDailySnow(post: DailySnowPost | null | undefined, state: DailySnowState | undefined, now: Date): ApiDailySnow | null {
+export function publicDailySnow(post: DailySnowPost | null | undefined, state: DailySnowState | undefined, now: Date, expected?: boolean): ApiDailySnow | null {
   if (!post) return null;
   const today = denverDate(now);
   return {
     ...post,
     outdated: post.date !== today,
+    publicationStatus: expected !== undefined && state?.current?.date === post.date ? dailySnowPublicationStatus(post.date, state, now, expected) : undefined,
     failing: post.date !== today && (state?.consecutiveFailures ?? 0) >= DAILY_SNOW_FAILING_AFTER,
     archive: (state?.history ?? []).slice(0, DAILY_SNOW_ARCHIVE_POSTS).map((h) => ({ date: h.date, title: h.title })),
   };
@@ -133,6 +136,6 @@ export function buildReport(snapshot: Snapshot | null, now: Date = new Date(), d
     sources,
     requiredMissing,
     recommendation: publicRecommendation(snapshot?.recommendation, now),
-    dailySnow: publicDailySnow(snapshot?.dailySnow?.current, snapshot?.dailySnow, now),
+    dailySnow: publicDailySnow(snapshot?.dailySnow?.current, snapshot?.dailySnow, now, snapshot?.dailySnow?.current ? dailySnowActivity(snapshot, now).publicationExpected : false),
   };
 }

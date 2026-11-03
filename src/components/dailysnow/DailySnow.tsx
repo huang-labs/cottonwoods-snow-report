@@ -9,11 +9,18 @@ import { prefetchArchivedPost, useArchivedPost } from "./archive";
 import { Figure } from "./figures";
 import { HistoryRail } from "./HistoryRail";
 import { PHASE_LABEL, postDate } from "./labels";
+import { StatusBadge } from "../ui";
 
 const SECTION_TITLE: Record<DailySnowSectionId, string> = { update: "Today", "short-term": "Next Few Days", extended: "Extended Forecast" };
 /** Display names by Workers AI model id suffix (see recommend/llm.ts). */
 const MODEL_NAME: Record<string, string> = { "glm-5.3-flash": "GLM 5.3 Flash", "gpt-oss-120b": "gpt-oss-120b" };
 const modelName = (id: string) => MODEL_NAME[id.split("/").pop() ?? ""] ?? id;
+
+/** One publication warning, shared by the teaser and the latest article. */
+function PublicationNotice({ post }: { post: ApiDailySnow }) {
+  if (post.publicationStatus !== "delayed") return null;
+  return <StatusBadge tone="warn" title="The expected replacement edition has not been published. The edition date and posted time identify the forecast shown.">Latest edition delayed</StatusBadge>;
+}
 
 function Eyebrow({ post, now, archived }: { post: ApiDailySnow; now: Date; archived: boolean }) {
   return (
@@ -23,9 +30,8 @@ function Eyebrow({ post, now, archived }: { post: ApiDailySnow; now: Date; archi
       </span>
       <span className="dailysnow__posted">
         Posted {formatDenver(post.generatedAt, now)}
-        {archived ? " · Archive" : (post.outdated || post.failing) && (
-          <span className="dailysnow__warn">{post.outdated ? " · Outdated" : ""}{post.failing ? " · Today's post failed" : ""}</span>
-        )}
+        {archived && " · Archive"}
+        {!archived && <PublicationNotice post={post} />}
       </span>
     </div>
   );
@@ -147,12 +153,12 @@ export function DailySnowTeaser({ post, now }: { post: ApiDailySnow | null | und
   return (
     <Link href="/daily-snow" className="dailysnow-teaser" aria-label={`Daily Snow: ${post.title}`}>
       <span className="eyebrow">
-        Daily Snow<span className="badge badge--ai">AI</span> · {postDate(post.date)}{post.outdated ? " · Outdated" : ""}
+        Daily Snow<span className="badge badge--ai">AI</span> · {postDate(post.date)}
       </span>
       <strong className="dailysnow-teaser__title">{post.title}</strong>
       <span className="dailysnow-teaser__summary">{post.summary}</span>
       <span className="dailysnow-teaser__more">Read →</span>
-      <span className="dailysnow-teaser__time">Posted {formatDenver(post.generatedAt, now)}</span>
+      <span className="dailysnow-teaser__time">Posted {formatDenver(post.generatedAt, now)}<PublicationNotice post={post} /></span>
     </Link>
   );
 }

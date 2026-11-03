@@ -397,7 +397,7 @@ export type Freshness =
   | "old-report"
   /** Collection healthy but the source gives no publication time. */
   | "time-unknown"
-  /** Collection is failing; serving the last successful payload. */
+  /** No successful collection within the expected window; serving the last successful payload. */
   | "stale"
   /** Never collected successfully. */
   | "unavailable";
@@ -543,9 +543,13 @@ export interface DailySnowState {
   history: DailySnowHistoryEntry[];
 }
 
+export type DailySnowPublicationStatus = "current" | "scheduled" | "pending" | "delayed" | "paused";
+
 export interface ApiDailySnow extends DailySnowPost {
-  /** The post is not today's. */
+  /** Edition date differs from today. Retained for API compatibility; not a publication warning. */
   outdated: boolean;
+  /** Schedule-aware availability of the replacement edition. Optional for older responses. */
+  publicationStatus?: DailySnowPublicationStatus;
   /** Recent attempts are failing (the last good post is still shown). */
   failing: boolean;
   /** Most recent posts, newest first (at most DAILY_SNOW_ARCHIVE_POSTS). */

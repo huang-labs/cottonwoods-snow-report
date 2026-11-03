@@ -2,6 +2,8 @@
 
 import { createContext, useContext } from "react";
 import type { ReportResponse } from "@/lib/types";
+import { summarizeFreshness } from "./sections/freshness-summary";
+import { FreshnessBadge } from "./ui";
 import { formatAge } from "@/lib/time";
 
 export interface DashboardData {
@@ -32,8 +34,10 @@ export function DataBanners({ data }: { data: DashboardData }) {
         </div>
       )}
       {report && report.requiredMissing.length > 0 && (
-        <div className="banner banner--required-missing" role="status">
-          Required feeds unavailable: {report.requiredMissing.map((id) => report.sources[id].label).join(", ")}
+        <div className="banner banner--required-missing" role="status" aria-label="Required feed status">
+          {summarizeFreshness(report.requiredMissing.map((id) => report.sources[id])).groups.map(({ freshness, labels }) => (
+            <span className="feed-status" key={freshness}><FreshnessBadge freshness={freshness} /> {labels.join(", ")}</span>
+          ))}
         </div>
       )}
     </>

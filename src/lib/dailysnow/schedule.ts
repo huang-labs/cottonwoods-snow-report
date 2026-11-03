@@ -11,7 +11,7 @@ import type { DailySnowState } from "../types";
  *  - From 6:00 AM Denver, once per day.
  *  - A failed attempt retries after 10 minutes, at most 3 attempts a day.
  *  - An attempt still running (or cut off) blocks new ones for IN_FLIGHT_MS.
- *  - After 10 AM no new attempts: yesterday's post stays up, marked outdated.
+ *  - After 10 AM no new attempts: the last edition stays up with a publication-delay notice when an edition is expected.
  */
 export const POST_HOUR = 6;
 export const LAST_ATTEMPT_HOUR = 10;

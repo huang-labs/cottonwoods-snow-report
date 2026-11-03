@@ -119,6 +119,12 @@ describe("freshness semantics", () => {
     const recent = rec({ lastSuccessfulFetchAt: new Date(now.getTime() - 10 * MIN).toISOString(), status: "error", consecutiveFailures: 2 });
     expect(classify(def, recent, now).freshness).toBe("current");
   });
+  it("describes a delayed check without assuming the source or collector failed", () => {
+    const last = new Date(now.getTime() - STALE_AFTER_MS - MIN).toISOString();
+    expect(classify(def, rec({ lastSuccessfulFetchAt: last }), now)).toEqual({
+      freshness: "stale", note: "No successful check within the expected collection window; showing last successful data",
+    });
+  });
   it("never-collected sources are unavailable and required ones are reported missing", () => {
     expect(classify(def, undefined, now).freshness).toBe("unavailable");
     const report = buildReport(null, now);

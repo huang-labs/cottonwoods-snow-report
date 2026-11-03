@@ -42,7 +42,8 @@ it("shows nothing when no resort is picked", () => {
 
 it("retains stale output with a warning and removes the row endorsement", () => {
   render(<RegionalPage now={now} report={{ ...buildReport(null, now), recommendation: { ...recommendation, outdated: true, failing: true } }} />);
-  expect(screen.getByText(/Outdated.*Updates failing/)).toBeTruthy();
+  expect(screen.getByText("Recommendation needs updating").className).toContain("badge--warn");
+  expect(screen.getByText("Updates failing").className).toContain("badge--bad");
   expect(screen.getByText("Alta for deep powder")).toBeTruthy();
   expect(screen.queryByText("AI pick")).toBeNull();
 });

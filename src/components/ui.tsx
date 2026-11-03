@@ -1,16 +1,17 @@
+import type { ReactNode } from "react";
 import type { ApiSource, Freshness, LiftStatus, Metric, Notice } from "@/lib/types";
 import { formatAge, formatDenver } from "@/lib/time";
+import { FRESHNESS_STATUS, type StatusTone } from "@/lib/freshness";
 
-export const FRESHNESS_TEXT: Record<Freshness, string> = {
-  current: "Current",
-  "old-report": "Old report",
-  "time-unknown": "Report time unknown",
-  stale: "Stale — source failing",
-  unavailable: "Unavailable",
-};
+export const FRESHNESS_TEXT = Object.fromEntries(Object.entries(FRESHNESS_STATUS).map(([key, status]) => [key, status.label])) as Record<Freshness, string>;
+
+export function StatusBadge({ children, tone, title, className = "" }: { children: ReactNode; tone: StatusTone; title?: string; className?: string }) {
+  return <span className={`badge badge--${tone} ${className}`.trim()} title={title}>{children}</span>;
+}
 
 export function FreshnessBadge({ freshness }: { freshness: Freshness }) {
-  return <span className={`badge badge--${freshness}`}>{FRESHNESS_TEXT[freshness]}</span>;
+  const status = FRESHNESS_STATUS[freshness];
+  return <StatusBadge tone={status.tone} title={status.description} className={`badge--${freshness}`}>{status.label}</StatusBadge>;
 }
 
 /** Large metric value. Zero, not-reported and unavailable look different. */

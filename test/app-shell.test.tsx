@@ -181,7 +181,7 @@ describe("app shell", () => {
   it("renders explicit unavailable states when nothing has been collected", async () => {
     mockApi(buildReport(null, FIXTURE_NOW));
     let view = renderAt("/alta");
-    expect(await screen.findByText(/Required feeds unavailable/)).toBeTruthy();
+    expect(await screen.findByText("Unavailable", { selector: ".banner .badge" })).toBeTruthy();
     expect(await screen.findByText("Alta report unavailable")).toBeTruthy();
     view.unmount();
     view = renderAt("/plumes");
