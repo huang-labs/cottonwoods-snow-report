@@ -5,7 +5,7 @@ import { buildDailyDigest, phaseOf } from "@/lib/dailysnow/digest";
 import { buildModelInput, DAILY_SNOW_TIMEOUT_MS, groundNumbers, ungroundedInches, validateDailySnow } from "@/lib/dailysnow/llm";
 import { IN_FLIGHT_MS, MAX_ATTEMPTS, RETRY_AFTER_MS, shouldRunDailySnow } from "@/lib/dailysnow/schedule";
 import { FALLBACK_MODEL, PRIMARY_MODEL } from "@/lib/recommend/llm";
-import { buildReport, DAILY_SNOW_PUBLIC_POSTS } from "@/lib/report";
+import { buildReport, DAILY_SNOW_INDEX_POSTS } from "@/lib/report";
 import { parseAfd } from "@/lib/sources/nwsafd";
 import { MemoryKV, readSnapshot, writeSnapshot } from "@/lib/store";
 import type { AfdPayload, DailySnowState, PlumePayload, ResortCamsPayload, Snapshot } from "@/lib/types";
@@ -276,14 +276,14 @@ describe("posting", () => {
     };
     // A full index of earlier posts: the new post pushes the oldest out of the snapshot (not out of KV).
     const snapshot = (await readSnapshot(kv))!;
-    const history = Array.from({ length: DAILY_SNOW_PUBLIC_POSTS }, (_, i) => ({ date: `2026-10-${String(31 - i).padStart(2, "0")}`, title: "Earlier", phase: "quiet" as const, forecast: [] }));
+    const history = Array.from({ length: DAILY_SNOW_INDEX_POSTS }, (_, i) => ({ date: `2026-10-${String(31 - i).padStart(2, "0")}`, title: "Earlier", phase: "quiet" as const, forecast: [] }));
     await writeSnapshot(kv, { ...snapshot, dailySnow: { ...emptyDailySnowState(), history } });
     const { ai } = fakeAi(() => answer(["plume-snow-cln"]));
     await runCollection({ SNOW_KV: kv, AI: ai }, { now: SIX_AM, sources: [] });
     expect(options.length).toBeGreaterThanOrEqual(2); // the post and its plume still
     expect(options.every((o) => o === undefined)).toBe(true);
     const state = (await readSnapshot(kv))!.dailySnow!;
-    expect(state.history).toHaveLength(DAILY_SNOW_PUBLIC_POSTS);
+    expect(state.history).toHaveLength(DAILY_SNOW_INDEX_POSTS);
     expect(state.history.map((h) => h.date).slice(0, 2)).toEqual(["2026-11-01", "2026-10-31"]);
   });
   it("drops figures whose still cannot be stored", async () => {

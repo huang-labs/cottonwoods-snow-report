@@ -1,7 +1,7 @@
 import { createFetchContext, type CollectorSecrets } from "../http";
 import type { RecommendEnv } from "../recommend";
 import { denverDate } from "../recommend/digest";
-import { DAILY_SNOW_PUBLIC_POSTS } from "../report";
+import { DAILY_SNOW_INDEX_POSTS } from "../report";
 import type { KVLike } from "../store";
 import type { DailySnowFigure, DailySnowPost, DailySnowState, Snapshot } from "../types";
 import { buildDailyDigest, historyEntry, type FigureCandidate } from "./digest";
@@ -14,7 +14,7 @@ export interface DailySnowEnv extends RecommendEnv, CollectorSecrets {
 }
 
 /** Archived posts and their figure stills (one write per post, plus one per image figure).
-    Stored without expiry: KV keeps every post as the business archive; the API serves only the recent ones. */
+    Stored without expiry: KV keeps every post as the business archive, and /api/daily-snow serves any of them. */
 export const dailySnowKey = (date: string) => `dailysnow:v1:${date}`;
 export const dailySnowFigureKey = (date: string, id: string) => `dailysnow-fig:v1:${date}:${id}`;
 export const dailySnowFigureUrl = (date: string, id: string) => `/api/daily-snow/figure/${date}/${id}`;
@@ -132,7 +132,7 @@ export function planDailySnow(
         ...(r.fallbackReason ? { fallbackReason: r.fallbackReason } : {}),
       };
       await env.SNOW_KV.put(dailySnowKey(date), JSON.stringify(post));
-      const history = [historyEntry(post), ...base.history.filter((h) => h.date !== date)].slice(0, DAILY_SNOW_PUBLIC_POSTS);
+      const history = [historyEntry(post), ...base.history.filter((h) => h.date !== date)].slice(0, DAILY_SNOW_INDEX_POSTS);
       return { ...reserved, current: post, history, lastError: null, consecutiveFailures: 0, lastFinishedAt: finishedAt() };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);

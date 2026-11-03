@@ -520,7 +520,7 @@ export interface DailySnowState {
   consecutiveFailures: number;
   /** Scheduled attempts and reserved model requests per Denver day. */
   attempts: { date: string; count: number; calls: number };
-  /** Most recent posts first (at most DAILY_SNOW_PUBLIC_POSTS). */
+  /** Most recent posts first (at most DAILY_SNOW_INDEX_POSTS). */
   history: DailySnowHistoryEntry[];
 }
 
@@ -529,7 +529,7 @@ export interface ApiDailySnow extends DailySnowPost {
   outdated: boolean;
   /** Recent attempts are failing (the last good post is still shown). */
   failing: boolean;
-  /** Archived posts, newest first. */
+  /** Most recent posts, newest first (3 on /api/report, 10 on /api/daily-snow). */
   archive: Array<{ date: string; title: string }>;
 }
 

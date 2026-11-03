@@ -4,8 +4,8 @@ import type { CollectSummary } from "@/lib/collect";
 import type { WorkerEnv } from "@/worker/env";
 import { MemoryKV, readSnapshot, writeSnapshot } from "@/lib/store";
 import { dailySnowFigureKey, dailySnowKey, emptyDailySnowState } from "@/lib/dailysnow";
-import { DAILY_SNOW_PUBLIC_POSTS } from "@/lib/report";
-import type { DailySnowHistoryEntry, DailySnowPost } from "@/lib/types";
+import { DAILY_SNOW_INDEX_POSTS, DAILY_SNOW_REPORT_POSTS } from "@/lib/report";
+import type { ApiDailySnow, DailySnowHistoryEntry, DailySnowPost } from "@/lib/types";
 import { createFixtureFetch, FIXTURE_NOW } from "./fixtureFetch";
 
 function setup(adminToken?: string) {
@@ -64,12 +64,6 @@ describe("Worker request routing", () => {
     expect((await call("/api/daily-snow")).status).toBe(400);
     expect((await call("/api/daily-snow?date=2026-11-01")).status).toBe(404);
     await env.SNOW_KV.put(dailySnowKey(post.date), JSON.stringify(post));
-    // Stored but not indexed in the snapshot history: not public.
-    expect((await call("/api/daily-snow?date=2026-11-01")).status).toBe(404);
-    await writeSnapshot(env.SNOW_KV, {
-      schemaVersion: 1, writtenAt: FIXTURE_NOW.toISOString(), sources: {},
-      dailySnow: { ...emptyDailySnowState(), history: [{ date: post.date, title: post.title, phase: "quiet", forecast: [] }] },
-    });
     const res = await call("/api/daily-snow?date=2026-11-01");
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ title: post.title, date: post.date });
@@ -86,25 +80,28 @@ describe("Worker request routing", () => {
     expect(env.ASSETS.fetch).not.toHaveBeenCalled();
   });
 
-  it("serves only the most recent posts by date; older stored posts stay in KV", async () => {
+  it("serves any stored post by date, and caps the archive lists (10 per post, 3 in the report)", async () => {
     const { env, call } = setup();
-    // An index left over from before the window shrank: 12 posts, newest first.
-    const dates = Array.from({ length: 12 }, (_, i) => `2026-10-${String(31 - i).padStart(2, "0")}`);
-    const history: DailySnowHistoryEntry[] = dates.map((date) => ({ date, title: `Post ${date}`, phase: "quiet", forecast: [] }));
-    await writeSnapshot(env.SNOW_KV, { schemaVersion: 1, writtenAt: FIXTURE_NOW.toISOString(), sources: {}, dailySnow: { ...emptyDailySnowState(), history } });
-    for (const date of dates) {
-      const post: DailySnowPost = {
+    // Twelve stored posts, newest first; the snapshot indexes them all (as before the cap shrank).
+    const posts: DailySnowPost[] = Array.from({ length: 12 }, (_, i) => {
+      const date = `2026-10-${String(31 - i).padStart(2, "0")}`;
+      return {
         date, phase: "quiet", title: `Post ${date}`, summary: "Quiet weather.", sections: [], figures: {},
         numbers: { canyons: [], resorts: [] }, generatedAt: FIXTURE_NOW.toISOString(), model: "test-model", trigger: "morning",
       };
-      await env.SNOW_KV.put(dailySnowKey(date), JSON.stringify(post));
-    }
-    const newest = await call(`/api/daily-snow?date=${dates[0]}`);
-    expect(newest.status).toBe(200);
-    expect(((await newest.json()) as { archive: unknown[] }).archive).toHaveLength(DAILY_SNOW_PUBLIC_POSTS);
-    expect((await call(`/api/daily-snow?date=${dates[DAILY_SNOW_PUBLIC_POSTS - 1]}`)).status).toBe(200);
-    expect((await call(`/api/daily-snow?date=${dates[DAILY_SNOW_PUBLIC_POSTS]}`)).status).toBe(404);
-    expect(await env.SNOW_KV.get(dailySnowKey(dates[DAILY_SNOW_PUBLIC_POSTS]), "text")).not.toBeNull();
+    });
+    for (const p of posts) await env.SNOW_KV.put(dailySnowKey(p.date), JSON.stringify(p));
+    const history: DailySnowHistoryEntry[] = posts.map((p) => ({ date: p.date, title: p.title, phase: "quiet", forecast: [] }));
+    await writeSnapshot(env.SNOW_KV, { schemaVersion: 1, writtenAt: FIXTURE_NOW.toISOString(), sources: {}, dailySnow: { ...emptyDailySnowState(), current: posts[0], history } });
+
+    const report = (await (await call("/api/report")).json()) as { dailySnow: ApiDailySnow };
+    expect(report.dailySnow.archive.map((a) => a.date)).toEqual(posts.slice(0, DAILY_SNOW_REPORT_POSTS).map((p) => p.date));
+    const second = (await (await call(`/api/daily-snow?date=${posts[1].date}`)).json()) as ApiDailySnow;
+    expect(second.archive).toHaveLength(DAILY_SNOW_INDEX_POSTS);
+    // Old links keep working: the oldest post is outside every list but still served.
+    const oldest = await call(`/api/daily-snow?date=${posts.at(-1)!.date}`);
+    expect(oldest.status).toBe(200);
+    expect(await oldest.json()).toMatchObject({ date: posts.at(-1)!.date });
   });
 
   it("disables admin collection without a token and requires authorization when enabled", async () => {
