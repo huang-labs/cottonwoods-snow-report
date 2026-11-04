@@ -1,7 +1,7 @@
 import { decode, encode } from "fast-png";
 import { describe, expect, it, vi } from "vitest";
 import { runCollection } from "@/lib/collect";
-import { cropSnowPanels } from "@/lib/plumeCrop";
+import { cropSnowPanels, findRightColumnFrames } from "@/lib/plumeCrop";
 import { PLUME_MAX_CROP_ATTEMPTS, PLUME_PANEL_REFRESH_MS, PLUME_PANEL_TTL_S, plumePanelsLive } from "@/lib/plumePanels";
 import { MemoryKV, plumePanelKey, readSnapshot, writeSnapshot } from "@/lib/store";
 import { denverMidnightsBetween } from "@/lib/time";
@@ -25,7 +25,40 @@ describe("plume panel cropping", () => {
       expect(p.plot.left).toBeGreaterThan(40); // y-axis label and tick labels kept
       expect(p.plot.right - p.plot.left).toBeGreaterThan(800);
       expect(p.plot.top).toBeGreaterThan(15); // panel title kept
-      expect(p.height - p.plot.bottom).toBeLessThan(15); // only tick marks below the frame
+      expect(p.height - p.plot.bottom).toBeLessThan(15); // only tick marks and the bottom y tick label below the frame
+    }
+  });
+
+  it("keeps y tick labels that overhang the frame's top and bottom edges whole", () => {
+    // Paint label-sized marks centred on the top and bottom edges of each
+    // snow panel's frame, where matplotlib puts e.g. "25" and "0".
+    const img = decode(chart());
+    const r = { width: img.width, height: img.height, rgba: img.data as Uint8Array };
+    const { frames } = findRightColumnFrames(r);
+    const LABEL = { dx: -28, w: 12, h: 14 };
+    const paint = (x0: number, yc: number) => {
+      for (let y = yc - LABEL.h / 2; y < yc + LABEL.h / 2; y++)
+        for (let x = x0; x < x0 + LABEL.w; x++) r.rgba.set([0, 0, 0, 255], (y * r.width + x) * 4);
+    };
+    for (const f of [frames[0], frames[2]]) {
+      paint(f.left + LABEL.dx, f.top);
+      paint(f.left + LABEL.dx, f.bottom);
+    }
+    const panels = cropSnowPanels(encode({ width: r.width, height: r.height, data: r.rgba, channels: 4, depth: 8 }));
+    for (const p of panels) {
+      const out = decode(p.png);
+      const d = out.data as Uint8Array;
+      const black = (yc: number) => {
+        let n = 0;
+        for (let y = yc - LABEL.h / 2; y < yc + LABEL.h / 2; y++)
+          for (let x = p.plot.left + LABEL.dx; x < p.plot.left + LABEL.dx + LABEL.w; x++) {
+            const i = (y * out.width + x) * 4;
+            if (y >= 0 && y < out.height && d[i] === 0 && d[i + 3] === 255) n++;
+          }
+        return n;
+      };
+      expect(black(p.plot.top)).toBe(LABEL.w * LABEL.h);
+      expect(black(p.plot.bottom)).toBe(LABEL.w * LABEL.h);
     }
   });
 

@@ -7,8 +7,9 @@ import { decode, encode } from "fast-png";
  *
  * Panels are located from the image itself — the black axes frames — rather
  * than hard-coded pixel offsets, so a resized figure still crops correctly; an
- * unexpected layout throws instead of producing a wrong crop. The UTC tick
- * labels under each frame are cut off (the dashboard draws Mountain Time ones),
+ * unexpected layout throws instead of producing a wrong crop. Y tick labels are
+ * kept whole, including the ones overhanging the frame's top and bottom edges.
+ * The UTC tick labels under each frame are cut off (the dashboard draws Mountain Time ones),
  * and the frame position inside each crop is returned so the time axis can be
  * mapped: the frame's left edge is the model init time, the right edge init +
  * forecast length.
@@ -62,6 +63,8 @@ function lum(r: Raster, x: number, y: number) {
 }
 const isDark = (r: Raster, x: number, y: number) => lum(r, x, y) < 60;
 const isInk = (r: Raster, x: number, y: number) => lum(r, x, y) < 235;
+/** Width left of the axis searched for y tick labels (right-aligned, at most ~4 digits). */
+const TICK_LABEL_STRIP = 60;
 
 interface Segment {
   x: number;
@@ -212,17 +215,33 @@ export function cropSnowPanels(png: Uint8Array): CroppedPanel[] {
     };
     const titleX0 = gap(-1);
     const titleX1 = gap(1);
-    // Bottom: keep the frame and its tick marks; cut at the first blank row
-    // inside the plot's width (just before the UTC tick labels).
+    // Y-axis tick labels are centred on their ticks, so the labels at the
+    // frame's top and bottom edges (e.g. "25" and "0") overhang the frame by
+    // half a text height. Find that overhang in the label strip left of the
+    // axis: ink contiguous with the frame edge.
+    const stripX0 = Math.max(x0, f.left - TICK_LABEL_STRIP);
+    const stripX1 = f.left - 3;
+    let labelTop = f.top;
+    while (labelTop > y0 && rowHasInk(r, labelTop - 1, stripX0, stripX1)) labelTop--;
+    let labelBottom = f.bottom;
+    while (labelBottom < r.height - 1 && rowHasInk(r, labelBottom + 1, stripX0, stripX1)) labelBottom++;
+    // Bottom: keep the frame, its tick marks and the bottom y tick label; the
+    // UTC tick labels start below the first blank row inside the plot's width.
     y = f.bottom + 1;
     while (y < r.height - 1 && rowHasInk(r, y, f.left + 40, f.right - 40)) y++;
-    const y1 = y - 1;
+    const tickBottom = y - 1;
+    const y1 = Math.max(tickBottom, labelBottom);
     while (x0 < f.left && !colHasInk(r, x0, f.top - 1, y1)) x0++;
     while (x1 > f.right && !colHasInk(r, x1, f.top - 1, y1)) x1--;
     if (y1 - y0 < 100 || x1 - x0 < 200) throw new Error(`Implausible ${id} crop ${x1 - x0}×${y1 - y0}`);
     return {
       id,
-      png: crop(r, x0, y0, x1, y1, (x, yy) => yy < f.top - 1 && (x < titleX0 || x > titleX1)),
+      png: crop(r, x0, y0, x1, y1, (x, yy) => {
+        // Above the frame keep only the title and the top y tick label;
+        // below the tick marks keep only the bottom y tick label.
+        if (yy < f.top - 1) return (x < titleX0 || x > titleX1) && !(yy >= labelTop && x >= stripX0 && x <= stripX1);
+        return yy > tickBottom && x > stripX1;
+      }),
       width: x1 - x0 + 1,
       height: y1 - y0 + 1,
       plot: { left: f.left - x0, right: f.right - x0, top: f.top - y0, bottom: f.bottom - y0 },
