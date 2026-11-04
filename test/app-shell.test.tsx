@@ -201,6 +201,10 @@ describe("app shell", () => {
   });
 
   it("renders every section page from real-source fixtures", async () => {
+    // Pin the clock to collection time: stored plume panels expire after
+    // PLUME_PANEL_TTL_S, so a wall clock would turn this test red days later.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(FIXTURE_NOW);
     mockApi(REPORT);
     const expected = ["Resort snowfall", "Waiting for the first post", "Cottonwoods mountain weather", "Utah ensemble snow plumes", "Canyon roads", "Alta", "Snowbird", "Solitude", "Brighton"];
     expect(SECTIONS).toHaveLength(9);
