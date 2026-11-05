@@ -137,7 +137,7 @@ export function DailySnowPage({ report, now }: { report: ReportResponse; now: Da
   );
 }
 
-/** Compact strip for the Snowfall page, above the resort pick. */
+/** Compact strip for the Resorts page, above the resort pick. */
 export function DailySnowTeaser({ post, now }: { post: ApiDailySnow | null | undefined; now: Date }) {
   if (!post) return null;
   return (

@@ -1,5 +1,6 @@
 import type { Snapshot, SourceId, SourceRecord } from "./types";
 import { mergeStormTracking } from "./dailysnow/storms";
+import { mergeSnowLog } from "./snowlog/record";
 
 /** Minimal KV surface used here (Cloudflare KVNamespace satisfies it). */
 export interface KVLike {
@@ -88,6 +89,8 @@ export function mergeSnapshot(latest: Snapshot | null, incoming: Snapshot): Snap
   }
   const stormTracking = mergeStormTracking(latest.stormTracking, incoming.stormTracking);
   if (stormTracking) merged.stormTracking = stormTracking;
+  const snowLog = mergeSnowLog(latest.snowLog, incoming.snowLog, new Date(incoming.writtenAt));
+  if (snowLog) merged.snowLog = snowLog;
   return merged;
 }
 

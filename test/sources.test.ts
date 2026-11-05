@@ -157,6 +157,23 @@ describe("NWS gridpoints", () => {
     expect(summary.hourlySnow).toHaveLength(7);
     expect(summary.hourlySnow![0].snowIn).toBeCloseTo(1 / 6, 12);
     expect(summary.hourlySnow![6]).toEqual({ start: "2026-11-03T18:00:00.000Z", snowIn: 0 });
+    // No QPF series: liquid stays aligned with the snow hours, all unknown.
+    expect(summary.hourlyLiquidIn).toEqual(Array(7).fill(null));
+  });
+  it("keeps hourly liquid index-aligned with hourly snow, to 0.0001 in", () => {
+    const start = new Date("2026-11-03T12:00:00Z");
+    const summary = summarizeGrid({ properties: {
+      temperature: { values: [] },
+      snowfallAmount: { uom: "wmoUnit:mm", values: [{ validTime: "2026-11-03T12:00:00Z/PT6H", value: 25.4 }] },
+      quantitativePrecipitation: { uom: "wmoUnit:mm", values: [{ validTime: "2026-11-03T12:00:00Z/PT3H", value: 2.54 }] },
+    } }, start);
+    expect(summary.hourlyLiquidIn).toHaveLength(summary.hourlySnow!.length);
+    expect(summary.hourlyLiquidIn).toEqual([0.0333, 0.0333, 0.0333, null, null, null]);
+  });
+  it("records liquid for every snow hour in the fixture grid", () => {
+    const s = summarizeGrid(grid, FIXTURE_NOW);
+    expect(s.hourlyLiquidIn).toHaveLength(s.hourlySnow!.length);
+    expect(s.hourlyLiquidIn!.every((v) => v !== null && v >= 0)).toBe(true);
   });
   it("finds the next ≥1in storm with its minimum snow level", () => {
     const s = summarizeGrid(grid, FIXTURE_NOW);

@@ -11,9 +11,9 @@ const recommendation: ApiRecommendation = {
 };
 afterEach(cleanup);
 
-it("integrates the pick into the resort's table row with reasoning beneath it", () => {
+it("integrates the pick into the resort's timeline with reasoning beneath it", () => {
   render(<RegionalPage now={now} report={{ ...buildReport(null, now), recommendation }} />);
-  const row = screen.getByText("AI pick").closest("tr");
+  const row = screen.getByText("AI pick").closest("article");
   expect(row?.textContent).toContain("Alta");
   const reasoning = screen.getByRole("generic", { name: "AI recommendation reasoning" });
   expect(reasoning.textContent).toContain(recommendation.headline);
@@ -22,8 +22,10 @@ it("integrates the pick into the resort's table row with reasoning beneath it", 
   expect(reasoning.textContent).toContain(recommendation.caveats[0]);
   expect(reasoning.textContent).toContain("test-model");
   expect(reasoning.textContent).toContain("For 2026-12-01");
-  // The reasoning row follows the picked resort's data row.
-  expect(document.querySelector(".recommendation-row")?.previousElementSibling).toBe(row);
+  // The reasoning follows the picked resort's timeline, inside the accent-lined block.
+  expect(row?.classList.contains("resort-timeline--picked")).toBe(true);
+  expect(reasoning.parentElement).toBe(row);
+  expect(reasoning.previousElementSibling?.classList.contains("snowtl")).toBe(true);
 });
 
 it("falls back to the plan text when no summary was written", () => {

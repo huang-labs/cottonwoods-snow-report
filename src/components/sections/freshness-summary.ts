@@ -13,9 +13,9 @@ export type FreshnessSummary = {
 };
 
 /**
- * Rolls several sources' freshness into one summary, for a footer that speaks for a
- * group of sources (the Snowfall table's four resorts). Each source keeps its own
- * classification; this only orders and groups them.
+ * Rolls several sources' freshness into one summary, for a line that speaks for a
+ * group of sources (the required feeds in the global banner). Each source keeps its
+ * own classification; this only orders and groups them.
  */
 export function summarizeFreshness(sources: Pick<ApiSource, "freshness" | "label" | "lastSuccessfulFetchAt">[]): FreshnessSummary {
   const groups = FRESHNESS_ORDER.map((freshness) => ({
