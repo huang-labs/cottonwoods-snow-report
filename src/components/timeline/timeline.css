@@ -1,6 +1,6 @@
-/* Snowfall timeline: 7 past days | last 24h | 7 forecast days. Mobile first: all
+/* Snowfall timeline: 7 past days | last 24 h | 7 forecast days. Mobile first: all
    15 columns fit a 360px phone (~22px each), so the strip never scrolls. From 901px
-   the middle column widens into the large "Last 24h" figure. */
+   the middle column widens into the large "Last 24 h" figure. */
 .snowtl { --plot-h: 64px; --today-col: minmax(44px, 1.6fr); min-width: 0; }
 
 /* Phones: a fixed two-row header, so every resort's is the same height. Heading over

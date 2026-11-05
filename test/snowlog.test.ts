@@ -164,10 +164,10 @@ describe("timeline model", () => {
     // Nov 2's snow day ends at 5 AM MST; the evening before DST ended it would have been 6 AM.
     expect(model.future[0]).toMatchObject({ partial: true, state: "forecast", amountIn: 0.5 });
     expect(model.future[0].detail).toBe("Mon, Nov 2 · 0.5″ NWS forecast, now to 5 AM (LCC grid point)");
-    expect(model.future[1].detail).toMatch(/1\.2″ NWS forecast, 24h to 5 AM/);
+    expect(model.future[1].detail).toMatch(/1\.2″ NWS forecast, 24 h to 5 AM/);
     // This forecast ends 6 days out, partway through the last day: no partial total.
     expect(model.future.at(-1)).toMatchObject({ state: "no_forecast", amountIn: null });
-    expect(model.last24.detail).toBe("Last 24h · 3″ reported by Alta (“Last 24 hrs”, report 3:00 PM)");
+    expect(model.last24.detail).toBe("Last 24 h · 3″ reported by Alta (“Last 24 hrs”, report 3:00 PM)");
   });
 
   it("shares one bar scale, between 6″ and 18″", () => {

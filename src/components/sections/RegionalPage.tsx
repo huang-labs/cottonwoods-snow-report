@@ -52,7 +52,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
       <DailySnowTeaser post={report.dailySnow} now={now} />
       <header className="page__header">
         <h1>Resorts</h1>
-        <p className="page__sub">Snowfall at each resort: the past week, the last 24h, and the NWS forecast for the week ahead.</p>
+        <p className="page__sub">Snowfall at each resort: the past week, the last 24 h, and the NWS forecast for the week ahead.</p>
       </header>
       <div className="resort-timelines">
         {resorts.map(({ id, source, model }) => {
