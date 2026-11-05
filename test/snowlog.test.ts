@@ -218,6 +218,15 @@ describe("timeline model", () => {
     expect(model.past[0]).toMatchObject({ state: "not_recorded", amountIn: null });
   });
 
+  it("dates a morning reading whose report came the evening before", () => {
+    const evening = buildSnowTimeline({
+      resort: "alta", name: "Alta", canyon: "LCC", now, forecast: null, report: null,
+      log: { resorts: { alta: { "2026-11-01": { state: "reported", valueIn: 5, label: "Last 24 hrs", windowEnd: "2026-11-01T03:00:00Z", collectedAt: "2026-11-01T13:00:00Z" } } }, forecasts: {} },
+    });
+    // 9 PM MDT on Oct 31, stored under the Nov 1 morning.
+    expect(evening.past.at(-1)!.detail).toBe("Sun, Nov 1 · 5″ reported by Alta (“Last 24 hrs” at Sat, Oct 31, 9:00 PM)");
+  });
+
   it("names the day boundary in local time across the daylight-saving change", () => {
     // Nov 2's snow day ends at 5 AM MST; the evening before DST ended it would have been 6 AM.
     expect(model.future[0]).toMatchObject({ partial: true, state: "forecast", amountIn: 0.5 });

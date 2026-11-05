@@ -42,6 +42,13 @@ const weekdayFmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "sh
 const dayFmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, day: "numeric" });
 const dateFmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short", month: "short", day: "numeric" });
 const timeFmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" });
+const ymdFmt = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
+
+/** A report time within a day's description: the clock time, plus the date when it falls on another day. */
+function reportAt(iso: string, key: string): string {
+  const t = new Date(iso);
+  return ymdFmt.format(t) === key ? timeFmt.format(t) : `${dateFmt.format(t)}, ${timeFmt.format(t)}`;
+}
 const hourFmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric" });
 
 /** Whole inches for bar labels: "<1" keeps a trace distinct from a reported zero. */
@@ -66,7 +73,7 @@ function pastDay(key: string, name: string, reading: MorningReading | undefined,
   const ghost = forecastIn === null ? "" : ` · NWS forecast ${inches(forecastIn)}`;
   const base = { key, kind: "past" as const, ...labels, forecastIn, partial: false };
   if (!reading) return { ...base, state: "not_recorded", amountIn: null, detail: `${date} · Not recorded${ghost}` };
-  const report = reading.windowEnd ? ` at ${timeFmt.format(new Date(reading.windowEnd))}` : "";
+  const report = reading.windowEnd ? ` at ${reportAt(reading.windowEnd, key)}` : "";
   switch (reading.state) {
     case "reported":
       return { ...base, state: "reported", amountIn: reading.valueIn!, detail: `${date} · ${inches(reading.valueIn!)} reported by ${name} (“${reading.label}”${report})${ghost}` };
