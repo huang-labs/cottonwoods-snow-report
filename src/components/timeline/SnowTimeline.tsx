@@ -82,7 +82,7 @@ export function SnowTimeline({
       </div>
       <ol className="snowtl__strip" aria-label={`${label} snowfall by day: past 7 days, last 24 hours, next 7 days`}>
         <li className="snowtl__span snowtl__span--past" aria-hidden="true">Past 7 days</li>
-        <li className="snowtl__span snowtl__span--now" aria-hidden="true">Last 24 h</li>
+        <li className="snowtl__span snowtl__span--now" aria-hidden="true">Last 24h</li>
         <li className="snowtl__span snowtl__span--next" aria-hidden="true">Next 7 days</li>
         {model.past.map((day) => <Day key={day.key} day={day} scale={scale} />)}
         <li className="snowtl__day snowtl__day--today">

@@ -70,9 +70,9 @@ function pastDay(key: string, name: string, reading: MorningReading | undefined,
     case "reported":
       return { ...base, state: "reported", amountIn: reading.valueIn!, detail: `${date} · ${inches(reading.valueIn!)} reported by ${name} (“${reading.label}”${report})${ghost}` };
     case "not_reported":
-      return { ...base, state: "not_reported", amountIn: null, detail: `${date} · ${name} left its 24 h total empty${ghost}` };
+      return { ...base, state: "not_reported", amountIn: null, detail: `${date} · ${name} left its 24h total empty${ghost}` };
     case "unavailable":
-      return { ...base, state: "unavailable", amountIn: null, detail: `${date} · ${name} doesn’t publish a 24 h total${ghost}` };
+      return { ...base, state: "unavailable", amountIn: null, detail: `${date} · ${name} doesn’t publish a 24h total${ghost}` };
     default:
       return { ...base, state: "no_report", amountIn: null, detail: `${date} · No new morning report from ${name}${ghost}` };
   }
@@ -82,7 +82,7 @@ function futureDay(key: string, canyon: CanyonId, hourly: PointForecast["hourlyS
   const { date, ...labels } = dayLabels(key);
   const partial = snowDayOf(now.getTime()) === key;
   const amountIn = hourly ? forecastForDay(hourly, key, partial ? now.getTime() : -Infinity) : null;
-  const span = partial ? `now to ${endsAt(key)}` : `24 h to ${endsAt(key)}`;
+  const span = partial ? `now to ${endsAt(key)}` : `24h to ${endsAt(key)}`;
   const base = { key, kind: "forecast" as const, ...labels, forecastIn: null, partial };
   return amountIn === null
     ? { ...base, state: "no_forecast", amountIn: null, detail: `${date} · No NWS forecast for this day` }
@@ -115,12 +115,12 @@ export function buildSnowTimeline(input: {
   const metric = report?.snowfall.h24 ?? null;
   const at = report?.reportTime ? `, report ${timeFmt.format(new Date(report.reportTime))}` : "";
   const detail = !metric
-    ? `Last 24 h · No report from ${name}`
+    ? `Last 24h · No report from ${name}`
     : metric.state === "reported"
-      ? `Last 24 h · ${inches(metric.value)} reported by ${name} (“${metric.label}”${at})`
+      ? `Last 24h · ${inches(metric.value)} reported by ${name} (“${metric.label}”${at})`
       : metric.state === "not_reported"
-        ? `Last 24 h · ${name} left its 24 h total empty${at}`
-        : `Last 24 h · ${name} doesn’t publish a 24 h total`;
+        ? `Last 24h · ${name} left its 24h total empty${at}`
+        : `Last 24h · ${name} doesn’t publish a 24h total`;
   return { past, future, last24: { metric, reportTime: report?.reportTime ?? null, detail }, canyon };
 }
 

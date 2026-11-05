@@ -4,7 +4,7 @@ A snow and conditions dashboard for Alta, Snowbird, Solitude and Brighton, built
 
 **[Open the dashboard](https://cottonwoods-snow-report.huang.mx)**
 
-- Compare resort snowfall day by day (past week, last 24 h, NWS week ahead), lift and terrain status, and webcams.
+- Compare resort snowfall day by day (past week, last 24h, NWS week ahead), lift and terrain status, and webcams.
 - Check NWS mountain weather, University of Utah ensemble plumes, and canyon roads with UDOT webcams.
 - Read an AI resort pick and the morning **Daily Snow** forecast, labeled separately from source data.
 

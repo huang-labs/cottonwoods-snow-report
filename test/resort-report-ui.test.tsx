@@ -248,7 +248,7 @@ it("keeps a resort's wording only where its window differs, and lists shared sou
   expect(notes).toContain("Overnight, 24 h");
 });
 
-it("shows each resort as a snowfall timeline: 7 recorded days, the last 24 h, 7 NWS forecast days", () => {
+it("shows each resort as a snowfall timeline: 7 recorded days, the last 24h, 7 NWS forecast days", () => {
   const { container } = render(renderSection("regional", report, FIXTURE_NOW, null));
   const blocks = [...container.querySelectorAll(".resort-timeline")];
   expect(blocks.map((b) => b.querySelector(".resort-name")?.textContent)).toEqual(["Alta", "Snowbird", "Solitude", "Brighton"]);
@@ -293,7 +293,7 @@ it("describes every day for screen readers, with no interactive controls", () =>
   const alta = container.querySelector(".resort-timeline")!;
   const days = [...alta.querySelectorAll(".snowtl__day")];
   expect(days).toHaveLength(15);
-  expect(days[7].querySelector(".snowtl__sr")!.textContent).toMatch(/^Last 24 h · .*Alta/);
+  expect(days[7].querySelector(".snowtl__sr")!.textContent).toMatch(/^Last 24h · .*Alta/);
   expect(days[8].querySelector(".snowtl__sr")!.textContent).toMatch(/NWS forecast, now to 6 AM/);
   expect(days[0].querySelector(".snowtl__sr")!.textContent).toMatch(/Not recorded$/);
   expect(alta.querySelectorAll("button, [tabindex]")).toHaveLength(0);
