@@ -28,6 +28,12 @@ export interface MorningReading {
 /** The NWS grid forecast for a whole snow day, as it stood when that day began. */
 export interface DayAheadForecast {
   snowIn: number;
+  /**
+   * NWS liquid (QPF) for the same day, inches to 0.01, for a future snow-to-liquid
+   * ratio (snowIn / liquidIn). Absent when the forecast had no full day of liquid, and
+   * on entries recorded before it was added.
+   */
+  liquidIn?: number;
   /** NWS grid update time of the forecast used. */
   issuedAt: string | null;
   collectedAt: string;

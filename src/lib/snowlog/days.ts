@@ -32,24 +32,45 @@ export function morningOf(t: number): SnowDayKey | null {
   return since >= 0 && since < MORNING_WINDOW_MS ? key : null;
 }
 
-/** NWS 24 h total for a snow day from hourly amounts, from `fromMs` when the day is under way. */
+/**
+ * Sum of an hourly series over a snow day, from `fromMs` when the day is under way.
+ * Only a fully covered window is a total: a forecast that ends mid-day, or a missing
+ * (null) hour, gives null.
+ */
+function sumForDay(hours: Array<{ start: string; value: number | null }>, key: SnowDayKey, fromMs: number): number | null {
+  const start = Math.max(snowDayStart(key), Math.floor(fromMs / HOUR) * HOUR);
+  const end = snowDayEnd(key);
+  if (start >= end) return null;
+  let total = 0;
+  let count = 0;
+  for (const h of hours) {
+    const t = Date.parse(h.start);
+    if (t < start || t >= end) continue;
+    if (h.value === null) return null;
+    total += h.value;
+    count++;
+  }
+  return count === (end - start) / HOUR ? total : null;
+}
+
+/** NWS 24 h snow total (inches, to 0.1) for a snow day from hourly amounts. */
 export function forecastForDay(
   hourly: Array<{ start: string; snowIn: number }>,
   key: SnowDayKey,
   fromMs = -Infinity,
 ): number | null {
-  const start = Math.max(snowDayStart(key), Math.floor(fromMs / HOUR) * HOUR);
-  const end = snowDayEnd(key);
-  if (start >= end) return null;
-  let total = 0;
-  let hours = 0;
-  for (const h of hourly) {
-    const t = Date.parse(h.start);
-    if (t >= start && t < end) {
-      total += h.snowIn;
-      hours++;
-    }
-  }
-  // Only a fully covered window is a total; a forecast that ends mid-day isn't.
-  return hours === (end - start) / HOUR ? Math.round(total * 10) / 10 : null;
+  const total = sumForDay(hourly.map((h) => ({ start: h.start, value: h.snowIn })), key, fromMs);
+  return total === null ? null : Math.round(total * 10) / 10;
+}
+
+/** NWS 24 h liquid total (inches, to 0.01) for a snow day; `liquid` is index-aligned with `hourly`. */
+export function liquidForDay(
+  hourly: Array<{ start: string }>,
+  liquid: Array<number | null>,
+  key: SnowDayKey,
+  fromMs = -Infinity,
+): number | null {
+  if (liquid.length !== hourly.length) return null;
+  const total = sumForDay(hourly.map((h, i) => ({ start: h.start, value: liquid[i] })), key, fromMs);
+  return total === null ? null : Math.round(total * 100) / 100;
 }

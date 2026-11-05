@@ -164,13 +164,14 @@ export function summarizeGrid(grid: GridData, now: Date, blockCount = 6): Omit<P
     sixHourSnow.push({ start: new Date(t).toISOString(), snowIn: round1(sum(vals)!), snowLevelFt: sl.length ? Math.round(min(sl)!) : null });
   }
 
+  const hourly = [...snow].filter(([t]) => t >= Math.floor(now.getTime() / HOUR) * HOUR && t < now.getTime() + 7 * 24 * HOUR);
   return {
     elevationFt: p.elevation?.value != null ? Math.round(mToFt(p.elevation.value)) : null,
     gridUpdatedAt: p.updateTime ? new Date(p.updateTime).toISOString() : null,
     blocks,
     sixHourSnow,
-    hourlySnow: [...snow].filter(([t]) => t >= Math.floor(now.getTime() / HOUR) * HOUR && t < now.getTime() + 7 * 24 * HOUR)
-      .map(([t, snowIn]) => ({ start: new Date(t).toISOString(), snowIn })),
+    hourlySnow: hourly.map(([t, snowIn]) => ({ start: new Date(t).toISOString(), snowIn })),
+    hourlyLiquidIn: hourly.map(([t]) => (qpf.has(t) ? Math.round(qpf.get(t)! * 10_000) / 10_000 : null)),
     nextStorm: findNextStorm(snow, snowLevel, now),
   };
 }

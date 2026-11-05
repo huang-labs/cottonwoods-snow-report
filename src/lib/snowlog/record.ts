@@ -1,5 +1,5 @@
 import type { CanyonId, Metric, NwsPayload, PrimaryResortId, ResortReport, Snapshot } from "../types";
-import { addDays, forecastForDay, morningOf, snowDayOf, snowDayStart } from "./days";
+import { addDays, forecastForDay, liquidForDay, morningOf, snowDayOf, snowDayStart } from "./days";
 import type { DayAheadForecast, MorningReading, SnowDayKey, SnowLogState } from "./types";
 
 export const SNOW_LOG_RESORTS: PrimaryResortId[] = ["alta", "snowbird", "solitude", "brighton"];
@@ -56,8 +56,9 @@ function prune<T>(days: Record<SnowDayKey, T> | undefined, oldest: SnowDayKey): 
 
 /**
  * Advance the log from this run's snapshot. Resorts collected during a morning window
- * record that morning's 24 h figure; every NWS collection records its whole-day totals
- * for days that haven't begun yet, so the last one before a day starts is what stays.
+ * record that morning's 24 h figure; every NWS collection records its whole-day snow
+ * and liquid totals for days that haven't begun yet, so the last one before a day
+ * starts is what stays.
  * Pure: the caller stores the result in the snapshot.
  */
 export function recordSnowLog(previous: SnowLogState | undefined, snapshot: Snapshot, now: Date): SnowLogState {
@@ -84,7 +85,8 @@ export function recordSnowLog(previous: SnowLogState | undefined, snapshot: Snap
       for (let key = addDays(snowDayOf(t), 1); snowDayStart(key) - t < 8 * 86_400_000; key = addDays(key, 1)) {
         const snowIn = forecastForDay(point.hourlySnow, key);
         if (snowIn === null) break;
-        days[key] = preferForecast(days[key], { snowIn, issuedAt: point.gridUpdatedAt, collectedAt })!;
+        const liquidIn = point.hourlyLiquidIn ? liquidForDay(point.hourlySnow, point.hourlyLiquidIn, key) : null;
+        days[key] = preferForecast(days[key], { snowIn, ...(liquidIn === null ? {} : { liquidIn }), issuedAt: point.gridUpdatedAt, collectedAt })!;
       }
     }
     if (Object.keys(days).length) log.forecasts[canyon] = days;

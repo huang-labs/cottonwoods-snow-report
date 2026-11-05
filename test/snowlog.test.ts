@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { barLabel, buildSnowTimeline, timelineScale } from "@/components/timeline/model";
 import { runCollection } from "@/lib/collect";
-import { addDays, forecastForDay, morningOf, snowDayOf } from "@/lib/snowlog/days";
+import { addDays, forecastForDay, liquidForDay, morningOf, snowDayOf } from "@/lib/snowlog/days";
 import { mergeSnowLog, recordSnowLog } from "@/lib/snowlog/record";
 import type { SnowLogState } from "@/lib/snowlog/types";
 import { mergeSnapshot, MemoryKV, readSnapshot } from "@/lib/store";
@@ -20,8 +20,8 @@ function hourly(from: string, hours: number, snowIn = 0.1) {
   return Array.from({ length: hours }, (_, i) => ({ start: new Date(Date.parse(from) + i * HOUR).toISOString(), snowIn }));
 }
 
-function nwsRecord(collectedAt: string, lcc: Array<{ start: string; snowIn: number }>): SourceRecord {
-  const point = (name: string) => ({ name, gridUpdatedAt: "2026-12-01T09:00:00Z", hourlySnow: lcc }) as unknown as NwsPayload["points"][number];
+function nwsRecord(collectedAt: string, lcc: Array<{ start: string; snowIn: number }>, liquid?: Array<number | null>): SourceRecord {
+  const point = (name: string) => ({ name, gridUpdatedAt: "2026-12-01T09:00:00Z", hourlySnow: lcc, ...(liquid ? { hourlyLiquidIn: liquid } : {}) }) as unknown as NwsPayload["points"][number];
   const payload: NwsPayload = { points: [point("Alta / Snowbird (LCC)"), point("Brighton / Solitude (BCC)")] };
   return { id: "nws", lastAttemptAt: collectedAt, lastSuccessfulFetchAt: collectedAt, sourceUpdatedAt: null, status: "ok", lastError: null, lastErrorAt: null, consecutiveFailures: 0, diagnostics: null, payload };
 }
@@ -49,6 +49,15 @@ describe("snow days", () => {
     expect(forecastForDay(h, "2026-12-01")).toBe(2.4);
     expect(forecastForDay(h, "2026-12-01", Date.parse("2026-12-01T06:30:00Z"))).toBe(0.6);
     expect(forecastForDay(h.slice(0, 40), "2026-12-02")).toBeNull();
+  });
+
+  it("totals liquid the same way, and needs every hour of it", () => {
+    const h = hourly("2026-11-30T12:00:00Z", 48);
+    const liquid = h.map(() => 0.0125);
+    expect(liquidForDay(h, liquid, "2026-12-01")).toBe(0.3);
+    expect(liquidForDay(h, liquid, "2026-12-01", Date.parse("2026-12-01T06:30:00Z"))).toBe(0.08);
+    expect(liquidForDay(h, liquid.map((v, i) => (i === 5 ? null : v)), "2026-12-01")).toBeNull();
+    expect(liquidForDay(h, liquid.slice(1), "2026-12-01")).toBeNull();
   });
 });
 
@@ -106,6 +115,20 @@ describe("recordSnowLog", () => {
     expect(log.forecasts.LCC?.["2026-12-02"]?.snowIn).toBe(12);
   });
 
+  it("records each day's forecast liquid beside its snow, for a later snow-to-liquid ratio", () => {
+    const at = "2026-12-01T03:00:00Z";
+    const h = hourly("2026-12-01T03:00:00Z", 7 * 24, 0.5);
+    const withLiquid = recordSnowLog(undefined, snap({ nws: nwsRecord(at, h, h.map(() => 0.05)) }), new Date(at));
+    // 12″ from 1.2″ of water: a 10:1 day.
+    expect(withLiquid.forecasts.LCC?.["2026-12-02"]).toMatchObject({ snowIn: 12, liquidIn: 1.2 });
+    // A missing liquid hour (or an older payload without liquid) leaves liquid out, never the snow.
+    const gap = recordSnowLog(undefined, snap({ nws: nwsRecord(at, h, h.map((_, i) => (i === 20 ? null : 0.05))) }), new Date(at));
+    expect(gap.forecasts.LCC?.["2026-12-02"]).not.toHaveProperty("liquidIn");
+    expect(gap.forecasts.LCC?.["2026-12-03"]?.liquidIn).toBe(1.2);
+    const legacy = recordSnowLog(undefined, snap({ nws: nwsRecord(at, h) }), new Date(at));
+    expect(legacy.forecasts.LCC?.["2026-12-02"]).toEqual({ snowIn: 12, issuedAt: "2026-12-01T09:00:00Z", collectedAt: at });
+  });
+
   it("drops days older than two weeks", () => {
     const previous: SnowLogState = { resorts: { alta: { "2026-11-10": { state: "reported", valueIn: 3, label: "x", windowEnd: null, collectedAt: "2026-11-10T13:00:00Z" }, "2026-11-25": { state: "reported", valueIn: 1, label: "x", windowEnd: null, collectedAt: "2026-11-25T13:00:00Z" } } }, forecasts: {} };
     const log = recordSnowLog(previous, snap({}), new Date("2026-12-01T20:00:00Z"));
@@ -131,6 +154,8 @@ describe("snapshot storage", () => {
     const log = (await readSnapshot(kv))?.snowLog;
     // Outside a morning window: forecasts for the coming days, no resort readings yet.
     expect(Object.keys(log?.forecasts.LCC ?? {}).length).toBeGreaterThan(3);
+    // The real NWS grid has liquid for every forecast hour, so each recorded day has it.
+    expect(Object.values(log?.forecasts.LCC ?? {}).every((f) => typeof f.liquidIn === "number")).toBe(true);
     expect(log?.resorts).toEqual({});
   });
 });

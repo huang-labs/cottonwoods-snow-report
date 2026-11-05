@@ -249,6 +249,12 @@ export interface PointForecast {
   sixHourSnow: SixHourSnow[];
   /** Unrounded hourly NWS accumulation; absent on snapshots collected before phase 1. */
   hourlySnow?: Array<{ start: string; snowIn: number }>;
+  /**
+   * NWS liquid (QPF, inches, to 0.0001) for the same hours as `hourlySnow`, index for
+   * index; null where NWS gives no liquid for that hour. Kept as bare numbers so the
+   * snapshot stays small. Absent on snapshots collected before it was added.
+   */
+  hourlyLiquidIn?: Array<number | null>;
   nextStorm: NextStorm | null;
   periods: Array<{ name: string; detailedForecast: string; start: string }>;
 }
