@@ -43,7 +43,7 @@ export function Figure({ figure: f, postedAt }: { figure: DailySnowFigure; poste
   let body;
   switch (f.kind) {
     case "storm-recap":
-      body = <StormRecap storm={f.storm} postedAt={postedAt} />;
+      body = <StormRecap storm={f.storm} />;
       break;
     case "snow-bars": {
       // Posts written before 2026-11-03 stored the NWS grid time in the caption.
