@@ -267,7 +267,8 @@ it("shows each resort as a snowfall timeline: 7 recorded days, the last 24 h, 7 
   expect(alta.querySelectorAll(".snowtl__day--not_recorded")).toHaveLength(7);
   // The header is the name and region only; the report time sits at its right on phones.
   expect(alta.querySelector(".snowtl__meta")!.textContent).toBe("Utah · United States");
-  expect(alta.querySelector(".snowtl__reported")!.textContent).toMatch(/^Reported /);
+  expect(alta.querySelector(".snowtl__reported-label")!.textContent).toBe("Reported");
+  expect(alta.querySelector(".snowtl__reported-time")!.textContent).toMatch(/(Today|Yesterday|, )/);
   expect(alta.querySelector(".snowtl__hero")!.textContent).not.toMatch(/Last 24 hrs/);
   expect(alta.querySelectorAll(".badge")).toHaveLength(0);
   expect(container.querySelector("table")).toBeNull();

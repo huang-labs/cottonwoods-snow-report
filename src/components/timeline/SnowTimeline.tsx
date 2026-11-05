@@ -73,7 +73,12 @@ export function SnowTimeline({
           {heading}
           {meta && <div className="snowtl__meta">{meta}</div>}
         </div>
-        {reportTime && <span className="snowtl__reported" aria-hidden="true">Reported {reportTime}</span>}
+        {reportTime && (
+          <span className="snowtl__reported" aria-hidden="true">
+            <span className="snowtl__reported-label">Reported</span>
+            <span className="snowtl__reported-time">{reportTime}</span>
+          </span>
+        )}
       </div>
       <ol className="snowtl__strip" aria-label={`${label} snowfall by day: past 7 days, last 24 hours, next 7 days`}>
         <li className="snowtl__span snowtl__span--past" aria-hidden="true">Past 7 days</li>
