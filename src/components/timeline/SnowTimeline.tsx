@@ -65,7 +65,8 @@ export function SnowTimeline({
   now: Date;
 }) {
   const m = model.last24.metric;
-  const reportTime = model.last24.reportTime ? formatDenver(model.last24.reportTime, now) : null;
+  // A figure without a report time is "Time unknown"; "No report" means no figure at all.
+  const reportTime = model.last24.reportTime ? formatDenver(model.last24.reportTime, now) : m ? "Time unknown" : null;
   return (
     <div className="snowtl">
       <div className="snowtl__head">

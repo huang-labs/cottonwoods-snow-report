@@ -288,6 +288,22 @@ it("makes each resort's timeline one link to its page, named by the resort", () 
   }
 });
 
+it("labels a 24 h figure without a report time as Time unknown, and no figure as No report", () => {
+  const base = report.sources.alta;
+  const payload = base.payload as ResortReport;
+  const withNoTime = { ...report, sources: { ...report.sources, alta: { ...base, payload: { ...payload, reportTime: null } } } };
+  const { container, unmount } = render(renderSection("regional", withNoTime, FIXTURE_NOW, null));
+  const alta = container.querySelector(".resort-timeline")!;
+  expect(alta.querySelector(".snowtl__hero-time")!.textContent).toBe("Time unknown");
+  expect(alta.querySelector(".snowtl__reported-time")!.textContent).toBe("Time unknown");
+  unmount();
+  const noPayload = { ...report, sources: { ...report.sources, alta: { ...base, payload: null } } };
+  const view = render(renderSection("regional", noPayload, FIXTURE_NOW, null));
+  const empty = view.container.querySelector(".resort-timeline")!;
+  expect(empty.querySelector(".snowtl__hero-time")!.textContent).toBe("No report");
+  expect(empty.querySelector(".snowtl__reported")).toBeNull();
+});
+
 it("describes every day for screen readers, with no interactive controls", () => {
   const { container } = render(renderSection("regional", report, FIXTURE_NOW, null));
   const alta = container.querySelector(".resort-timeline")!;
