@@ -254,6 +254,16 @@ describe("schedule", () => {
 describe("validation", () => {
   const { digest } = buildDailyDigest(structuredClone({ schemaVersion: 1, writtenAt: "", sources: {} }) as Snapshot, null, [], SIX_AM);
   const withData = () => buildDailyDigest(snap(), null, [], SIX_AM).digest;
+  it("cleans model-written figure markers before saving without losing figure placement", () => {
+    const r = validateDailySnow(answer([], {
+      title: "Snow Returns [nws-snow-lcc]",
+      summary: "Snow levels fall tonight. [nws-snow-level]",
+      sections: [{ id: "update", paragraphs: [{ text: "Snow levels fall tonight: [nws-snow-level]", figure: "nws-snow-level" }] }],
+    }), withData());
+    expect(r.title).toBe("Snow Returns");
+    expect(r.summary).toBe("Snow levels fall tonight.");
+    expect(r.sections[0].paragraphs).toEqual([{ text: "Snow levels fall tonight:", figure: "nws-snow-level" }]);
+  });
   it("flags inch amounts that appear nowhere in the data", () => {
     expect(ungroundedInches("We got 12″ and 3-6\" lower down, 0.5″ of water.", [12, 3, 6, 0.5])).toEqual([]);
     expect(ungroundedInches("Up to 30″ fell", [12, 17.1])).toEqual([30]);
