@@ -42,8 +42,8 @@ function Day({ day, scale }: { day: TimelineDay; scale: number }) {
 /**
  * Daily snowfall around now: 7 past snow days (each resort's morning report), the
  * latest 24 h figure, and 7 days of NWS forecast. The page supplies the heading and
- * a line shown beside it, and a shared `scale` when several timelines are shown
- * together. Each day carries a full description for screen readers; the drawing is
+ * a line shown beside it, an optional footer beneath the strip, and a shared `scale`
+ * when several timelines are shown together. Each day carries a full description for screen readers; the drawing is
  * hidden from them.
  */
 export function SnowTimeline({
@@ -52,6 +52,7 @@ export function SnowTimeline({
   label,
   heading,
   meta,
+  footer,
   now,
 }: {
   model: SnowTimelineModel;
@@ -60,6 +61,7 @@ export function SnowTimeline({
   label: string;
   heading: ReactNode;
   meta?: ReactNode;
+  footer?: ReactNode;
   now: Date;
 }) {
   const m = model.last24.metric;
@@ -91,9 +93,8 @@ export function SnowTimeline({
           </span>
         </li>
         {model.future.map((day) => <Day key={day.key} day={day} scale={scale} />)}
-        <li className="snowtl__source snowtl__source--past" aria-hidden="true">Morning reports</li>
-        <li className="snowtl__source snowtl__source--next" aria-hidden="true">NWS forecast · {model.canyon}</li>
       </ol>
+      {footer && <div className="snowtl__footer">{footer}</div>}
     </div>
   );
 }

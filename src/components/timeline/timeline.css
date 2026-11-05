@@ -17,9 +17,6 @@
 .snowtl__span--now { grid-column: 8 / 9; justify-content: center; visibility: hidden; }
 .snowtl__span--now::before, .snowtl__span--now::after { content: none; }
 .snowtl__span--next { grid-column: 9 / 16; }
-.snowtl__source { grid-row: 3; margin-top: 4px; color: var(--muted); font-size: var(--fs-label); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.snowtl__source--past { grid-column: 1 / 8; }
-.snowtl__source--next { grid-column: 9 / 16; }
 
 .snowtl__day { grid-row: 2; position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 4px 0 6px; border-radius: 6px; }
 .snowtl__visual { display: contents; }
@@ -47,6 +44,7 @@
 .snowtl__day--weekend :is(.snowtl__weekday, .snowtl__date) { color: var(--text); font-weight: 750; }
 
 .snowtl__day--today { background: var(--panel); }
+.snowtl__footer { display: flex; justify-content: flex-end; margin-top: 8px; }
 .snowtl__compact { display: contents; }
 .snowtl__hero { display: none; }
 

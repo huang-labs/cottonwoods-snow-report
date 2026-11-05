@@ -260,7 +260,9 @@ it("shows each resort as a snowfall timeline: 7 recorded days, the last 24 h, 7 
   expect(alta.querySelectorAll(".snowtl__day--no_forecast")).toHaveLength(0);
   // The first forecast day is the snow day under way, ending at 6 AM (MDT).
   expect(alta.querySelector(".snowtl__day--forecast .snowtl__sr")!.textContent).toMatch(/now to 6 AM \(LCC grid point\)/);
-  expect(blocks[2].querySelector(".snowtl__source--next")!.textContent).toBe("NWS forecast · BCC");
+  // BCC resorts use the BCC grid point; the strip carries no source captions.
+  expect(blocks[2].querySelector(".snowtl__day--forecast .snowtl__sr")!.textContent).toMatch(/\(BCC grid point\)/);
+  expect(alta.textContent).not.toMatch(/Morning reports|NWS forecast ·/);
   // One collection outside a morning window records no history yet.
   expect(alta.querySelectorAll(".snowtl__day--not_recorded")).toHaveLength(7);
   // The header is the name and region only; the report time sits at its right on phones.
@@ -278,6 +280,10 @@ it("makes each resort's timeline one link to its page, named by the resort", () 
     expect(links).toHaveLength(1);
     expect(links[0].classList.contains("resort-name__link")).toBe(true);
     expect(links[0].getAttribute("href")).toBe(`/${links[0].textContent!.toLowerCase()}`);
+    // "View more" is a visible cue inside the block's link area, not a second link.
+    const more = block.querySelector(".snowtl__footer .resort-timeline__more")!;
+    expect(more.textContent).toBe("View more →");
+    expect(more.closest("a")).toBeNull();
   }
 });
 

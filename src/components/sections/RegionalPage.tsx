@@ -71,6 +71,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
                   </div>
                 }
                 meta={REGION}
+                footer={<span className="resort-timeline__more" aria-hidden="true">View more →</span>}
               />
               {picked && <PickReasoning pick={picked} now={now} />}
             </article>
