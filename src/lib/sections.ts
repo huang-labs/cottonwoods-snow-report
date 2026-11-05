@@ -1,4 +1,8 @@
-/** Dashboard sections. Each is a page, routed from the navbar. */
+/**
+ * Dashboard sections. Each is a page, routed from the navbar. The first section
+ * (`/`, "Resorts") is also the parent of the resort pages: the navbar shows their
+ * row beneath it on `/` and on each resort page.
+ */
 export interface SectionDef {
   id: string;
   /** Full heading-style title (page title). */
@@ -13,7 +17,7 @@ export type SectionGroup = "resorts";
 export const GROUP_LABELS: Record<SectionGroup, string> = { resorts: "Resorts" };
 
 export const SECTIONS: SectionDef[] = [
-  { id: "regional", title: "Resort snowfall", label: "Snowfall" },
+  { id: "regional", title: "Resorts", label: "Resorts" },
   { id: "daily-snow", title: "Daily Snow", label: "Daily Snow" },
   { id: "weather", title: "Mountain weather", label: "Weather" },
   { id: "plumes", title: "Ensemble plumes", label: "Plumes" },

@@ -259,29 +259,28 @@ it("shows each resort as a snowfall timeline: 7 recorded days, the last 24 h, 7 
   expect(alta.querySelectorAll(".snowtl__day--forecast.snowtl__day--forecast")).toHaveLength(7);
   expect(alta.querySelectorAll(".snowtl__day--no_forecast")).toHaveLength(0);
   // The first forecast day is the snow day under way, ending at 6 AM (MDT).
-  expect(alta.querySelector(".snowtl__day--forecast")!.getAttribute("aria-label")).toMatch(/now to 6 AM \(LCC grid point\)/);
+  expect(alta.querySelector(".snowtl__day--forecast .snowtl__sr")!.textContent).toMatch(/now to 6 AM \(LCC grid point\)/);
   expect(blocks[2].querySelector(".snowtl__source--next")!.textContent).toBe("NWS forecast · BCC");
   // One collection outside a morning window records no history yet.
   expect(alta.querySelectorAll(".snowtl__day--not_recorded")).toHaveLength(7);
-  // The table's other windows are gone; Storm and Base stay in the header.
-  expect(alta.querySelector(".resort-facts")!.textContent).toMatch(/^Storm.*Base/);
+  // The header is the name and region only; the report time sits at its right on phones.
+  expect(alta.querySelector(".snowtl__meta")!.textContent).toBe("Utah · United States");
+  expect(alta.querySelector(".snowtl__reported")!.textContent).toMatch(/^Reported /);
+  expect(alta.querySelector(".snowtl__hero")!.textContent).not.toMatch(/Last 24 hrs/);
+  expect(alta.querySelectorAll(".badge")).toHaveLength(0);
   expect(container.querySelector("table")).toBeNull();
 });
 
-it("opens with the last 24 h described, and moves the detail line with the arrow keys", () => {
+it("describes every day for screen readers, with no interactive controls", () => {
   const { container } = render(renderSection("regional", report, FIXTURE_NOW, null));
   const alta = container.querySelector(".resort-timeline")!;
-  const detail = alta.querySelector(".snowtl__detail")!;
-  const today = alta.querySelector<HTMLButtonElement>(".snowtl__day--today")!;
-  expect(detail.textContent).toMatch(/^Last 24 h · .*Alta/);
-  expect(today.tabIndex).toBe(0);
-  expect([...alta.querySelectorAll<HTMLButtonElement>(".snowtl__day")].filter((d) => d.tabIndex === 0)).toHaveLength(1);
-  today.focus();
-  fireEvent.keyDown(today, { key: "ArrowRight" });
-  expect(detail.textContent).toMatch(/NWS forecast, now to 6 AM/);
-  expect(document.activeElement).toBe(alta.querySelector(".snowtl__day--forecast"));
-  fireEvent.keyDown(document.activeElement!, { key: "Home" });
-  expect(detail.textContent).toMatch(/Not recorded$/);
+  const days = [...alta.querySelectorAll(".snowtl__day")];
+  expect(days).toHaveLength(15);
+  expect(days[7].querySelector(".snowtl__sr")!.textContent).toMatch(/^Last 24 h · .*Alta/);
+  expect(days[8].querySelector(".snowtl__sr")!.textContent).toMatch(/NWS forecast, now to 6 AM/);
+  expect(days[0].querySelector(".snowtl__sr")!.textContent).toMatch(/Not recorded$/);
+  expect(alta.querySelectorAll("button, [tabindex]")).toHaveLength(0);
+  expect(alta.querySelector(".snowtl__detail")).toBeNull();
 });
 
 it("shows main travel routes per canyon and reveals every segment on request", () => {

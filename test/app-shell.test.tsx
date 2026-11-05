@@ -135,7 +135,7 @@ describe("app shell", () => {
     expect(document.querySelector("[aria-busy=true]")).toBeNull();
     await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
     expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(screen.getByRole("heading", { name: "Resort snowfall" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Resorts" })).toBeTruthy();
     expect(screen.queryByText("Could not load the report")).toBeNull();
   });
 
@@ -158,12 +158,13 @@ describe("app shell", () => {
   it("opens on the page under the editorial nav", async () => {
     mockApi(REPORT);
     renderAt("/");
-    expect(await loadedHeading("Resort snowfall")).toBeTruthy();
-    // The primary row links to sections; Resorts reveals the secondary row.
-    const navLinks = within(screen.getByRole("navigation", { name: "Sections" }))
-      .getAllByRole("link");
+    expect(await loadedHeading("Resorts")).toBeTruthy();
+    // The primary row links to sections, Resorts first; on `/` its row of resorts shows too.
+    const sectionsNav = screen.getByRole("navigation", { name: "Sections" });
+    const navLinks = within(sectionsNav).getAllByRole("link");
     expect(navLinks.map((a) => a.getAttribute("href"))).toEqual(SECTIONS.filter((s) => !s.group).map((s) => sectionHref(s.id)));
-    expect(screen.getByRole("link", { name: "Snowfall" }).getAttribute("aria-current")).toBe("page");
+    expect(within(sectionsNav).getByRole("link", { name: "Resorts" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("navigation", { name: "Resorts" })).toBeTruthy();
     // The tabs sit in their own bar after the masthead, with one bar marking the current tab.
     const tabs = document.querySelector(".section-nav__tabs")!;
     expect(tabs.closest("header")).toBeNull();
@@ -177,7 +178,7 @@ describe("app shell", () => {
   it.each(["alta", "snowbird", "solitude", "brighton"])("opens %s from the snowfall table without reloading the report", async (id) => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(REPORT));
     const view = renderAt("/");
-    await loadedHeading("Resort snowfall");
+    await loadedHeading("Resorts");
     const link = document.querySelector<HTMLAnchorElement>(`.resort-name__link[href="/${id}"]`)!;
     // Only a router Link intercepts the browser's full-document navigation.
     expect(fireEvent.click(link)).toBe(false);
@@ -206,19 +207,18 @@ describe("app shell", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(FIXTURE_NOW);
     mockApi(REPORT);
-    const expected = ["Resort snowfall", "Waiting for the first post", "Cottonwoods mountain weather", "Utah ensemble snow plumes", "Canyon roads", "Alta", "Snowbird", "Solitude", "Brighton"];
+    const expected = ["Resorts", "Waiting for the first post", "Cottonwoods mountain weather", "Utah ensemble snow plumes", "Canyon roads", "Alta", "Snowbird", "Solitude", "Brighton"];
     expect(SECTIONS).toHaveLength(9);
     for (const [i, title] of expected.entries()) {
       const view = renderAt(sectionHref(SECTIONS[i].id));
       expect(await loadedHeading(title)).toBeTruthy();
-      const toggle = screen.getByRole("button", { name: "Resorts" });
-      expect(toggle.hasAttribute("data-current")).toBe(Boolean(SECTIONS[i].group));
-      expect(toggle.getAttribute("aria-expanded")).toBe(String(Boolean(SECTIONS[i].group)));
-      if (SECTIONS[i].group) {
+      const parent = within(screen.getByRole("navigation", { name: "Sections" })).getByRole("link", { name: "Resorts" });
+      expect(parent.hasAttribute("data-current")).toBe(Boolean(SECTIONS[i].group));
+      if (i === 0 || SECTIONS[i].group) {
         const resorts = screen.getByRole("navigation", { name: "Resorts" });
         const links = within(resorts).getAllByRole("link");
         expect(links.map((a) => a.getAttribute("href"))).toEqual(["/alta", "/snowbird", "/solitude", "/brighton"]);
-        expect(links.filter((a) => a.getAttribute("aria-current") === "page").map((a) => a.textContent)).toEqual([SECTIONS[i].label]);
+        expect(links.filter((a) => a.getAttribute("aria-current") === "page").map((a) => a.textContent)).toEqual(SECTIONS[i].group ? [SECTIONS[i].label] : []);
       } else {
         expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
       }
@@ -247,14 +247,14 @@ describe("app shell", () => {
   it("redirects legacy ?slide= links to the section page", async () => {
     mockApi(REPORT);
     renderAt("/?slide=snowbird");
-    await loadedHeading("Resort snowfall");
+    await loadedHeading("Resorts");
     expect(nav.replace).toHaveBeenCalledWith("/snowbird");
   });
 
   it("persists the appearance choice and returns to the system default", async () => {
     mockApi(REPORT);
     renderAt("/");
-    await loadedHeading("Resort snowfall");
+    await loadedHeading("Resorts");
     fireEvent.click(screen.getByRole("button", { name: "Dark appearance" }));
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(window.localStorage.getItem("cottonwoods-snow-report.appearance")).toBe("dark");
@@ -267,55 +267,35 @@ describe("app shell", () => {
 
 
 describe("resort navigation", () => {
-  it("toggles in place and closes with Escape, returning focus from a resort link", () => {
-    render(<SectionNav pathname="/weather" />);
-    const toggle = screen.getByRole("button", { name: "Resorts" });
-    const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
-    expect(panel.hasAttribute("inert")).toBe(true);
-    fireEvent.click(toggle);
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    expect(panel.hasAttribute("inert")).toBe(false);
-    expect(screen.getByRole("link", { name: "Weather" }).getAttribute("aria-current")).toBe("page");
-    expect(toggle.hasAttribute("data-current")).toBe(false);
-    const link = within(screen.getByRole("navigation", { name: "Resorts" })).getByRole("link", { name: "Alta" });
-    link.focus();
-    fireEvent.keyDown(link, { key: "Escape" });
-    expect(document.activeElement).toBe(toggle);
-    expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
-    fireEvent.click(toggle);
-    fireEvent.click(toggle);
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-  });
+  const sectionsNav = () => screen.getByRole("navigation", { name: "Sections" });
+  const parent = () => within(sectionsNav()).getByRole("link", { name: "Resorts" });
 
-  it.each(["Alta", "Snowbird", "Solitude", "Brighton"])("pins the resort row open on %s with a fixed Resorts label", (name) => {
-    render(<SectionNav pathname={`/${name.toLowerCase()}`} />);
-    const toggle = screen.getByRole("button", { name: "Resorts" });
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    expect(toggle.hasAttribute("data-current")).toBe(true);
-    const resorts = screen.getByRole("navigation", { name: "Resorts" });
-    const link = within(resorts).getByRole("link", { name });
-    expect(link.getAttribute("aria-current")).toBe("page");
-    fireEvent.click(toggle);
-    fireEvent.keyDown(link, { key: "Escape" });
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  it("shows the resort row under Resorts on the home page, with no resort marked", () => {
+    render(<SectionNav pathname="/" />);
+    expect(parent().getAttribute("aria-current")).toBe("page");
+    expect(parent().hasAttribute("data-current")).toBe(false);
     expect(document.getElementById("resort-navigation")!.hasAttribute("inert")).toBe(false);
-    expect(screen.getByRole("navigation", { name: "Resorts" })).toBe(resorts);
+    const links = within(screen.getByRole("navigation", { name: "Resorts" })).getAllByRole("link");
+    expect(links.filter((a) => a.hasAttribute("aria-current"))).toHaveLength(0);
+    // There is no separate disclosure button any more.
+    expect(screen.queryByRole("button", { name: "Resorts" })).toBeNull();
   });
 
-  it("keeps the row open between resorts and resets disclosure across other routes and back", () => {
-    const view = render(<SectionNav pathname="/" />);
-    fireEvent.click(screen.getByRole("button", { name: "Resorts" }));
+  it.each(["Alta", "Snowbird", "Solitude", "Brighton"])("keeps Resorts marked as the parent of %s", (name) => {
+    render(<SectionNav pathname={`/${name.toLowerCase()}`} />);
+    expect(parent().getAttribute("aria-current")).toBeNull();
+    expect(parent().hasAttribute("data-current")).toBe(true);
+    expect(within(screen.getByRole("navigation", { name: "Resorts" })).getByRole("link", { name }).getAttribute("aria-current")).toBe("page");
+  });
+
+  it("hides the resort row on other sections and shows it again on return", () => {
+    const view = render(<SectionNav pathname="/weather" />);
+    expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
+    expect(document.getElementById("resort-navigation")!.hasAttribute("inert")).toBe(true);
+    expect(parent().hasAttribute("data-current")).toBe(false);
     view.rerender(<SectionNav pathname="/alta" />);
-    const toggle = screen.getByRole("button", { name: "Resorts" });
-    fireEvent.click(toggle);
-    fireEvent.keyDown(toggle, { key: "Escape" });
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    view.rerender(<SectionNav pathname="/brighton" />);
-    expect(screen.getByRole("button", { name: "Resorts" }).hasAttribute("data-current")).toBe(true);
-    expect(screen.getByRole("link", { name: "Brighton" }).getAttribute("aria-current")).toBe("page");
-    view.rerender(<SectionNav pathname="/weather" />);
-    expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
+    expect(screen.getByRole("navigation", { name: "Resorts" })).toBeTruthy();
     view.rerender(<SectionNav pathname="/" />);
-    expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
+    expect(screen.getByRole("navigation", { name: "Resorts" })).toBeTruthy();
   });
 });

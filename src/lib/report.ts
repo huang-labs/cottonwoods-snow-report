@@ -66,7 +66,7 @@ function publicRecord(rec: SourceRecord): SourceRecord {
 
 /** A pick not refreshed for this long (outside quiet hours' natural gap) is shown as outdated. */
 export const RECOMMENDATION_MAX_AGE_MS = 12 * 3_600_000;
-/** Consecutive failed model calls before the Snowfall page says updates are failing. */
+/** Consecutive failed model calls before the Resorts page says updates are failing. */
 export const RECOMMENDATION_FAILING_AFTER = 3;
 
 export function publicRecommendation(state: RecommendationState | undefined, now: Date): ApiRecommendation | null {
