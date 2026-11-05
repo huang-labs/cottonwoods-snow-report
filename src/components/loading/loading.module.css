@@ -8,7 +8,7 @@
 .subtitle .lines > :nth-child(2) { width: 68%; }
 .subtitle .lines > :last-child { display: none; }
 .lines { display: grid; gap: 12px; }
-.lines > div, .shortLine, .articleTitle, .snowValues > div, .jumpLinks > div { background: var(--panel-2); border-radius: 4px; height: 12px; }
+.lines > div, .shortLine, .articleTitle, .jumpLinks > div { background: var(--panel-2); border-radius: 4px; height: 12px; }
 .lines > :last-child { width: 72%; }
 .shortLine { width: 140px; max-width: 60%; height: 18px; }
 .shapes, .subtitle { animation: loading-pulse 1.8s ease-in-out 500ms infinite; }
@@ -19,13 +19,13 @@
 .camera { aspect-ratio: 16 / 9; background: var(--panel); border-radius: 4px; }
 .summary { background: var(--panel); border-radius: 8px; padding: 24px; }
 .forecastTable { display: grid; gap: 24px; padding: 12px 0; }
-.snowfall { border-top: 1px solid var(--line); }
-.snowRow { display: flex; align-items: center; gap: 32px; min-height: 108px; border-bottom: 1px solid var(--line); }
-.resortName { flex: 0 0 150px; font-size: var(--fs-title); font-weight: 650; }
-.resortName .shortLine { height: 10px; width: 90px; margin-top: 12px; }
-.snowValues { flex: 1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px; }
-.snowValues > div { height: 24px; }
-.reportTime { flex: 0 0 130px; }
+.snowfall { display: grid; }
+.snowRow { display: grid; gap: 14px; padding: 20px 0; border-bottom: 1px solid var(--line); }
+.snowRow:first-child { padding-top: 0; }
+.resortName { font-size: var(--fs-title); font-weight: 650; }
+.snowStrip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)) 152px repeat(7, minmax(0, 1fr)); gap: 4px; align-items: end; height: 120px; border-bottom: 1px solid var(--line); }
+.snowStrip > div { background: var(--panel-2); border-radius: 2px 2px 0 0; width: 60%; max-width: 30px; justify-self: center; height: 6px; }
+.snowStrip > .snowToday { width: 100%; max-width: none; height: 100%; border-radius: 6px; background: var(--panel); }
 .jumpLinks { display: flex; gap: 24px; border-bottom: 1px solid var(--line); padding-bottom: 20px; }
 .jumpLinks > div { width: 100px; max-width: 25%; }
 .metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
@@ -41,11 +41,7 @@
 .errorDetail { font-size: var(--fs-caption); overflow-wrap: anywhere; }
 @media (max-width: 900px) {
   .columns { grid-template-columns: minmax(0, 1fr); gap: var(--page-gap); }
-  .reportTime { display: none; }
-  .snowRow { display: grid; gap: 20px; padding: 20px 0; }
-  .snowValues { gap: 12px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .snowValues > div { height: 12px; }
-  .snowValues > :first-child { height: 32px; grid-column: 1 / -1; width: 64px; margin-bottom: 8px; }
+  .snowStrip { grid-template-columns: repeat(7, minmax(0, 1fr)) minmax(44px, 1.6fr) repeat(7, minmax(0, 1fr)); gap: 2px; height: 88px; }
   .history { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (prefers-reduced-motion: reduce) {

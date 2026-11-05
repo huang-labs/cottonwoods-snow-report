@@ -151,6 +151,7 @@ export function buildReport(snapshot: Snapshot | null, now: Date = new Date(), d
     sources,
     requiredMissing,
     recommendation: publicRecommendation(snapshot?.recommendation, now),
+    snowLog: snapshot?.snowLog ?? null,
     dailySnow: publicDailySnow(snapshot?.dailySnow?.current, snapshot?.dailySnow, now, snapshot?.dailySnow?.current ? dailySnowActivity(snapshot, now).publicationExpected : false),
   };
 }

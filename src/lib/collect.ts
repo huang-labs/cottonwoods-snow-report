@@ -2,6 +2,7 @@ import { planDailySnow, type DailySnowPlan } from "./dailysnow";
 import { archiveStorms, trackStorms } from "./dailysnow/storm-store";
 import { createFetchContext, type CollectorSecrets } from "./http";
 import { planRecommendation, type RecommendationPlan, type RecommendEnv } from "./recommend";
+import { recordSnowLog } from "./snowlog/record";
 import { SOURCES } from "./sources";
 import { MINUTE, type SourceDefinition } from "./sources/types";
 import { readSnapshot, writeSnapshot, type KVLike } from "./store";
@@ -151,6 +152,13 @@ export async function runCollection(env: CollectorEnv, opts: CollectOptions = {}
     snapshot.stormTracking = previous?.stormTracking;
     console.error("dailysnow: storm tracking failed", err);
   }
+  try {
+    snapshot.snowLog = recordSnowLog(previous?.snowLog, snapshot, now);
+  } catch (err) {
+    // The timeline's history is optional; collection continues without this run's entries.
+    snapshot.snowLog = previous?.snowLog;
+    console.error("snowlog: recording failed", err);
+  }
   // The recommendation is derived from the fresh sources. Its bookkeeping goes
   // into the same KV put; a model call (a few times an hour at most) waits until
   // the source data is stored, then costs one more put.
@@ -175,6 +183,7 @@ export async function runCollection(env: CollectorEnv, opts: CollectOptions = {}
   const stored = await writeSnapshot(env.SNOW_KV, snapshot);
   snapshot.sources = stored.sources;
   snapshot.stormTracking = stored.stormTracking;
+  snapshot.snowLog = stored.snowLog;
   try {
     await archiveStorms(env.SNOW_KV, stored, now);
   } catch (err) {

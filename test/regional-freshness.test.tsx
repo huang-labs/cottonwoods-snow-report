@@ -15,7 +15,7 @@ function withFreshness(states: Record<"alta" | "snowbird" | "solitude" | "bright
   return report;
 }
 
-const statusLine = () => document.querySelector(".page--regional > .source-line");
+const statusLine = () => document.querySelector(".page--regional > .source-lines > .source-line:first-child");
 /** The source line's freshness text, without the check time and attribution after it. */
 const statusText = () =>
   [...(statusLine()?.children ?? [])]
@@ -23,9 +23,15 @@ const statusText = () =>
     .map((e) => e.textContent)
     .join("|");
 
-it("keeps freshness out of the resort rows", () => {
-  render(<RegionalPage now={now} report={withFreshness({ alta: "current", snowbird: "old-report", solitude: "stale", brighton: "unavailable" })} />);
-  expect(document.querySelector(".snow-table .badge:not(.badge--ai)")).toBeNull();
+it("badges a resort header only when that resort isn't current or its latest check failed", () => {
+  const report = withFreshness({ alta: "current", snowbird: "old-report", solitude: "stale", brighton: "current" });
+  report.sources.brighton.status = "error";
+  render(<RegionalPage now={now} report={report} />);
+  const badges = (i: number) => [...document.querySelectorAll(".resort-timeline")[i].querySelectorAll(".snowtl__meta .badge")].map((b) => b.textContent);
+  expect(badges(0)).toEqual([]);
+  expect(badges(1)).toEqual(["Old report"]);
+  expect(badges(2)).toEqual(["Updates delayed"]);
+  expect(badges(3)).toEqual(["Latest check failed"]);
 });
 
 it("shows one Current badge and the oldest last successful check when every resort is current", () => {
@@ -41,11 +47,11 @@ it("shows one Current badge and the oldest last successful check when every reso
   expect(statusText()).toBe("Current");
   expect(line?.textContent).toContain("Last successful check: 4 min ago");
 });
-it("keeps the value legend on its own line between the table and the source line", () => {
+it("keeps the value legend on its own line between the timelines and the source lines", () => {
   render(<RegionalPage now={now} report={withFreshness({ alta: "current", snowbird: "current", solitude: "current", brighton: "current" })} />);
   const page = document.querySelector(".page--regional")!;
   const order = [...page.children].map((e) => e.className);
-  expect(order.slice(-3)).toEqual(["snow-table", "legend", "source-line"]);
+  expect(order.slice(-3)).toEqual(["resort-timelines", "legend", "source-lines"]);
   expect(page.querySelector(".legend")?.textContent).toContain("reported zero");
   expect(statusLine()?.textContent).not.toContain("reported zero");
 });
@@ -54,6 +60,13 @@ it("ends with the resorts as the source attribution, like the other pages' sourc
   render(<RegionalPage now={now} report={withFreshness({ alta: "current", snowbird: "current", solitude: "current", brighton: "current" })} />);
   expect(statusLine()?.lastElementChild?.className).toBe("source-line__attr");
   expect(statusLine()?.lastElementChild?.textContent).toBe("Alta, Snowbird, Solitude and Brighton snow reports (resort websites)");
+});
+
+it("adds the NWS forecast's own source line beneath the resorts'", () => {
+  render(<RegionalPage now={now} report={withFreshness({ alta: "current", snowbird: "current", solitude: "current", brighton: "current" })} />);
+  const lines = document.querySelectorAll(".page--regional > .source-lines > .source-line");
+  expect(lines).toHaveLength(2);
+  expect(lines[1].textContent).toContain("Forecast grid updated");
 });
 
 it("names resorts whose latest check failed", () => {

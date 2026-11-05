@@ -248,34 +248,40 @@ it("keeps a resort's wording only where its window differs, and lists shared sou
   expect(notes).toContain("Overnight, 24 h");
 });
 
-it("names each snowfall window in the column header, with no note under any value", () => {
+it("shows each resort as a snowfall timeline: 7 recorded days, the last 24 h, 7 NWS forecast days", () => {
   const { container } = render(renderSection("regional", report, FIXTURE_NOW, null));
-  expect([...container.querySelectorAll(".snow-table thead th")].map((th) => th.textContent)).toEqual([
-    "Resort", "Overnight / 12 h", "24 h", "48 h", "Storm", "Base", "Report time (MT)",
-  ]);
-  const row = (name: string) =>
-    [...container.querySelectorAll(".snow-table .row--primary")].find((r) => r.querySelector(".resort-name")?.textContent === name)!;
-  // The column header names the window, so no note sits under any value (Alta's
-  // 12 h total is covered by "Overnight / 12 h"; Solitude's wording isn't repeated).
-  expect(row("Alta").querySelectorAll("td:not(.report-time, .snow-phone) :not(.metric, .metric *)")).toHaveLength(0);
-  expect(row("Solitude").textContent).not.toMatch(/since lifts closed/i);
-  // "Snow 24 Hrs." is just the 24 h window: no source wording repeated under the value.
-  expect(row("Brighton").textContent).not.toContain("Snow 24 Hrs.");
+  const blocks = [...container.querySelectorAll(".resort-timeline")];
+  expect(blocks.map((b) => b.querySelector(".resort-name")?.textContent)).toEqual(["Alta", "Snowbird", "Solitude", "Brighton"]);
+  const alta = blocks[0];
+  expect(alta.querySelectorAll(".snowtl__day--past")).toHaveLength(7);
+  expect(alta.querySelectorAll(".snowtl__day--today")).toHaveLength(1);
+  // The fixture NWS grid covers the whole week: no day is missing its forecast.
+  expect(alta.querySelectorAll(".snowtl__day--forecast.snowtl__day--forecast")).toHaveLength(7);
+  expect(alta.querySelectorAll(".snowtl__day--no_forecast")).toHaveLength(0);
+  // The first forecast day is the snow day under way, ending at 6 AM (MDT).
+  expect(alta.querySelector(".snowtl__day--forecast")!.getAttribute("aria-label")).toMatch(/now to 6 AM \(LCC grid point\)/);
+  expect(blocks[2].querySelector(".snowtl__source--next")!.textContent).toBe("NWS forecast · BCC");
+  // One collection outside a morning window records no history yet.
+  expect(alta.querySelectorAll(".snowtl__day--not_recorded")).toHaveLength(7);
+  // The table's other windows are gone; Storm and Base stay in the header.
+  expect(alta.querySelector(".resort-facts")!.textContent).toMatch(/^Storm.*Base/);
+  expect(container.querySelector("table")).toBeNull();
 });
 
-it("summarizes each resort for phones: 24 h headline, other windows named by the window they cover", () => {
+it("opens with the last 24 h described, and moves the detail line with the arrow keys", () => {
   const { container } = render(renderSection("regional", report, FIXTURE_NOW, null));
-  const summary = (name: string) =>
-    [...container.querySelectorAll(".snow-table .row--primary")].find((r) => r.querySelector(".resort-name")?.textContent === name)!
-      .querySelector(".snow-phone")!;
-  // A visual copy of the value cells, so screen readers read the table once.
-  expect(summary("Alta").getAttribute("aria-hidden")).toBe("true");
-  expect(summary("Alta").querySelector(".snow-phone__lead .snow-phone__window")!.textContent).toBe("24 h");
-  // Alta's overnight figure is its 12 h total, so the line says 12 h rather than Overnight.
-  expect([...summary("Alta").querySelectorAll(".snow-phone__rest .snow-phone__window")].map((w) => w.textContent)).toEqual([
-    "12 h", "48 h", "Storm", "Base",
-  ]);
-  expect(summary("Alta").querySelectorAll(".snow-phone__rest .snow-phone__note")).toHaveLength(0);
+  const alta = container.querySelector(".resort-timeline")!;
+  const detail = alta.querySelector(".snowtl__detail")!;
+  const today = alta.querySelector<HTMLButtonElement>(".snowtl__day--today")!;
+  expect(detail.textContent).toMatch(/^Last 24 h · .*Alta/);
+  expect(today.tabIndex).toBe(0);
+  expect([...alta.querySelectorAll<HTMLButtonElement>(".snowtl__day")].filter((d) => d.tabIndex === 0)).toHaveLength(1);
+  today.focus();
+  fireEvent.keyDown(today, { key: "ArrowRight" });
+  expect(detail.textContent).toMatch(/NWS forecast, now to 6 AM/);
+  expect(document.activeElement).toBe(alta.querySelector(".snowtl__day--forecast"));
+  fireEvent.keyDown(document.activeElement!, { key: "Home" });
+  expect(detail.textContent).toMatch(/Not recorded$/);
 });
 
 it("shows main travel routes per canyon and reveals every segment on request", () => {

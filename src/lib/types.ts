@@ -1,4 +1,5 @@
 import type { StormRecord, StormTrackingState } from "./dailysnow/storm-types";
+import type { SnowLogState } from "./snowlog/types";
 
 /**
  * Normalized report contract shared by the collector (scheduled Worker), the
@@ -69,6 +70,8 @@ export interface Snapshot {
   dailySnow?: DailySnowState;
   /** Observation-based storm memory, updated by collection even without AI. */
   stormTracking?: StormTrackingState;
+  /** Recent snow days: each resort's morning 24 h report and the NWS forecast each day began with. */
+  snowLog?: SnowLogState;
 }
 
 export type SourceId =
@@ -436,6 +439,8 @@ export interface ReportResponse {
   recommendation: ApiRecommendation | null;
   /** AI Daily Snow post; null until one has been generated. */
   dailySnow?: ApiDailySnow | null;
+  /** Recent snow days for the snowfall timeline; null until collection has recorded one. */
+  snowLog?: SnowLogState | null;
 }
 
 // ---------- NWS Area Forecast Discussion ----------

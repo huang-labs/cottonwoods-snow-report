@@ -23,11 +23,10 @@ function Layout({ kind }: { kind: string }) {
         <div className={styles.snowfall}>
           {["Alta", "Snowbird", "Solitude", "Brighton"].map((name) => (
             <div className={styles.snowRow} key={name}>
-              <div className={styles.resortName}>{name}<div className={styles.shortLine} /></div>
-              <div className={styles.snowValues}>
-                {Array.from({ length: 5 }, (_, i) => <div key={i} />)}
+              <div className={styles.resortName}>{name}</div>
+              <div className={styles.snowStrip}>
+                {Array.from({ length: 15 }, (_, i) => <div key={i} className={i === 7 ? styles.snowToday : undefined} />)}
               </div>
-              <div className={styles.reportTime}><Lines /></div>
             </div>
           ))}
         </div>

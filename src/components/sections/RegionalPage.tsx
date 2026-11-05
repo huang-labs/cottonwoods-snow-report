@@ -1,141 +1,99 @@
 import Link from "next/link";
-import { Fragment } from "react";
-import type { ApiSource, Metric, ReportResponse, ResortReport, SnowfallSet, SourceId } from "@/lib/types";
+import type { ApiRecommendation, ApiSource, NwsPayload, PrimaryResortId, ReportResponse, ResortReport } from "@/lib/types";
 import { sectionHref } from "@/lib/sections";
-import { formatAge, formatDenver } from "@/lib/time";
+import { RESORT_CANYON, SNOW_LOG_RESORTS } from "@/lib/snowlog/record";
+import { formatDenver } from "@/lib/time";
 import { DailySnowTeaser } from "../dailysnow/DailySnow";
-import { MetricValue, StatusBadge } from "../ui";
+import { buildSnowTimeline, timelineScale } from "../timeline/model";
+import { SnowTimeline } from "../timeline/SnowTimeline";
+import { FreshnessBadge, MetricValue, SourceLine, StatusBadge } from "../ui";
 import { ResortsSourceLine } from "./ResortsSourceLine";
-import { newSnowKey, SNOW_LABEL } from "./resort-display";
 
-const PRIMARY: SourceId[] = ["alta", "snowbird", "solitude", "brighton"];
-
-type ColumnKey = keyof SnowfallSet | "base";
-
-const COLUMNS: Array<{ key: ColumnKey; title: string }> = [
-  { key: "overnight", title: "Overnight / 12 h" },
-  { key: "h24", title: SNOW_LABEL.h24 },
-  { key: "h48", title: SNOW_LABEL.h48 },
-  { key: "storm", title: SNOW_LABEL.storm },
-  { key: "base", title: "Base" },
-];
-
-/** Phones lead with this window and list the rest on one line beneath it. */
-const PHONE_LEAD: ColumnKey = "h24";
-
-/**
- * The value for a column and the window it actually covers. Column headers name the
- * window ("Overnight / 12 h" covers Alta's 12 h total), so the table shows no note
- * under a value; the phone summary names each figure by its own window.
- */
-function cell(r: ResortReport, key: ColumnKey): { m: Metric; window: string } {
-  if (key === "base") return { m: r.base, window: "Base" };
-  const used = key === "overnight" ? newSnowKey(r.snowfall) : key;
-  return { m: r.snowfall[used], window: SNOW_LABEL[used] };
-}
-
-/**
- * The phone rendering of a resort's values: the lead window as a large headline,
- * then every other window as one line of text, each named by the window it
- * actually covers. The table cells stay in the DOM for screen readers, so this
- * visual copy is hidden from them.
- */
-function PhoneSummary({ r }: { r: ResortReport }) {
-  const lead = cell(r, PHONE_LEAD);
+function PickReasoning({ pick, now }: { pick: ApiRecommendation; now: Date }) {
   return (
-    <td className="snow-phone" aria-hidden="true">
-      <div className="snow-phone__lead">
-        <MetricValue m={lead.m} size="xl" />
-        <span className="snow-phone__window">{lead.window}</span>
+    <div className="pick-reasoning" aria-label="AI recommendation reasoning">
+      <strong>{pick.headline}</strong>
+      <p>{pick.summary || pick.plan}</p>
+      {pick.summary && <p className="muted">{pick.plan}</p>}
+      {!!pick.caveats.length && <p className="pick-reasoning__caveats">{pick.caveats.join(" · ")}</p>}
+      <div className="pick-reasoning__meta">
+        AI · {pick.model ?? "Model not recorded"} · For {pick.targetDate} · Updated {formatDenver(pick.generatedAt, now)}
+        {pick.outdated && <StatusBadge tone="warn">Recommendation needs updating</StatusBadge>}
+        {pick.failing && <StatusBadge tone="bad">Updates failing</StatusBadge>}
       </div>
-      <div className="snow-phone__rest">
-        {COLUMNS.filter((c) => c.key !== PHONE_LEAD).map((c) => {
-          const { m, window } = cell(r, c.key);
-          return (
-            <span key={c.key} className="snow-phone__item">
-              <span className="snow-phone__window">{window}</span> <MetricValue m={m} size="sm" />
-            </span>
-          );
-        })}
-      </div>
-    </td>
+    </div>
   );
 }
 
-function Row({ source, now, recommended }: { source: ApiSource; now: Date; recommended: boolean }) {
-  const r = source.payload as ResortReport | null;
+/** Badges a resort header shows only when something is wrong; the AI pick badge when endorsed. */
+function ResortMeta({ source, report, endorsed }: { source: ApiSource; report: ResortReport | null; endorsed: boolean }) {
   return (
-    <tr className={`row--primary${recommended ? " row--recommended" : ""}`}>
-      <th scope="row">
-        <div className="resort-name"><Link className="resort-name__link" href={sectionHref(source.id)}>{source.label}</Link></div>
-        {recommended && <span className="badge badge--ai">AI pick</span>}
-      </th>
-      {COLUMNS.map((c) => {
-        if (!r) return <td key={c.key} className="muted">—</td>;
-        return (
-          <td key={c.key}>
-            <MetricValue m={cell(r, c.key).m} size="xl" />
-          </td>
-        );
-      })}
-      <td className="report-time">
-        <div>{r ? formatDenver(r.reportTime, now) : "no data"}</div>
-        <div className="report-time__checked">checked {formatAge(source.lastSuccessfulFetchAt, now)}</div>
-        {source.status === "error" && <div className="report-time__failed">latest check failed</div>}
-      </td>
-      {r && <PhoneSummary r={r} />}
-    </tr>
+    <>
+      {endorsed && <span className="badge badge--ai">AI pick</span>}
+      {source.freshness !== "current" && <FreshnessBadge freshness={source.freshness} />}
+      {source.status === "error" && <StatusBadge tone="bad">Latest check failed</StatusBadge>}
+      {report && (
+        <span className="resort-facts">
+          <span>Storm <MetricValue m={report.snowfall.storm} size="sm" /></span>
+          <span>Base <MetricValue m={report.base} size="sm" /></span>
+        </span>
+      )}
+    </>
   );
 }
 
 export function RegionalPage({ report, now }: { report: ReportResponse; now: Date }) {
   const pick = report.recommendation;
+  const nws = report.sources.nws;
+  const points = (nws?.payload as NwsPayload | null | undefined)?.points ?? [];
+  const resorts = SNOW_LOG_RESORTS.map((id: PrimaryResortId) => {
+    const source = report.sources[id];
+    const payload = source.payload as ResortReport | null;
+    const canyon = RESORT_CANYON[id];
+    const model = buildSnowTimeline({
+      resort: id,
+      name: source.label,
+      canyon,
+      report: payload,
+      log: report.snowLog,
+      forecast: points.find((p) => p.name.includes(`(${canyon})`)) ?? null,
+      now,
+    });
+    return { id, source, payload, model };
+  });
+  const scale = timelineScale(resorts.map((r) => r.model));
   return (
     <section className="page page--regional">
       <DailySnowTeaser post={report.dailySnow} now={now} />
       <header className="page__header">
         <h1>Resort snowfall</h1>
-        <p className="page__sub">Resort-reported totals in the same windows for every resort. Each resort measures at its own site and time, so totals aren’t strictly comparable.</p>
+        <p className="page__sub">Each resort’s morning 24 h reports for the past week, its latest 24 h total, and the NWS forecast for the week ahead. Resorts measure at their own sites and times.</p>
       </header>
-      <table className="snow-table">
-        <thead>
-          <tr>
-            <th scope="col">Resort</th>
-            {COLUMNS.map((c) => (
-              <th scope="col" key={c.key}>{c.title}</th>
-            ))}
-            <th scope="col">Report time (MT)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {PRIMARY.map((id) => (
-            <Fragment key={id}>
-              <Row source={report.sources[id]} now={now} recommended={pick?.pick === id && !pick.outdated && !pick.failing} />
-              {pick?.pick === id && (
-                <tr className="recommendation-row">
-                  <td colSpan={COLUMNS.length + 2}>
-                    <div className="recommendation-row__body" aria-label="AI recommendation reasoning">
-                      <strong>{pick.headline}</strong>
-                      <p>{pick.summary || pick.plan}</p>
-                      {pick.summary && <p className="muted">{pick.plan}</p>}
-                      {!!pick.caveats.length && <p className="recommendation-row__caveats">{pick.caveats.join(" · ")}</p>}
-                      <div className="recommendation-row__meta">
-                        AI · {pick.model ?? "Model not recorded"} · For {pick.targetDate} · Updated {formatDenver(pick.generatedAt, now)}
-                        {pick.outdated && <StatusBadge tone="warn">Recommendation needs updating</StatusBadge>}
-                        {pick.failing && <StatusBadge tone="bad">Updates failing</StatusBadge>}
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </Fragment>
-          ))}
-        </tbody>
-      </table>
+      <div className="resort-timelines">
+        {resorts.map(({ id, source, payload, model }) => {
+          const picked = pick?.pick === id ? pick : null;
+          return (
+            <article key={id} className={`resort-timeline${picked ? " resort-timeline--picked" : ""}`} aria-label={source.label}>
+              <SnowTimeline
+                model={model}
+                scale={scale}
+                label={source.label}
+                now={now}
+                heading={<h2 className="resort-name"><Link className="resort-name__link" href={sectionHref(id)}>{source.label}</Link></h2>}
+                meta={<ResortMeta source={source} report={payload} endorsed={!!picked && !picked.outdated && !picked.failing} />}
+              />
+              {picked && <PickReasoning pick={picked} now={now} />}
+            </article>
+          );
+        })}
+      </div>
       <p className="legend">
-        <span className="metric__value metric__value--zero">0″</span> reported zero · <span className="metric__missing">not reported</span> field empty in source · <span className="metric__na">—</span> not provided by source
+        <span className="legend__key legend__key--reported" /> reported · <span className="legend__key legend__key--forecast" /> NWS forecast · <span className="legend__key legend__key--ghost" /> what NWS forecast · <span className="metric__value metric__value--zero">0</span> reported zero · <span className="metric__na">–</span> not reported or no new report · <span className="legend__key legend__key--none" /> not recorded. Days end at the morning report (5 AM MST / 6 AM MDT); tap a day for details.
       </p>
-      <ResortsSourceLine sources={PRIMARY.map((id) => report.sources[id])} now={now} />
+      <div className="source-lines">
+        <ResortsSourceLine sources={SNOW_LOG_RESORTS.map((id) => report.sources[id])} now={now} />
+        {nws && <SourceLine source={nws} now={now} reportLabel="Forecast grid updated" />}
+      </div>
     </section>
   );
 }

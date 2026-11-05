@@ -1,0 +1,71 @@
+/* Snowfall timeline: 7 past days | last 24 h | 7 forecast days. Mobile first: all
+   15 columns fit a 360px phone (~22px each), so the strip never scrolls. From 901px
+   the middle column widens into the large "Last 24 h" figure. */
+.snowtl { --plot-h: 64px; --today-col: minmax(44px, 1.6fr); min-width: 0; }
+
+.snowtl__head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 12px; }
+.snowtl__heading { min-width: 0; }
+.snowtl__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; color: var(--muted); font-size: var(--fs-caption); }
+.snowtl__now { margin-left: auto; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.snowtl__now .metric--lg { font-size: 26px; }
+.snowtl__now-label { color: var(--muted); font-size: var(--fs-caption); }
+
+.snowtl__strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)) var(--today-col) repeat(7, minmax(0, 1fr)); column-gap: 2px; align-items: end; }
+.snowtl__span { grid-row: 1; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; color: var(--muted); font-size: var(--fs-label); font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+.snowtl__span::before, .snowtl__span::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.snowtl__span--past { grid-column: 1 / 8; }
+.snowtl__span--now { grid-column: 8 / 9; justify-content: center; visibility: hidden; }
+.snowtl__span--now::before, .snowtl__span--now::after { content: none; }
+.snowtl__span--next { grid-column: 9 / 16; }
+.snowtl__source { grid-row: 3; margin-top: 4px; color: var(--muted); font-size: var(--fs-label); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.snowtl__source--past { grid-column: 1 / 8; }
+.snowtl__source--next { grid-column: 9 / 16; }
+
+.snowtl__day { grid-row: 2; display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 4px 0 6px; border: 0; border-radius: 6px; background: transparent; color: var(--text); font: inherit; cursor: default; touch-action: manipulation; }
+.snowtl__day[tabindex="0"] { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.snowtl__day:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Plot: --plot-h of bar space plus a line for the amount above the tallest bar. */
+.snowtl__amount { position: absolute; left: 0; right: 0; bottom: calc(var(--plot-h) * var(--r, 0) + 2px); font-size: 12px; font-weight: 700; line-height: 16px; text-align: center; font-variant-numeric: tabular-nums; }
+.snowtl__amount--zero { color: var(--muted); font-weight: 500; }
+.snowtl__day:is(.snowtl__day--not_reported, .snowtl__day--unavailable, .snowtl__day--no_report) .snowtl__amount { color: var(--muted); font-weight: 400; }
+.snowtl__day--forecast .snowtl__amount:not(.snowtl__amount--zero) { color: var(--accent); }
+
+.snowtl__plot { position: relative; display: block; width: 100%; height: calc(var(--plot-h) + 18px); border-bottom: 1px solid color-mix(in srgb, var(--muted) 45%, transparent); }
+.snowtl__bar, .snowtl__ghost { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 70%; max-width: 30px; border-radius: 2px 2px 0 0; }
+.snowtl__bar, .snowtl__ghost { height: calc(var(--plot-h) * var(--r)); }
+.snowtl__bar { min-height: 2px; background: var(--accent); }
+/* Forecast: the same hue, striped, so it never reads as a measurement. */
+.snowtl__day--forecast .snowtl__bar { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--accent) 70%, transparent) 0 3px, color-mix(in srgb, var(--accent) 30%, transparent) 3px 6px); }
+/* What NWS forecast for a past day: an outline behind the reported bar. */
+.snowtl__ghost { box-sizing: border-box; min-height: 2px; border: 1.5px dashed color-mix(in srgb, var(--muted) 70%, transparent); border-bottom: 0; }
+/* Taller than the shared scale: clipped, with a gap marking the break. */
+.snowtl__bar--over::after { content: ""; position: absolute; left: 0; right: 0; top: 5px; height: 2px; background: var(--bg); }
+/* No entry for the day (before the record began, or no check that morning). */
+.snowtl__day--not_recorded .snowtl__plot::before { content: ""; position: absolute; inset: auto 15% 0; height: 12px; background: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--muted) 22%, transparent) 3px 4px); }
+
+.snowtl__weekday { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 14px; }
+.snowtl__date { font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
+.snowtl__day--weekend :is(.snowtl__weekday, .snowtl__date) { color: var(--text); font-weight: 750; }
+
+.snowtl__day--today { background: var(--panel); }
+.snowtl__day--today[tabindex="0"] { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 45%, transparent); }
+.snowtl__compact { display: contents; }
+.snowtl__hero { display: none; }
+
+.snowtl__detail { margin: 8px 0 0; min-height: 3em; color: var(--muted); font-size: var(--fs-caption); line-height: 1.5; }
+
+@media (min-width: 901px) {
+  .snowtl { --plot-h: 96px; --today-col: 152px; }
+  .snowtl__strip { column-gap: 4px; }
+  .snowtl__span--now { visibility: visible; }
+  .snowtl__now { display: none; }
+  .snowtl__amount { font-size: 13px; }
+  .snowtl__weekday { font-size: 12px; }
+  .snowtl__compact { display: none; }
+  .snowtl__hero { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; align-self: stretch; height: 100%; padding: 0 8px; text-align: center; }
+  .snowtl__day--today { align-self: stretch; }
+  .snowtl__hero .metric--xl { font-size: 44px; }
+  .snowtl__hero-label { color: var(--muted); font-size: var(--fs-caption); }
+  .snowtl__hero-time { font-size: var(--fs-caption); }
+  .snowtl__detail { min-height: 1.5em; }
+}
