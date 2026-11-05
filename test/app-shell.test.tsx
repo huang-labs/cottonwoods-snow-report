@@ -159,12 +159,12 @@ describe("app shell", () => {
     mockApi(REPORT);
     renderAt("/");
     expect(await loadedHeading("Resorts")).toBeTruthy();
-    // The primary row links to sections, Resorts first; on `/` its row of resorts shows too.
+    // The primary row links to sections, Resorts first; `/` links to resorts from its timelines, not a second row.
     const sectionsNav = screen.getByRole("navigation", { name: "Sections" });
     const navLinks = within(sectionsNav).getAllByRole("link");
     expect(navLinks.map((a) => a.getAttribute("href"))).toEqual(SECTIONS.filter((s) => !s.group).map((s) => sectionHref(s.id)));
     expect(within(sectionsNav).getByRole("link", { name: "Resorts" }).getAttribute("aria-current")).toBe("page");
-    expect(screen.getByRole("navigation", { name: "Resorts" })).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
     // The tabs sit in their own bar after the masthead, with one bar marking the current tab.
     const tabs = document.querySelector(".section-nav__tabs")!;
     expect(tabs.closest("header")).toBeNull();
@@ -175,7 +175,7 @@ describe("app shell", () => {
     expect(screen.getByRole("button", { name: "Dark appearance" })).toBeTruthy();
   });
 
-  it.each(["alta", "snowbird", "solitude", "brighton"])("opens %s from the snowfall table without reloading the report", async (id) => {
+  it.each(["alta", "snowbird", "solitude", "brighton"])("opens %s from its timeline without reloading the report", async (id) => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(REPORT));
     const view = renderAt("/");
     await loadedHeading("Resorts");
@@ -214,11 +214,11 @@ describe("app shell", () => {
       expect(await loadedHeading(title)).toBeTruthy();
       const parent = within(screen.getByRole("navigation", { name: "Sections" })).getByRole("link", { name: "Resorts" });
       expect(parent.hasAttribute("data-current")).toBe(Boolean(SECTIONS[i].group));
-      if (i === 0 || SECTIONS[i].group) {
+      if (SECTIONS[i].group) {
         const resorts = screen.getByRole("navigation", { name: "Resorts" });
         const links = within(resorts).getAllByRole("link");
         expect(links.map((a) => a.getAttribute("href"))).toEqual(["/alta", "/snowbird", "/solitude", "/brighton"]);
-        expect(links.filter((a) => a.getAttribute("aria-current") === "page").map((a) => a.textContent)).toEqual(SECTIONS[i].group ? [SECTIONS[i].label] : []);
+        expect(links.filter((a) => a.getAttribute("aria-current") === "page").map((a) => a.textContent)).toEqual([SECTIONS[i].label]);
       } else {
         expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
       }
@@ -270,13 +270,12 @@ describe("resort navigation", () => {
   const sectionsNav = () => screen.getByRole("navigation", { name: "Sections" });
   const parent = () => within(sectionsNav()).getByRole("link", { name: "Resorts" });
 
-  it("shows the resort row under Resorts on the home page, with no resort marked", () => {
+  it("marks Resorts on the home page without the resort row", () => {
     render(<SectionNav pathname="/" />);
     expect(parent().getAttribute("aria-current")).toBe("page");
     expect(parent().hasAttribute("data-current")).toBe(false);
-    expect(document.getElementById("resort-navigation")!.hasAttribute("inert")).toBe(false);
-    const links = within(screen.getByRole("navigation", { name: "Resorts" })).getAllByRole("link");
-    expect(links.filter((a) => a.hasAttribute("aria-current"))).toHaveLength(0);
+    expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
+    expect(document.getElementById("resort-navigation")!.hasAttribute("inert")).toBe(true);
     // There is no separate disclosure button any more.
     expect(screen.queryByRole("button", { name: "Resorts" })).toBeNull();
   });
@@ -288,7 +287,7 @@ describe("resort navigation", () => {
     expect(within(screen.getByRole("navigation", { name: "Resorts" })).getByRole("link", { name }).getAttribute("aria-current")).toBe("page");
   });
 
-  it("hides the resort row on other sections and shows it again on return", () => {
+  it("shows the resort row only on resort pages", () => {
     const view = render(<SectionNav pathname="/weather" />);
     expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
     expect(document.getElementById("resort-navigation")!.hasAttribute("inert")).toBe(true);
@@ -296,6 +295,6 @@ describe("resort navigation", () => {
     view.rerender(<SectionNav pathname="/alta" />);
     expect(screen.getByRole("navigation", { name: "Resorts" })).toBeTruthy();
     view.rerender(<SectionNav pathname="/" />);
-    expect(screen.getByRole("navigation", { name: "Resorts" })).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
   });
 });

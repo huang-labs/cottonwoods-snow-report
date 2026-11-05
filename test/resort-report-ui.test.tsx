@@ -271,6 +271,16 @@ it("shows each resort as a snowfall timeline: 7 recorded days, the last 24 h, 7 
   expect(container.querySelector("table")).toBeNull();
 });
 
+it("makes each resort's timeline one link to its page, named by the resort", () => {
+  const { container } = render(renderSection("regional", report, FIXTURE_NOW, null));
+  for (const block of container.querySelectorAll(".resort-timeline")) {
+    const links = block.querySelectorAll(".snowtl a");
+    expect(links).toHaveLength(1);
+    expect(links[0].classList.contains("resort-name__link")).toBe(true);
+    expect(links[0].getAttribute("href")).toBe(`/${links[0].textContent!.toLowerCase()}`);
+  }
+});
+
 it("describes every day for screen readers, with no interactive controls", () => {
   const { container } = render(renderSection("regional", report, FIXTURE_NOW, null));
   const alta = container.querySelector(".resort-timeline")!;

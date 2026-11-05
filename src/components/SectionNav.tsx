@@ -79,13 +79,14 @@ function NavRow({ label, pathname, children }: { label: string; pathname: string
 }
 
 /**
- * Resorts (`/`) is the first tab and the parent of the resort pages: its row of
- * resort links shows on `/` and on each resort page, where Resorts stays marked.
+ * Resorts (`/`) is the first tab and the parent of the resort pages: on each resort
+ * page Resorts stays marked and the row of resort links shows beneath it. `/` links
+ * to the resorts from its own timelines, so it shows no row.
  */
 export function SectionNav({ pathname }: { pathname: string | null }) {
   const home = sectionHref(SECTIONS[0].id);
   const resort = SECTIONS.find((s) => s.group && sectionHref(s.id) === pathname);
-  const expanded = pathname === home || Boolean(resort);
+  const expanded = Boolean(resort);
 
   return (
     <div className="section-nav">

@@ -218,7 +218,15 @@ a { color: var(--accent); }
 .resort-timeline:first-child { padding-top: 0; }
 .resort-name { font: 700 var(--fs-title)/1.25 var(--font); letter-spacing: -0.015em; margin: 0; }
 .resort-name__link { color: inherit; text-decoration: none; }
-.resort-name__link:hover, .resort-name__link:focus-visible { color: var(--accent); }
+/* The name's link is stretched over the resort's whole timeline, so the block opens the
+   resort page while staying one keyboard stop named by the resort. */
+.resort-timeline .snowtl { position: relative; }
+.resort-name__link::after { content: ""; position: absolute; inset: -8px; z-index: 1; border-radius: 8px; }
+.resort-name__link:focus-visible { outline: none; }
+.resort-name__link:focus-visible::after { outline: 2px solid var(--accent); }
+@media (hover: hover) {
+  .resort-timeline .snowtl:has(.resort-name__link:hover) .resort-name__link { color: var(--accent); }
+}
 .resort-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .legend { color: var(--muted); font-size: var(--fs-caption); line-height: 1.7; margin-top: calc(16px - var(--page-gap)); }
 .legend .metric__missing, .legend .metric__na { font-size: 1em; }
