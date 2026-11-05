@@ -57,4 +57,4 @@ See [Local development](docs/DEVELOPMENT.md) for the full command reference, sch
 
 ## AI code review
 
-PRs get an advisory PR-Agent review from GLM 5.3 on Workers AI through the `pr-agent` AI Gateway. See [AI code review](docs/AI_CODE_REVIEW.md) for setup and the `/review` command.
+PRs get an advisory PR-Agent review from GLM 5.3 on Workers AI through the `pr-agent` AI Gateway. See [AI code review](docs/AI_CODE_REVIEW.md) for setup and how to rerun a review.
