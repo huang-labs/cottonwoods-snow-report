@@ -2,56 +2,52 @@
 
 [← README](../README.md)
 
-Setup, reviewer selection and manual review commands for the advisory PR workflow.
+Setup and reruns for the advisory PR workflow.
 
 The official [PR-Agent Action](https://github.com/marketplace/actions/the-pr-agent)
-runs **one advisory review per eligible PR event** through OpenRouter. A short
-routing step selects a model; PR-Agent owns inference, review formatting,
-persistent comments, inline findings, coverage and failure reporting.
+runs **one advisory review per eligible PR event**. Every review uses GLM 5.3
+(`@cf/zai-org/glm-5.3`) on Workers AI through the dedicated `pr-agent` AI Gateway.
+PR-Agent owns inference, review formatting, persistent comments, inline findings,
+coverage and failure reporting. No labels are needed.
 
-Apply exactly one author label. PR-number parity keeps the selected reviewer
-stable across pushes while distributing reviews between the other two families:
+Setup: the `pr-agent` gateway (Huang Inc. account) is authenticated, logs requests,
+and has a sliding limit of 100 requests per day, shared with
+`huang-labs/mitchells-snow-report`. Actions secret
+`PR_AGENT_CLOUDFLARE_TOKEN` holds a dedicated user API token limited to Workers AI
+Read and AI Gateway Run on that account; the workflow builds the gateway URL from
+`CLOUDFLARE_ACCOUNT_ID`. That token in `Authorization` also satisfies gateway
+authentication. Every request sends `cf-aig-skip-cache`, so a re-push reruns
+inference. Fallbacks are disabled. Review content goes to Cloudflare Workers AI and
+is visible in the gateway's logs.
 
-| Author label | Even PR number | Odd PR number |
-| --- | --- | --- |
-| `author:codex` | Claude Opus 5.5 | GLM 5.3 |
-| `author:claude` | GPT-6.1 Sol | GLM 5.3 |
-| `author:glm` | Claude Opus 5.5 | GPT-6.1 Sol |
-
-Setup: store a dedicated OpenRouter key as Actions secret `OPENROUTER_API_KEY`;
-set its spending cap/reset period in OpenRouter. Defaults are
-`anthropic/claude-opus-5.5`, `openai/gpt-6.1-sol`, and `z-ai/glm-5.3`. Optional
-repository variables `AI_REVIEW_CLAUDE_MODEL`, `AI_REVIEW_GPT_MODEL`, and
-`AI_REVIEW_GLM_MODEL` accept explicit same-vendor model IDs, without the
-`openrouter/` prefix. Model fallbacks and auto routers are disabled. OpenRouter
-may switch hosting providers serving the same model. Review content is sent to
-OpenRouter and the selected provider under your account privacy settings.
-
-Reviews run on open, reopen, ready-for-review, pushes and author-label changes.
-Drafts, forks, Dependabot and bot events are skipped. Missing/conflicting author
-labels produce an Actions notice without inference. A collaborator with current
-write/maintain/admin permission can post exactly `/review` to rerun; other
-commands and arguments are ignored. Automatic description rewriting and code
-suggestion generation are disabled. Review findings are advisory: keep this
-workflow optional in branch protection. Model/run details identify the reviewer;
-GitHub tests and preview deployment remain independent.
+Reviews run on open, reopen, ready-for-review and pushes. Drafts, forks, Dependabot
+and bot events are skipped. There is no comment command: to rerun, push a new
+commit (`git commit --allow-empty` works). Each push, reopen or ready-for-review
+event reviews the PR head once; duplicate events for a commit replace each other, and an event for a commit that
+is no longer the PR head is skipped before inference. A review already running
+for an older commit finishes, so rapid pushes can each use a request. Automatic description
+rewriting and code suggestion generation are disabled. Review findings are
+advisory and never block a merge, but branch protection on `main` requires the
+`review` check to pass, alongside `test` and `preview`. A failed run (provider,
+auth or the gateway's daily limit) therefore blocks merging until a re-push
+succeeds. A review skipped for a superseded commit still passes.
 
 The `pull_request_target` workflow and review configuration come from trusted
 base/default branches, with no checkout or execution of PR code. PR-Agent reads
-PR data and default-branch AGENTS.md through GitHub's API. Repeated requests for
-the same head cancel each other; different heads have separate concurrency groups
-so delayed older jobs cannot cancel newer heads. Native PR-Agent owns how
-in-progress/full-diff reviews and their persistent findings are updated.
+PR data and default-branch AGENTS.md through GitHub's API.
 
-Policy is in `.pr_agent.toml`: **high reasoning for all three models**, a 131,072-token
-context budget and a 32,768-token completion allowance shared by reasoning and
-the final review. Each model call has up to 20 minutes; the job allows 45 minutes
-for startup and one transient-error retry. Large-PR chunking stays disabled.
-An exhausted budget fails the review rather than lowering reasoning effort.
-These limits are not dollar caps. The official Action wrapper is pinned
-to v0.49.0's commit; its Dockerfile uses upstream's rolling `github_action` image.
+Policy is in `.pr_agent.toml`: high reasoning effort, a 131,072-token context
+budget and a 32,768-token completion allowance shared by reasoning and the final
+review. Each model call has up to 20 minutes; the job allows 45 minutes for
+startup and one transient-error retry. A diff over the budget is reviewed in up to
+four chunks whose findings are merged; files that still do not fit are listed in
+the review's coverage footer. Chunks are reviewed independently, so a chunk cannot
+see code in another chunk. Captured fixtures (`test/fixtures/**`) and
+`package-lock.json` are excluded from review. These limits are not dollar caps;
+the gateway's daily request limit is. The official Action wrapper is pinned to
+v0.49.0's commit; its Dockerfile uses upstream's rolling `github_action` image.
 Update deliberately and check live model compatibility after upgrades.
 
-Automatic reviews activate after merging this workflow/config into main. Existing
-PRs need a new eligible event. Provider/auth/credit failures appear in PR-Agent's
-native output and Actions logs; fix the configuration and post `/review` to retry.
+Workflow and policy changes take effect after merging into main. Provider, auth
+or rate-limit failures appear in PR-Agent's native output, Actions logs and the
+gateway logs; fix the configuration and push a new commit to retry.

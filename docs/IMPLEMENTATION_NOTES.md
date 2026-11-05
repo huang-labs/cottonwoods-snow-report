@@ -573,6 +573,11 @@ Previous and next stay together for continuing after reading. Neighbor resolutio
 
 ## 2026-11-03 — Official PR-Agent Action through OpenRouter
 
+**Superseded.** OpenRouter routing, the `select` job and author labels were
+replaced by a single GLM 5.3 review on Workers AI through the `pr-agent` AI
+Gateway; [AI code review](AI_CODE_REVIEW.md) describes the current setup. The
+Action pin and trusted-base design below still apply.
+
 **Decision.** Use the official Marketplace Action directly, pinned to v0.49.0's
 wrapper commit `efdde4afe14aa401a3889012c7f3e9ef3081a430`. Its Dockerfile still
 uses upstream's rolling `github_action` image; the runtime is not digest-pinned.

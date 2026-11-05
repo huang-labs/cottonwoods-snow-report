@@ -11,6 +11,7 @@ Live at **https://cottonwoods-snow-report.huang.mx**. It runs as the Worker `cot
 | Worker + cron (`*/5 * * * *`) | `wrangler.jsonc` |
 | KV namespace `SNOW_KV` | id `25451aae36fb40b68f530ee747940440` (in `wrangler.jsonc`) |
 | Workers AI | binding `AI`; AI Gateway `snow-report` (`AI_GATEWAY_ID`) with logging, no caching and a daily request limit |
+| PR review AI Gateway | `pr-agent`, logging, sliding 100 requests/day shared with `mitchells-snow-report`; see [AI code review](AI_CODE_REVIEW.md) |
 | Domain | Workers custom domain `cottonwoods-snow-report.huang.mx` (DNS record and certificate managed by Cloudflare). `workers.dev` is disabled; per-PR preview URLs are enabled. |
 | Logs | Workers Logs (`observability.enabled`). Each cron logs one `{"event":"collection",…}` line, including the `recommendation` and `dailySnow` outcomes. Live tail: `npx wrangler tail cottonwoods-snow-report` |
 | Plain vars | `AI_GATEWAY_ID`, `COLLECTOR_CONTACT` (site URL, sent in the User-Agent) |
@@ -20,10 +21,12 @@ Live at **https://cottonwoods-snow-report.huang.mx**. It runs as the Worker `cot
 - Every push to `main` typechecks, tests, builds, and smoke-checks the local Worker, then runs `npm run deploy` (static export + `wrangler deploy`).
 - Every pull request from this repository passes the same checks, then is uploaded with `wrangler versions upload` as a non-deployed Worker version with a stable preview URL (`pr-<number>-cottonwoods-snow-report.huang-inc.workers.dev`), linked in a PR comment. Previews share production bindings, so they read the live KV snapshot; crons stay on the deployed version.
 
-The workflow uses two repository secrets:
+The deploy workflow uses two repository secrets:
 
 - `CLOUDFLARE_API_TOKEN`: the user API token "cottonwoods-snow-report deploy (GitHub Actions)". It is limited to this account (Workers Scripts, Workers KV, Workers Tail, Account Settings read) and the `huang.mx` zone (Workers Routes, Zone read). To rotate it, roll the token in the dashboard (My Profile → API Tokens), then run `gh secret set CLOUDFLARE_API_TOKEN`.
 - `CLOUDFLARE_ACCOUNT_ID`.
+
+The AI review workflow also uses `CLOUDFLARE_ACCOUNT_ID`, plus `PR_AGENT_CLOUDFLARE_TOKEN`: a dedicated user API token with only Workers AI Read and AI Gateway Run on this account.
 
 Optional secrets (`npx wrangler secret put …`):
 
