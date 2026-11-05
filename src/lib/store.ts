@@ -89,7 +89,7 @@ export function mergeSnapshot(latest: Snapshot | null, incoming: Snapshot): Snap
   }
   const stormTracking = mergeStormTracking(latest.stormTracking, incoming.stormTracking);
   if (stormTracking) merged.stormTracking = stormTracking;
-  const snowLog = mergeSnowLog(latest.snowLog, incoming.snowLog);
+  const snowLog = mergeSnowLog(latest.snowLog, incoming.snowLog, new Date(incoming.writtenAt));
   if (snowLog) merged.snowLog = snowLog;
   return merged;
 }

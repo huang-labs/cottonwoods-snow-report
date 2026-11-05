@@ -33,21 +33,23 @@ export function morningOf(t: number): SnowDayKey | null {
 }
 
 /**
- * Sum of an hourly series over a snow day, from `fromMs` when the day is under way.
- * Only a fully covered window is a total: a forecast that ends mid-day, or a missing
- * (null) hour, gives null.
+ * Sum of an hourly series over a snow day, from `fromMs` when the day is under way:
+ * the hour containing `fromMs` counts only its remaining fraction (NWS amounts are
+ * spread evenly over their hours). Only a fully covered window is a total: a forecast
+ * that ends mid-day, or a missing (null) hour, gives null.
  */
 function sumForDay(hours: Array<{ start: string; value: number | null }>, key: SnowDayKey, fromMs: number): number | null {
-  const start = Math.max(snowDayStart(key), Math.floor(fromMs / HOUR) * HOUR);
+  const from = Math.max(snowDayStart(key), fromMs);
+  const start = Math.floor(from / HOUR) * HOUR;
   const end = snowDayEnd(key);
-  if (start >= end) return null;
+  if (from >= end) return null;
   let total = 0;
   let count = 0;
   for (const h of hours) {
     const t = Date.parse(h.start);
     if (t < start || t >= end) continue;
     if (h.value === null) return null;
-    total += h.value;
+    total += t === start ? h.value * ((start + HOUR - from) / HOUR) : h.value;
     count++;
   }
   return count === (end - start) / HOUR ? total : null;

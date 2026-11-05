@@ -1,4 +1,5 @@
 import { addDays, forecastForDay, snowDayEnd, snowDayOf } from "@/lib/snowlog/days";
+import { formatDenver } from "@/lib/time";
 import type { MorningReading, SnowLogState } from "@/lib/snowlog/types";
 import type { CanyonId, Metric, PointForecast, PrimaryResortId, ResortReport } from "@/lib/types";
 
@@ -113,7 +114,8 @@ export function buildSnowTimeline(input: {
   });
   const future = Array.from({ length: TIMELINE_DAYS }, (_, i) => futureDay(addDays(current, i), canyon, forecast?.hourlySnow, now));
   const metric = report?.snowfall.h24 ?? null;
-  const at = report?.reportTime ? `, report ${timeFmt.format(new Date(report.reportTime))}` : "";
+  // The date matters here: an old report would otherwise read like today's.
+  const at = report?.reportTime ? `, report ${formatDenver(report.reportTime, now)}` : "";
   const detail = !metric
     ? `Last 24 h · No report from ${name}`
     : metric.state === "reported"

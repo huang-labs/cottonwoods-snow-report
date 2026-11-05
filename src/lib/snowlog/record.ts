@@ -84,7 +84,9 @@ export function recordSnowLog(previous: SnowLogState | undefined, snapshot: Snap
       // Days that haven't started at collection time: whole-day forecasts only.
       for (let key = addDays(snowDayOf(t), 1); snowDayStart(key) - t < 8 * 86_400_000; key = addDays(key, 1)) {
         const snowIn = forecastForDay(point.hourlySnow, key);
-        if (snowIn === null) break;
+        // An incomplete day (a missing hour, or the forecast's end) is skipped; later
+        // complete days are still recorded.
+        if (snowIn === null) continue;
         const liquidIn = point.hourlyLiquidIn ? liquidForDay(point.hourlySnow, point.hourlyLiquidIn, key) : null;
         days[key] = preferForecast(days[key], { snowIn, ...(liquidIn === null ? {} : { liquidIn }), issuedAt: point.gridUpdatedAt, collectedAt })!;
       }
@@ -94,20 +96,24 @@ export function recordSnowLog(previous: SnowLogState | undefined, snapshot: Snap
   return log;
 }
 
-/** Merge two runs' logs (see store.ts): each day keeps its preferred entry. */
-export function mergeSnowLog(a: SnowLogState | undefined, b: SnowLogState | undefined): SnowLogState | undefined {
-  if (!a) return b;
-  if (!b) return a;
+/**
+ * Merge two runs' logs (see store.ts): each day keeps its preferred entry, and days
+ * past retention at `now` are dropped. The stored log still holds days a run has just
+ * pruned, so retention must apply here too or the union would restore them.
+ */
+export function mergeSnowLog(a: SnowLogState | undefined, b: SnowLogState | undefined, now: Date): SnowLogState | undefined {
+  if (!a && !b) return undefined;
+  const oldest = addDays(snowDayOf(now.getTime()), -SNOW_LOG_RETENTION_DAYS);
   const out: SnowLogState = { resorts: {}, forecasts: {} };
-  for (const id of new Set([...Object.keys(a.resorts), ...Object.keys(b.resorts)]) as Set<PrimaryResortId>) {
-    const days = { ...a.resorts[id] };
-    for (const [k, v] of Object.entries(b.resorts[id] ?? {})) days[k] = preferReading(days[k], v)!;
-    out.resorts[id] = days;
+  for (const id of new Set([...Object.keys(a?.resorts ?? {}), ...Object.keys(b?.resorts ?? {})]) as Set<PrimaryResortId>) {
+    const days = prune(a?.resorts[id], oldest);
+    for (const [k, v] of Object.entries(prune(b?.resorts[id], oldest))) days[k] = preferReading(days[k], v)!;
+    if (Object.keys(days).length) out.resorts[id] = days;
   }
-  for (const c of new Set([...Object.keys(a.forecasts), ...Object.keys(b.forecasts)]) as Set<CanyonId>) {
-    const days = { ...a.forecasts[c] };
-    for (const [k, v] of Object.entries(b.forecasts[c] ?? {})) days[k] = preferForecast(days[k], v)!;
-    out.forecasts[c] = days;
+  for (const c of new Set([...Object.keys(a?.forecasts ?? {}), ...Object.keys(b?.forecasts ?? {})]) as Set<CanyonId>) {
+    const days = prune(a?.forecasts[c], oldest);
+    for (const [k, v] of Object.entries(prune(b?.forecasts[c], oldest))) days[k] = preferForecast(days[k], v)!;
+    if (Object.keys(days).length) out.forecasts[c] = days;
   }
   return out;
 }

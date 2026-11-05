@@ -4,7 +4,7 @@ import { runCollection } from "@/lib/collect";
 import { addDays, forecastForDay, liquidForDay, morningOf, snowDayOf } from "@/lib/snowlog/days";
 import { mergeSnowLog, recordSnowLog } from "@/lib/snowlog/record";
 import type { SnowLogState } from "@/lib/snowlog/types";
-import { mergeSnapshot, MemoryKV, readSnapshot } from "@/lib/store";
+import { mergeSnapshot, MemoryKV, readSnapshot, writeSnapshot } from "@/lib/store";
 import type { Metric, NwsPayload, PrimaryResortId, ResortReport, Snapshot, SourceRecord } from "@/lib/types";
 import { createFixtureFetch, FIXTURE_NOW } from "./fixtureFetch";
 
@@ -47,7 +47,10 @@ describe("snow days", () => {
   it("totals a forecast only over a fully covered day, from now when the day is under way", () => {
     const h = hourly("2026-11-30T12:00:00Z", 48);
     expect(forecastForDay(h, "2026-12-01")).toBe(2.4);
-    expect(forecastForDay(h, "2026-12-01", Date.parse("2026-12-01T06:30:00Z"))).toBe(0.6);
+    // From 06:45 the 06:00 hour counts only its last quarter: 0.025 + 5 × 0.1.
+    expect(forecastForDay(h, "2026-12-01", Date.parse("2026-12-01T06:45:00Z"))).toBe(0.5);
+    // A minute before the day ends, the remaining minute is all that's left.
+    expect(forecastForDay(hourly("2026-11-30T12:00:00Z", 24, 1), "2026-12-01", Date.parse("2026-12-01T11:59:00Z"))).toBe(0);
     expect(forecastForDay(h.slice(0, 40), "2026-12-02")).toBeNull();
   });
 
@@ -55,7 +58,7 @@ describe("snow days", () => {
     const h = hourly("2026-11-30T12:00:00Z", 48);
     const liquid = h.map(() => 0.0125);
     expect(liquidForDay(h, liquid, "2026-12-01")).toBe(0.3);
-    expect(liquidForDay(h, liquid, "2026-12-01", Date.parse("2026-12-01T06:30:00Z"))).toBe(0.08);
+    expect(liquidForDay(h, liquid, "2026-12-01", Date.parse("2026-12-01T06:45:00Z"))).toBe(0.07);
     expect(liquidForDay(h, liquid.map((v, i) => (i === 5 ? null : v)), "2026-12-01")).toBeNull();
     expect(liquidForDay(h, liquid.slice(1), "2026-12-01")).toBeNull();
   });
@@ -129,6 +132,16 @@ describe("recordSnowLog", () => {
     expect(legacy.forecasts.LCC?.["2026-12-02"]).toEqual({ snowIn: 12, issuedAt: "2026-12-01T09:00:00Z", collectedAt: at });
   });
 
+  it("skips a day with a forecast gap but still records the complete days after it", () => {
+    const at = "2026-12-01T03:00:00Z";
+    // Hour 20 (Dec 1 23:00Z) falls in snow day Dec 2.
+    const h = hourly(at, 7 * 24, 0.5).filter((_, i) => i !== 20);
+    const log = recordSnowLog(undefined, snap({ nws: nwsRecord(at, h) }), new Date(at));
+    expect(log.forecasts.LCC?.["2026-12-02"]).toBeUndefined();
+    expect(log.forecasts.LCC?.["2026-12-03"]?.snowIn).toBe(12);
+    expect(log.forecasts.LCC?.["2026-12-07"]?.snowIn).toBe(12);
+  });
+
   it("drops days older than two weeks", () => {
     const previous: SnowLogState = { resorts: { alta: { "2026-11-10": { state: "reported", valueIn: 3, label: "x", windowEnd: null, collectedAt: "2026-11-10T13:00:00Z" }, "2026-11-25": { state: "reported", valueIn: 1, label: "x", windowEnd: null, collectedAt: "2026-11-25T13:00:00Z" } } }, forecasts: {} };
     const log = recordSnowLog(previous, snap({}), new Date("2026-12-01T20:00:00Z"));
@@ -141,11 +154,26 @@ describe("snapshot storage", () => {
     const reading = (state: "reported" | "no_report", collectedAt: string, valueIn?: number) => ({ state, valueIn, label: "x", windowEnd: null, collectedAt });
     const a: SnowLogState = { resorts: { alta: { "2026-12-01": reading("reported", "2026-12-01T13:00:00Z", 4), "2026-11-30": reading("reported", "2026-11-30T13:00:00Z", 1) } }, forecasts: {} };
     const b: SnowLogState = { resorts: { alta: { "2026-12-01": reading("no_report", "2026-12-01T14:00:00Z") }, snowbird: { "2026-12-01": reading("reported", "2026-12-01T14:00:00Z", 2) } }, forecasts: {} };
-    const merged = mergeSnowLog(a, b)!;
+    const merged = mergeSnowLog(a, b, new Date("2026-12-01T15:00:00Z"))!;
     expect(merged.resorts.alta?.["2026-12-01"]?.valueIn).toBe(4);
     expect(merged.resorts.alta?.["2026-11-30"]?.valueIn).toBe(1);
     expect(merged.resorts.snowbird?.["2026-12-01"]?.valueIn).toBe(2);
-    expect(mergeSnapshot({ ...snap({}), snowLog: a }, { ...snap({}), snowLog: b }).snowLog).toEqual(merged);
+    expect(mergeSnapshot({ ...snap({}), snowLog: a }, { ...snap({}), writtenAt: "2026-12-01T15:00:00Z", snowLog: b }).snowLog).toEqual(merged);
+  });
+
+  it("expires days past retention through the real snapshot write, not just the record step", async () => {
+    const kv = new MemoryKV();
+    const old = { state: "reported" as const, valueIn: 3, label: "x", windowEnd: null, collectedAt: "2026-11-10T13:00:00Z" };
+    const recent = { ...old, collectedAt: "2026-11-25T13:00:00Z" };
+    const stored: SnowLogState = { resorts: { alta: { "2026-11-10": old, "2026-11-25": recent } }, forecasts: { LCC: { "2026-11-10": { snowIn: 1, issuedAt: null, collectedAt: "2026-11-09T11:00:00Z" } } } };
+    await writeSnapshot(kv, { ...snap({}), writtenAt: "2026-11-25T14:00:00Z", snowLog: stored });
+    const now = new Date("2026-12-01T20:00:00Z");
+    const pruned = recordSnowLog((await readSnapshot(kv))!.snowLog, snap({}), now);
+    await writeSnapshot(kv, { ...snap({}), writtenAt: now.toISOString(), snowLog: pruned });
+    const log = (await readSnapshot(kv))!.snowLog!;
+    // The stored copy still had Nov 10; the merge must not bring it back.
+    expect(Object.keys(log.resorts.alta!)).toEqual(["2026-11-25"]);
+    expect(log.forecasts.LCC).toBeUndefined();
   });
 
   it("is written by collection and served by the report", async () => {
@@ -192,7 +220,15 @@ describe("timeline model", () => {
     expect(model.future[1].detail).toMatch(/1\.2″ NWS forecast, 24 h to 5 AM/);
     // This forecast ends 6 days out, partway through the last day: no partial total.
     expect(model.future.at(-1)).toMatchObject({ state: "no_forecast", amountIn: null });
-    expect(model.last24.detail).toBe("Last 24 h · 3″ reported by Alta (“Last 24 hrs”, report 3:00 PM)");
+    expect(model.last24.detail).toBe("Last 24 h · 3″ reported by Alta (“Last 24 hrs”, report Today 3:00 PM)");
+  });
+
+  it("dates an old report in the screen-reader description, so it can't pass for today's", () => {
+    const stale = buildSnowTimeline({
+      resort: "alta", name: "Alta", canyon: "LCC", log, now, forecast: null,
+      report: { reportTime: "2026-10-29T22:00:00Z", snowfall: { h24: inches(3) } } as unknown as ResortReport,
+    });
+    expect(stale.last24.detail).toMatch(/report Thu, Oct 29, 4:00 PM\)$/);
   });
 
   it("shares one bar scale, between 6″ and 18″", () => {
