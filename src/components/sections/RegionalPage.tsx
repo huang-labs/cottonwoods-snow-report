@@ -52,7 +52,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
       <DailySnowTeaser post={report.dailySnow} now={now} />
       <header className="page__header">
         <h1>Resorts</h1>
-        <p className="page__sub">Snowfall at each resort: the past week, the last 24h, and the NWS forecast for the week ahead.</p>
+        <p className="page__sub">Snowfall at each resort: the past week, the last 24 h, and the NWS forecast for the week ahead.</p>
       </header>
       <div className="resort-timelines">
         {resorts.map(({ id, source, model }) => {
@@ -78,7 +78,7 @@ export function RegionalPage({ report, now }: { report: ReportResponse; now: Dat
         })}
       </div>
       <p className="legend">
-        <span className="legend__key legend__key--reported" /> reported · <span className="legend__key legend__key--forecast" /> NWS forecast · <span className="legend__key legend__key--ghost" /> what NWS forecast · <span className="metric__value metric__value--zero">0</span> reported zero · <span className="metric__na">–</span> not reported or no new report · <span className="legend__key legend__key--none" /> not recorded. Days end at the morning report (5 AM MST / 6 AM MDT).
+        <span className="legend__key legend__key--reported" /> reported · <span className="legend__key legend__key--forecast" /> NWS forecast · <span className="legend__key legend__key--ghost" /> what NWS forecast · <span className="metric__value metric__value--zero">0</span> reported zero · <span className="metric__na">–</span> not reported or no new report · <span className="legend__key legend__key--none" /> not recorded.
       </p>
       {nws && <SourceLine source={nws} now={now} reportLabel="Forecast grid updated" />}
     </section>

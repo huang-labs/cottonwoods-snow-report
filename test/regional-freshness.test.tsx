@@ -33,10 +33,10 @@ it("ends with the legend, then the NWS forecast's source line only", () => {
   expect(page.querySelector(".source-line")?.textContent).toContain("Forecast grid updated");
 });
 
-it("titles the page Resorts, with 24h written together in the subtitle", () => {
+it("titles the page Resorts, with its subtitle", () => {
   render(<RegionalPage now={now} report={buildReport(null, now)} />);
   expect(document.querySelector("h1")?.textContent).toBe("Resorts");
-  expect(document.querySelector(".page__sub")?.textContent).toBe("Snowfall at each resort: the past week, the last 24h, and the NWS forecast for the week ahead.");
+  expect(document.querySelector(".page__sub")?.textContent).toBe("Snowfall at each resort: the past week, the last 24 h, and the NWS forecast for the week ahead.");
 });
 
 describe("summarizeFreshness", () => {

@@ -42,7 +42,7 @@ function Day({ day, scale }: { day: TimelineDay; scale: number }) {
 /**
  * Daily snowfall around now: 7 past snow days (each resort's morning report), the
  * latest 24 h figure, and 7 days of NWS forecast. The page supplies the heading and
- * anything shown under it, and a shared `scale` when several timelines are shown
+ * a line shown beside it, and a shared `scale` when several timelines are shown
  * together. Each day carries a full description for screen readers; the drawing is
  * hidden from them.
  */
