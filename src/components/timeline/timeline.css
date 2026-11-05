@@ -51,7 +51,7 @@
 .snowtl__day--weekend :is(.snowtl__weekday, .snowtl__date) { color: var(--text); font-weight: 750; }
 
 .snowtl__day--today { background: var(--panel); }
-.snowtl__footer { display: flex; margin-top: 8px; }
+.snowtl__footer { display: flex; justify-content: flex-end; margin-top: 8px; }
 .snowtl__compact { display: contents; }
 .snowtl__hero { display: none; }
 
