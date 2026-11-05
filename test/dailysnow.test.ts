@@ -3,7 +3,7 @@ import { runCollection } from "@/lib/collect";
 import { dailySnowFigureKey, dailySnowKey, emptyDailySnowState, planDailySnow } from "@/lib/dailysnow";
 import { buildContinuity, historyEntry } from "@/lib/dailysnow/continuity";
 import { buildDailyDigest, dailySnowActivity, phaseOf, snowNext } from "@/lib/dailysnow/digest";
-import { allowedAmounts, buildModelInput, DAILY_SNOW_TIMEOUT_MS, SYSTEM_PROMPT, validateDailySnow } from "@/lib/dailysnow/llm";
+import { allowedAmounts, askDailySnow, buildModelInput, DAILY_SNOW_TIMEOUT_MS, SYSTEM_PROMPT, validateDailySnow } from "@/lib/dailysnow/llm";
 import { IN_FLIGHT_MS, MAX_ATTEMPTS, RETRY_AFTER_MS, shouldRunDailySnow } from "@/lib/dailysnow/schedule";
 import { inchAmountsIn, ungroundedInches } from "@/lib/ai/grounding";
 import { FALLBACK_MODEL, PRIMARY_MODEL } from "@/lib/ai/model";
@@ -254,6 +254,33 @@ describe("schedule", () => {
 describe("validation", () => {
   const { digest } = buildDailyDigest(structuredClone({ schemaVersion: 1, writtenAt: "", sources: {} }) as Snapshot, null, [], SIX_AM);
   const withData = () => buildDailyDigest(snap(), null, [], SIX_AM).digest;
+  it.each(["title", "summary", "paragraph"])("rejects figure IDs in the model's %s before clipping", (field) => {
+    const d = withData();
+    // Use the supplied catalog, including future IDs, rather than hardcoded families.
+    d.figures.push({ id: "future-chart", caption: "Future chart", shows: "Forecast" });
+    for (const marker of ["[nws-snow-lcc]", "[future-chart]", "future-chart"]) {
+      const text = `${"Snow returns. ".repeat(80)}${marker}`;
+      const raw = answer([], field === "paragraph"
+        ? { sections: [{ id: "update", paragraphs: [{ text, figure: "nws-snow-level" }] }] }
+        : { [field]: text });
+      expect(() => validateDailySnow(raw, d)).toThrow(/figure ID in prose/);
+    }
+  });
+  it("allows ordinary bracketed prose and structured figure placement", () => {
+    const text = "Snow [at higher elevations] returns:";
+    const r = validateDailySnow(answer([], {
+      sections: [{ id: "update", paragraphs: [{ text, figure: "nws-snow-level" }] }],
+    }), withData());
+    expect(r.sections[0].paragraphs).toEqual([{ text, figure: "nws-snow-level" }]);
+  });
+  it("uses the existing fallback when primary output leaks a figure ID", async () => {
+    const { ai, calls } = fakeAi((model) => answer([], model === PRIMARY_MODEL
+      ? { summary: "Snow returns. [nws-snow-lcc]" } : {}));
+    const result = await askDailySnow(ai, withData(), undefined);
+    expect(result.model).toBe(FALLBACK_MODEL);
+    expect(result.fallbackReason).toContain("figure ID in prose: nws-snow-lcc");
+    expect(calls.map((c) => c.model)).toEqual([PRIMARY_MODEL, FALLBACK_MODEL]);
+  });
   it("flags inch amounts that appear nowhere in the data", () => {
     expect(ungroundedInches("We got 12″ and 3-6\" lower down, 0.5″ of water.", [12, 3, 6, 0.5])).toEqual([]);
     expect(ungroundedInches("Up to 30″ fell", [12, 17.1])).toEqual([30]);

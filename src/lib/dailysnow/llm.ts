@@ -46,6 +46,7 @@ Structure:
 - summary: 2–3 sentences (at most 320 characters) covering the whole story.
 - sections: first "update" (when the post is mostly about current/recent weather) or "short-term" (when it is mostly about the next 1–3 days), then optionally "extended" for days 3–7 and beyond. Leave out "extended" when there is nothing useful to say beyond the short term. Each section has 1–6 paragraphs of 1–3 sentences, at most about 800 characters per paragraph; a paragraph that runs longer is cut back to its last complete sentence, so keep each idea in a sentence that can stand on its own.
 - figures: a paragraph may show one figure after it (figure id from the list given, or "none"). When it does, the paragraph usually ends by introducing it with a colon, e.g. "Snow levels fall steadily through tonight:". Use 2–${MAX_FIGURES} figures in the whole post, each at most once, where they support the text. You cannot see images; never describe what a photo or plume chart shows.
+- Put figure IDs only in the paragraph's figure field. Never include IDs or bracketed figure markers in the title, summary or paragraph text; the app inserts the figure separately.
 - Include an accumulated-snow plume when a plume-snow-* figure is available, preferably plume-snow-cln. Introduce it neutrally as University of Utah ensemble guidance; do not imply it plots the numerical six-hour rows or read values from the image.
 - Use only ONE opening section: choose update OR short-term. Keep any next-1–3-day outlook in that same section, rather than adding the other opening section. Only extended may follow it.
 - About 250–450 words in total across sections.
@@ -156,11 +157,18 @@ export function allowedAmounts(digest: DailyDigest): number[] {
 export function validateDailySnow(raw: unknown, digest: DailyDigest): LlmDailySnow {
   const o = raw as Record<string, unknown>;
   if (!o || typeof o !== "object") throw new Error("Model output is not an object");
-  const title = clip(o.title, 48);
-  const summary = clip(o.summary, 360);
+  const known = new Set(digest.figures.map((f) => f.id));
+  const prose = (value: unknown, max: number) => {
+    if (typeof value === "string") {
+      const id = [...known].find((id) => value.toLowerCase().includes(id.toLowerCase()));
+      if (id) throw new Error(`Model output contains a figure ID in prose: ${id}`);
+    }
+    return clip(value, max);
+  };
+  const title = prose(o.title, 48);
+  const summary = prose(o.summary, 360);
   if (!title || !summary) throw new Error("Model output has no title or summary");
 
-  const known = new Set(digest.figures.map((f) => f.id));
   const used = new Set<string>();
   const seen = new Set<DailySnowSectionId>();
   const sections: LlmDailySnow["sections"] = [];
@@ -173,7 +181,7 @@ export function validateDailySnow(raw: unknown, digest: DailyDigest): LlmDailySn
     if (sections.some((s) => s.id === "extended") && id !== "extended") continue;
     const paragraphs: DailySnowParagraph[] = [];
     for (const p of (((s as { paragraphs?: unknown }).paragraphs as unknown[] | undefined) ?? []).slice(0, 6)) {
-      const text = clip((p as { text?: unknown })?.text, 800);
+      const text = prose((p as { text?: unknown })?.text, 800);
       if (!text) continue;
       const f = (p as { figure?: unknown }).figure;
       const figure = typeof f === "string" && known.has(f) && !used.has(f) && used.size < MAX_FIGURES ? f : null;
