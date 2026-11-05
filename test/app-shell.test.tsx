@@ -159,7 +159,7 @@ describe("app shell", () => {
     mockApi(REPORT);
     renderAt("/");
     expect(await loadedHeading("Resorts")).toBeTruthy();
-    // The primary row links to sections, Resorts first; its arrow (not opened yet) reveals the resort row.
+    // The primary row links to sections, Resorts first; `/` links to resorts from its timelines, not a second row.
     const sectionsNav = screen.getByRole("navigation", { name: "Sections" });
     const navLinks = within(sectionsNav).getAllByRole("link");
     expect(navLinks.map((a) => a.getAttribute("href"))).toEqual(SECTIONS.filter((s) => !s.group).map((s) => sectionHref(s.id)));
@@ -212,9 +212,8 @@ describe("app shell", () => {
     for (const [i, title] of expected.entries()) {
       const view = renderAt(sectionHref(SECTIONS[i].id));
       expect(await loadedHeading(title)).toBeTruthy();
-      const toggle = screen.getByRole("button", { name: "Show resorts" });
-      expect(toggle.closest(".section-nav__parent")!.hasAttribute("data-current")).toBe(i === 0 || Boolean(SECTIONS[i].group));
-      expect(toggle.getAttribute("aria-expanded")).toBe(String(Boolean(SECTIONS[i].group)));
+      const parent = within(screen.getByRole("navigation", { name: "Sections" })).getByRole("link", { name: "Resorts" });
+      expect(parent.hasAttribute("data-current")).toBe(Boolean(SECTIONS[i].group));
       if (SECTIONS[i].group) {
         const resorts = screen.getByRole("navigation", { name: "Resorts" });
         const links = within(resorts).getAllByRole("link");
@@ -269,61 +268,30 @@ describe("app shell", () => {
 
 describe("resort navigation", () => {
   const sectionsNav = () => screen.getByRole("navigation", { name: "Sections" });
-  const parentLink = () => within(sectionsNav()).getByRole("link", { name: "Resorts" });
-  const toggle = () => screen.getByRole("button", { name: "Show resorts" });
-  const marked = () => parentLink().closest(".section-nav__parent")!.hasAttribute("data-current");
+  const parent = () => within(sectionsNav()).getByRole("link", { name: "Resorts" });
 
-  it("marks Resorts on the home page, and its arrow opens the resort row in place", () => {
+  it("marks Resorts on the home page without the resort row", () => {
     render(<SectionNav pathname="/" />);
-    expect(parentLink().getAttribute("href")).toBe("/");
-    expect(parentLink().getAttribute("aria-current")).toBe("page");
-    expect(marked()).toBe(true);
-    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(parent().getAttribute("aria-current")).toBe("page");
+    expect(parent().hasAttribute("data-current")).toBe(false);
     expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
-    fireEvent.click(toggle());
-    expect(toggle().getAttribute("aria-expanded")).toBe("true");
-    const links = within(screen.getByRole("navigation", { name: "Resorts" })).getAllByRole("link");
-    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/alta", "/snowbird", "/solitude", "/brighton"]);
-    expect(links.filter((a) => a.hasAttribute("aria-current"))).toHaveLength(0);
+    expect(document.getElementById("resort-navigation")!.hasAttribute("inert")).toBe(true);
+    // There is no separate disclosure button any more.
+    expect(screen.queryByRole("button", { name: "Resorts" })).toBeNull();
   });
 
-  it("toggles in place on other sections and closes with Escape, returning focus to the arrow", () => {
-    render(<SectionNav pathname="/weather" />);
-    const panel = document.getElementById(toggle().getAttribute("aria-controls")!)!;
-    expect(panel.hasAttribute("inert")).toBe(true);
-    expect(marked()).toBe(false);
-    fireEvent.click(toggle());
-    expect(panel.hasAttribute("inert")).toBe(false);
-    expect(screen.getByRole("link", { name: "Weather" }).getAttribute("aria-current")).toBe("page");
-    const link = within(screen.getByRole("navigation", { name: "Resorts" })).getByRole("link", { name: "Alta" });
-    link.focus();
-    fireEvent.keyDown(link, { key: "Escape" });
-    expect(document.activeElement).toBe(toggle());
-    expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
-    fireEvent.click(toggle());
-    fireEvent.click(toggle());
-    expect(toggle().getAttribute("aria-expanded")).toBe("false");
-  });
-
-  it.each(["Alta", "Snowbird", "Solitude", "Brighton"])("pins the resort row open on %s, with Resorts marked as the parent", (name) => {
+  it.each(["Alta", "Snowbird", "Solitude", "Brighton"])("keeps Resorts marked as the parent of %s", (name) => {
     render(<SectionNav pathname={`/${name.toLowerCase()}`} />);
-    expect(parentLink().getAttribute("aria-current")).toBeNull();
-    expect(marked()).toBe(true);
-    expect(toggle().getAttribute("aria-expanded")).toBe("true");
-    const resorts = screen.getByRole("navigation", { name: "Resorts" });
-    const link = within(resorts).getByRole("link", { name });
-    expect(link.getAttribute("aria-current")).toBe("page");
-    fireEvent.click(toggle());
-    fireEvent.keyDown(link, { key: "Escape" });
-    expect(toggle().getAttribute("aria-expanded")).toBe("true");
-    expect(screen.getByRole("navigation", { name: "Resorts" })).toBe(resorts);
+    expect(parent().getAttribute("aria-current")).toBeNull();
+    expect(parent().hasAttribute("data-current")).toBe(true);
+    expect(within(screen.getByRole("navigation", { name: "Resorts" })).getByRole("link", { name }).getAttribute("aria-current")).toBe("page");
   });
 
-  it("closes an opened row when the route changes", () => {
-    const view = render(<SectionNav pathname="/" />);
-    fireEvent.click(toggle());
-    view.rerender(<SectionNav pathname="/weather" />);
+  it("shows the resort row only on resort pages", () => {
+    const view = render(<SectionNav pathname="/weather" />);
     expect(screen.queryByRole("navigation", { name: "Resorts" })).toBeNull();
+    expect(document.getElementById("resort-navigation")!.hasAttribute("inert")).toBe(true);
+    expect(parent().hasAttribute("data-current")).toBe(false);
     view.rerender(<SectionNav pathname="/alta" />);
     expect(screen.getByRole("navigation", { name: "Resorts" })).toBeTruthy();
     view.rerender(<SectionNav pathname="/" />);

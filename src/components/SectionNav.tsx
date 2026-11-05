@@ -9,9 +9,9 @@ const useBrowserLayoutEffect = typeof window === "undefined" ? useEffect : useLa
 
 interface Bar { left: number; width: number }
 
-/** The current page link, or the Resorts tab (its link and arrow) on `/` and resort pages. */
+/** The current page link, or the parent section's link on one of its child pages. */
 function activeTab(tabs: HTMLElement | null): HTMLElement | null {
-  return tabs?.querySelector<HTMLElement>(":scope > a[aria-current='page'], :scope > [data-current]") ?? null;
+  return tabs?.querySelector<HTMLElement>(":scope > a[aria-current='page'], :scope > a[data-current]") ?? null;
 }
 
 /** Both rows share scrolling hints, active-tab placement and underline motion. */
@@ -79,42 +79,23 @@ function NavRow({ label, pathname, children }: { label: string; pathname: string
 }
 
 /**
- * Resorts is the first tab and the parent of the resort pages. Its name links to `/`;
- * the arrow beside it shows the row of resort links in place on any page. Resort
- * pages pin that row open, with Resorts marked as the parent.
+ * Resorts (`/`) is the first tab and the parent of the resort pages: on each resort
+ * page Resorts stays marked and the row of resort links shows beneath it. `/` links
+ * to the resorts from its own timelines, so it shows no row.
  */
 export function SectionNav({ pathname }: { pathname: string | null }) {
   const home = sectionHref(SECTIONS[0].id);
-  const toggle = useRef<HTMLButtonElement>(null);
-  const [disclosure, setDisclosure] = useState({ pathname, open: false });
-  // Reset before rendering a new route, including browser back/forward navigation.
-  if (disclosure.pathname !== pathname) setDisclosure({ pathname, open: false });
   const resort = SECTIONS.find((s) => s.group && sectionHref(s.id) === pathname);
-  const expanded = Boolean(resort) || (disclosure.pathname === pathname && disclosure.open);
-  const parentCurrent = pathname === home || Boolean(resort);
+  const expanded = Boolean(resort);
 
   return (
-    <div className="section-nav" onKeyDown={(event) => {
-      if (event.key === "Escape" && expanded && !resort) {
-        setDisclosure({ pathname, open: false });
-        toggle.current?.focus();
-      }
-    }}>
+    <div className="section-nav">
       <NavRow label="Sections" pathname={pathname}>
-        {SECTIONS.filter((s) => !s.group).map((s) =>
-          sectionHref(s.id) === home ? (
-            <span key={s.id} className="section-nav__parent" data-current={parentCurrent ? "" : undefined}>
-              <Link href={home} aria-current={pathname === home ? "page" : undefined}>{s.label}</Link>
-              <button ref={toggle} type="button" className="section-nav__toggle" aria-label="Show resorts"
-                aria-expanded={expanded} aria-controls="resort-navigation" aria-disabled={resort ? true : undefined}
-                onClick={() => { if (!resort) setDisclosure({ pathname, open: !expanded }); }}>
-                <span className="section-nav__chevron" aria-hidden="true" />
-              </button>
-            </span>
-          ) : (
-            <Link key={s.id} href={sectionHref(s.id)} aria-current={sectionHref(s.id) === pathname ? "page" : undefined}>{s.label}</Link>
-          ),
-        )}
+        {SECTIONS.filter((s) => !s.group).map((s) => (
+          <Link key={s.id} href={sectionHref(s.id)}
+            aria-current={sectionHref(s.id) === pathname ? "page" : undefined}
+            data-current={sectionHref(s.id) === home && resort ? "" : undefined}>{s.label}</Link>
+        ))}
       </NavRow>
       <div id="resort-navigation" className="section-nav__subnav" data-expanded={expanded ? "" : undefined}
         inert={!expanded} aria-hidden={!expanded}>
