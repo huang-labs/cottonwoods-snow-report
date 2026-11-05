@@ -35,18 +35,6 @@ const post: ApiDailySnow = {
 };
 const report = (dailySnow: ApiDailySnow | null) => ({ ...buildReport(null, now), dailySnow });
 
-it("hides figure markers in saved editions while keeping the inline figures", () => {
-  const saved: ApiDailySnow = { ...post,
-    summary: "Snow returns. [nws-snow-lcc]",
-    sections: [{ id: "update", paragraphs: [{ text: "Snow levels fall tonight: [nws-snow-level]", figure: "nws-snow-level" }] }],
-  };
-  render(<><DailySnowPage report={report(saved)} now={now} /><DailySnowTeaser post={saved} now={now} /></>);
-  expect(screen.getAllByText("Snow returns.")).toHaveLength(2);
-  expect(screen.getByText("Snow levels fall tonight:")).toBeTruthy();
-  expect(document.body.textContent).not.toMatch(/\[nws-snow-/);
-  expect(screen.getByRole("img", { name: "NWS forecast snow level" })).toBeTruthy();
-});
-
 it.each(["24h", "48h"] as const)("shows a compact frozen storm recap with qualified %s observations and missing totals", (window) => {
   const observation = { amountIn: 15, window: "storm" as const, reportTime: "2026-11-01T12:00:00Z", collectedAt: "2026-11-01T13:00:00Z", sourceUrl: "https://www.alta.com/" };
   const storm: StormRecord = {

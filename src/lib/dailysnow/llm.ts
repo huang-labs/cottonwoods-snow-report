@@ -157,11 +157,18 @@ export function allowedAmounts(digest: DailyDigest): number[] {
 export function validateDailySnow(raw: unknown, digest: DailyDigest): LlmDailySnow {
   const o = raw as Record<string, unknown>;
   if (!o || typeof o !== "object") throw new Error("Model output is not an object");
-  const title = clip(o.title, 48);
-  const summary = clip(o.summary, 360);
+  const known = new Set(digest.figures.map((f) => f.id));
+  const prose = (value: unknown, max: number) => {
+    if (typeof value === "string") {
+      const id = [...known].find((id) => value.toLowerCase().includes(id.toLowerCase()));
+      if (id) throw new Error(`Model output contains a figure ID in prose: ${id}`);
+    }
+    return clip(value, max);
+  };
+  const title = prose(o.title, 48);
+  const summary = prose(o.summary, 360);
   if (!title || !summary) throw new Error("Model output has no title or summary");
 
-  const known = new Set(digest.figures.map((f) => f.id));
   const used = new Set<string>();
   const seen = new Set<DailySnowSectionId>();
   const sections: LlmDailySnow["sections"] = [];
@@ -174,7 +181,7 @@ export function validateDailySnow(raw: unknown, digest: DailyDigest): LlmDailySn
     if (sections.some((s) => s.id === "extended") && id !== "extended") continue;
     const paragraphs: DailySnowParagraph[] = [];
     for (const p of (((s as { paragraphs?: unknown }).paragraphs as unknown[] | undefined) ?? []).slice(0, 6)) {
-      const text = clip((p as { text?: unknown })?.text, 800);
+      const text = prose((p as { text?: unknown })?.text, 800);
       if (!text) continue;
       const f = (p as { figure?: unknown }).figure;
       const figure = typeof f === "string" && known.has(f) && !used.has(f) && used.size < MAX_FIGURES ? f : null;
