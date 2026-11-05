@@ -89,9 +89,14 @@ describe("recordSnowLog", () => {
     expect(stale.resorts.alta?.["2026-12-01"]).toMatchObject({ state: "reported", valueIn: 2 });
   });
 
-  it("treats Snowbird's 24 h as ending at fetch time, whatever its publish time", () => {
-    const log = recordSnowLog(undefined, snap({ snowbird: resortRecord("snowbird", "2026-12-01T13:00:00Z", "2026-11-29T23:00:00Z", inches(0, "24 Hour")) }), new Date("2026-12-01T13:00:00Z"));
-    expect(log.resorts.snowbird?.["2026-12-01"]).toMatchObject({ state: "reported", valueIn: 0, windowEnd: "2026-12-01T13:00:00Z" });
+  it("needs a fresh Snowbird publication too: its fetch-time rolling 0 isn't a report", () => {
+    // Snowbird recomputes 24 h at fetch time from published reports only, so an old
+    // publication reads 0 even after snow; that morning has no new report.
+    const stale = recordSnowLog(undefined, snap({ snowbird: resortRecord("snowbird", "2026-12-01T13:00:00Z", "2026-11-29T23:00:00Z", inches(0, "24 Hour")) }), new Date("2026-12-01T13:00:00Z"));
+    expect(stale.resorts.snowbird?.["2026-12-01"]).toMatchObject({ state: "no_report", windowEnd: "2026-11-29T23:00:00Z" });
+    // Once that morning's report is published, its figure is recorded and replaces the gap.
+    const fresh = recordSnowLog(stale, snap({ snowbird: resortRecord("snowbird", "2026-12-01T16:40:00Z", "2026-12-01T16:30:00Z", inches(9, "24 Hour")) }), new Date("2026-12-01T16:40:00Z"));
+    expect(fresh.resorts.snowbird?.["2026-12-01"]).toMatchObject({ state: "reported", valueIn: 9, windowEnd: "2026-12-01T16:30:00Z" });
   });
 
   it("keeps the resort's not-reported and unavailable states", () => {

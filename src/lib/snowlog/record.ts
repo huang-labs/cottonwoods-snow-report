@@ -9,15 +9,12 @@ export const RESORT_CANYON: Record<PrimaryResortId, CanyonId> = { alta: "LCC", s
 export const SNOW_LOG_RETENTION_DAYS = 14;
 
 /**
- * Snowbird computes its 24 h total from its report history at fetch time, so its
- * window ends when we fetch, not at its publish time (docs/IMPLEMENTATION_NOTES.md).
- */
-const ROLLING_AT_FETCH = new Set<PrimaryResortId>(["snowbird"]);
-
-/**
  * A morning's 24 h figure must end after ~8–9 PM the evening before (9 h before the
  * snow day ends). An older window is yesterday's report, and recording it again would
  * count the same snow twice. Alta and Brighton publish around 1 AM; Solitude near 7 AM.
+ * Snowbird is no exception: its 24 h is recomputed at fetch time, but only from the
+ * reports it has published, so with no new report it reads 0 even after snow. Its
+ * publication time is what shows whether the morning's figure is real.
  */
 const MAX_WINDOW_LEAD_MS = 9 * 3_600_000;
 
@@ -39,7 +36,7 @@ export function preferForecast(a: DayAheadForecast | undefined, b: DayAheadForec
 
 function reading(id: PrimaryResortId, report: ResortReport, collectedAt: string, day: SnowDayKey): MorningReading {
   const m: Metric = report.snowfall.h24;
-  const windowEnd = ROLLING_AT_FETCH.has(id) ? collectedAt : report.reportTime;
+  const windowEnd = report.reportTime;
   const fresh = windowEnd !== null && Date.parse(windowEnd) >= Date.parse(`${day}T12:00:00Z`) - MAX_WINDOW_LEAD_MS;
   if (!fresh) return { state: "no_report", label: m.label, windowEnd, collectedAt };
   if (m.state === "reported") return { state: "reported", valueIn: m.value, label: m.label, windowEnd, collectedAt };
