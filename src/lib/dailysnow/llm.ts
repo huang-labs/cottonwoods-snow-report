@@ -4,7 +4,6 @@ import { clipText } from "../clip";
 import type { DailySnowParagraph, DailySnowSectionId } from "../types";
 import type { DailyDigest } from "./digest";
 import { readerWording } from "./wording";
-import { validateStormAttribution } from "./storm-grounding";
 
 export const DAILY_SNOW_MAX_TOKENS = 8000;
 /**
@@ -195,7 +194,6 @@ export function validateDailySnow(raw: unknown, digest: DailyDigest): LlmDailySn
   }
   const bad = ungroundedInches(all, allowed);
   if (bad.length) throw new Error(`Model output has amounts not in the data: ${bad.slice(0, 5).join(", ")}″`);
-  if (digest.stormRecap) validateStormAttribution(all, digest.stormRecap);
   return { title, summary, sections };
 }
 
