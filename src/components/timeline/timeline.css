@@ -51,7 +51,8 @@
 .snowtl__day--weekend :is(.snowtl__weekday, .snowtl__date) { color: var(--text); font-weight: 750; }
 
 .snowtl__day--today { background: var(--panel); }
-.snowtl__footer { display: flex; justify-content: flex-end; margin-top: 8px; }
+/* Left on phones, under the name; right on desktop. */
+.snowtl__footer { display: flex; margin-top: 8px; }
 .snowtl__compact { display: contents; }
 .snowtl__hero { display: none; }
 
@@ -62,6 +63,7 @@
   .snowtl__head { display: flex; align-items: baseline; }
   .snowtl__heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; }
   .snowtl__reported { display: none; }
+  .snowtl__footer { justify-content: flex-end; }
   .snowtl__amount { font-size: 13px; }
   .snowtl__weekday { font-size: 12px; }
   .snowtl__compact { display: none; }
