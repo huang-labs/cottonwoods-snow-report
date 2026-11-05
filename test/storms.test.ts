@@ -4,7 +4,8 @@ import { buildDailyDigest } from "@/lib/dailysnow/digest";
 import { archiveStorms, trackStorms } from "@/lib/dailysnow/storm-store";
 import { advanceStormTracking, mergeStormTracking, seedStormTracking, stormDigest, stormForPost, stormKey } from "@/lib/dailysnow/storms";
 import { readerWording } from "@/lib/dailysnow/wording";
-import { buildModelInput, validateDailySnow } from "@/lib/dailysnow/llm";
+import { askDailySnow, buildModelInput, validateDailySnow } from "@/lib/dailysnow/llm";
+import { PRIMARY_MODEL } from "@/lib/ai/model";
 import { mergeSnapshot, MemoryKV, readSnapshot, writeSnapshot } from "@/lib/store";
 import type { DailySnowPost, NwsPayload, PrimaryResortId, ResortCamsPayload, ResortReport, Snapshot } from "@/lib/types";
 import { createFixtureFetch } from "./fixtureFetch";
@@ -281,9 +282,27 @@ describe("persistent storm observations", () => {
     expect(validateDailySnow(raw, d).sections[0].paragraphs[0].text).toBe("The NWS expects a dry day.");
     expect(() => validateDailySnow({ ...raw, summary: "The final numbers are in." }, d)).toThrow(/final storm totals/);
     expect(() => validateDailySnow({ ...raw, summary: "Alta reported 99″ for the storm." }, d)).toThrow(/not in the data/);
-    expect(() => validateDailySnow({ ...raw, summary: "Alta's storm total is 14″." }, d)).toThrow(/unsupported storm total to Alta/);
-    expect(() => validateDailySnow({ ...raw, summary: "Snowbird's storm total is 15″." }, d)).toThrow(/unsupported storm total to Snowbird/);
     expect(JSON.stringify(buildModelInput("test", d))).toContain("storm-recap");
+  });
+
+  it("keeps the primary model when prose distinguishes a rolling observation from a storm total", async () => {
+    const s = snapshot(0, { snowbird: { h48: 15 } });
+    s.stormTracking = run(s);
+    const d = buildDailyDigest(s, null, [], at(0)).digest;
+    expect(d.stormRecap?.resorts.find((r) => r.name === "Snowbird")).toMatchObject({
+      total: null, rolling: { amountIn: 15, window: "48h" },
+    });
+    const text = "Snowbird reported 15″ over 48 hours during the storm; this is a rolling observation rather than a storm total.";
+    const raw = { title: "A Break", summary: "Earlier observations put the storm in context.", sections: [{ id: "update", paragraphs: [{ text, figure: "storm-recap" }] }] };
+    const calls: string[] = [];
+    const result = await askDailySnow({ async run(model) {
+      calls.push(model);
+      return { response: JSON.stringify(raw) };
+    } }, d, undefined);
+    expect(calls).toEqual([PRIMARY_MODEL]);
+    expect(result.fallbackReason).toBeUndefined();
+    expect(result.value.sections[0].paragraphs[0].text).toBe(text);
+    expect(() => validateDailySnow({ ...raw, summary: "Snowbird reported 99″ over 48 hours." }, d)).toThrow(/not in the data/);
   });
 
   it("preserves both the storm recap and required plume within the six-figure budget", async () => {
