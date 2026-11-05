@@ -35,26 +35,29 @@ const post: ApiDailySnow = {
 };
 const report = (dailySnow: ApiDailySnow | null) => ({ ...buildReport(null, now), dailySnow });
 
-it("shows a frozen storm recap with qualified rolling observations, missing totals, and source times", () => {
+it.each(["24h", "48h"] as const)("shows a compact frozen storm recap with qualified %s observations and missing totals", (window) => {
   const observation = { amountIn: 15, window: "storm" as const, reportTime: "2026-11-01T12:00:00Z", collectedAt: "2026-11-01T13:00:00Z", sourceUrl: "https://www.alta.com/" };
   const storm: StormRecord = {
     id: "storm", firstObservedAt: observation.reportTime, lastSnowAt: observation.reportTime, updatedAt: observation.collectedAt,
     status: "wrapping-up", closedAt: null, closureReason: null,
     resorts: [
       { id: "alta", name: "Alta", total: { ...observation, previousAmountIn: 16 }, rolling: null },
-      { id: "snowbird", name: "Snowbird", total: null, rolling: { ...observation, window: "48h", sourceUrl: "https://www.snowbird.com/" } },
+      { id: "snowbird", name: "Snowbird", total: null, rolling: { ...observation, window, sourceUrl: "https://www.snowbird.com/" } },
+      { id: "solitude", name: "Solitude", total: { ...observation, amountIn: 9, previousAmountIn: 8 }, rolling: null, counterResetAt: observation.collectedAt, latestSegment: { ...observation, amountIn: 2 } },
       { id: "brighton", name: "Brighton", total: null, rolling: null },
     ],
   };
-  const withStorm = { ...post, stormRecap: storm, figures: { ...post.figures, "storm-recap": { id: "storm-recap", kind: "storm-recap" as const, caption: "Storm recap", storm } } };
+  const caption = "Storm recap · tracked since Yesterday 6:00 AM";
+  const withStorm = { ...post, stormRecap: storm, figures: { ...post.figures, "storm-recap": { id: "storm-recap", kind: "storm-recap" as const, caption, storm } } };
   render(<DailySnowPage report={report(withStorm)} now={now} />);
   const table = within(screen.getByRole("table", { name: "Observations for this storm" }));
-  expect(table.getByText("Earlier 48 h observation", { exact: false })).toBeTruthy();
-  expect(table.getByText(/Full storm total unavailable · Checked/)).toBeTruthy();
-  expect(table.getByText("Source revised from 16″")).toBeTruthy();
-  expect(table.getByText("— · Storm total unavailable")).toBeTruthy();
-  expect(table.getAllByText(/Report Today 5:00 AM/i)).toHaveLength(2);
-  expect(table.getByRole("link", { name: "Alta" }).getAttribute("href")).toBe("https://www.alta.com/");
+  expect(table.getByRole("row", { name: "Alta 15″ · Reported storm total" })).toBeTruthy();
+  expect(table.getByRole("row", { name: `Snowbird 15″ · Earlier ${window === "48h" ? "48 h" : "24 h"} observation` })).toBeTruthy();
+  expect(table.getByRole("row", { name: "Solitude 9″ · Earlier reported storm total" })).toBeTruthy();
+  expect(table.getByRole("row", { name: "Brighton — · Storm total unavailable" })).toBeTruthy();
+  expect(table.queryAllByRole("link")).toHaveLength(0);
+  expect(table.queryByText(/Checked|Report Today|Previously reported|Source revised|Source counter reset|since reset|Full storm total unavailable/i)).toBeNull();
+  expect(screen.getByText(caption, { selector: "figcaption" })).toBeTruthy();
   expect(document.querySelectorAll(".dailysnow-storm")).toHaveLength(1);
 });
 
