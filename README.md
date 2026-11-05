@@ -57,4 +57,4 @@ See [Local development](docs/DEVELOPMENT.md) for the full command reference, sch
 
 ## AI code review
 
-PRs use an advisory reviewer from another model family. Apply exactly one author label: `author:codex`, `author:claude`, or `author:glm`. See [AI code review](docs/AI_CODE_REVIEW.md) for setup, model routing and the `/review` command.
+PRs get an advisory PR-Agent review from GLM 5.3 on Workers AI through the `pr-agent` AI Gateway. See [AI code review](docs/AI_CODE_REVIEW.md) for setup and the `/review` command.
