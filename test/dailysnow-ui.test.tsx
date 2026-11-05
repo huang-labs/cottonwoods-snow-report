@@ -42,8 +42,8 @@ it.each(["24h", "48h"] as const)("shows a compact frozen storm recap with qualif
     status: "wrapping-up", closedAt: null, closureReason: null,
     resorts: [
       { id: "alta", name: "Alta", total: { ...observation, previousAmountIn: 16 }, rolling: null },
-      { id: "snowbird", name: "Snowbird", total: null, rolling: { ...observation, window, sourceUrl: "https://www.snowbird.com/" } },
-      { id: "solitude", name: "Solitude", total: { ...observation, amountIn: 9, previousAmountIn: 8 }, rolling: null, counterResetAt: observation.collectedAt, latestSegment: { ...observation, amountIn: 2 } },
+      { id: "snowbird", name: "Snowbird", total: null, rolling: { ...observation, window, reportTime: "2026-10-31T12:00:00Z", sourceUrl: "https://www.snowbird.com/" } },
+      { id: "solitude", name: "Solitude", total: { ...observation, amountIn: 9, previousAmountIn: 8, reportTime: null }, rolling: null, counterResetAt: observation.collectedAt, latestSegment: { ...observation, amountIn: 2 } },
       { id: "brighton", name: "Brighton", total: null, rolling: null },
     ],
   };
@@ -51,10 +51,12 @@ it.each(["24h", "48h"] as const)("shows a compact frozen storm recap with qualif
   const withStorm = { ...post, stormRecap: storm, figures: { ...post.figures, "storm-recap": { id: "storm-recap", kind: "storm-recap" as const, caption, storm } } };
   render(<DailySnowPage report={report(withStorm)} now={now} />);
   const table = within(screen.getByRole("table", { name: "Observations for this storm" }));
-  expect(table.getByRole("row", { name: "Alta 15″ · Reported storm total" })).toBeTruthy();
-  expect(table.getByRole("row", { name: `Snowbird 15″ · Earlier ${window === "48h" ? "48 h" : "24 h"} observation` })).toBeTruthy();
-  expect(table.getByRole("row", { name: "Solitude 9″ · Earlier reported storm total" })).toBeTruthy();
-  expect(table.getByRole("row", { name: "Brighton — · Storm total unavailable" })).toBeTruthy();
+  expect(table.getByRole("columnheader", { name: "Report time" })).toBeTruthy();
+  expect(table.getByRole("row", { name: "Alta 15″ · Reported storm total Sun, Nov 1, 5:00 AM" })).toBeTruthy();
+  expect(table.getByRole("row", { name: `Snowbird 15″ · Earlier ${window === "48h" ? "48 h" : "24 h"} observation Sat, Oct 31, 6:00 AM` })).toBeTruthy();
+  expect(table.getByText("Sat, Oct 31, 6:00 AM").getAttribute("datetime")).toBe("2026-10-31T12:00:00Z");
+  expect(table.getByRole("row", { name: "Solitude 9″ · Earlier reported storm total Time unavailable" })).toBeTruthy();
+  expect(table.getByRole("row", { name: "Brighton — · Storm total unavailable —" })).toBeTruthy();
   expect(table.queryAllByRole("link")).toHaveLength(0);
   expect(table.queryByText(/Checked|Report Today|Previously reported|Source revised|Source counter reset|since reset|Full storm total unavailable/i)).toBeNull();
   expect(screen.getByText(caption, { selector: "figcaption" })).toBeTruthy();
