@@ -38,7 +38,9 @@
 /* Forecast: the same hue, striped, so it never reads as a measurement. */
 .snowtl__day--forecast .snowtl__bar { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--accent) 70%, transparent) 0 3px, color-mix(in srgb, var(--accent) 30%, transparent) 3px 6px); }
 /* What NWS forecast for a past day: an outline behind the reported bar. */
-.snowtl__ghost { box-sizing: border-box; min-height: 2px; border: 1.5px dashed color-mix(in srgb, var(--muted) 70%, transparent); border-bottom: 0; }
+/* Wider than the bar and drawn over it, so its sides stay visible beside a taller
+   reported bar and its top edge crosses it when NWS underpredicted. */
+.snowtl__ghost { z-index: 1; pointer-events: none; box-sizing: border-box; width: calc(70% + 8px); max-width: 38px; min-height: 2px; border: 1.5px dashed color-mix(in srgb, var(--muted) 80%, transparent); border-bottom: 0; }
 /* Taller than the shared scale: clipped, with a gap marking the break. */
 .snowtl__bar--over::after { content: ""; position: absolute; left: 0; right: 0; top: 5px; height: 2px; background: var(--bg); }
 /* No entry for the day (before the record began, or no check that morning). */
