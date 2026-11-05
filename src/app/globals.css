@@ -106,22 +106,28 @@ a { color: var(--accent); }
 .section-nav__inner::before { left: 0; background: linear-gradient(to right, var(--bg), transparent); }
 .section-nav__inner::after { right: 0; background: linear-gradient(to left, var(--bg), transparent); }
 .section-nav__inner[data-fade-start]::before, .section-nav__inner[data-fade-end]::after { opacity: 1; }
-.section-nav__tabs > a { position: relative; display: flex; align-items: center; flex-shrink: 0; min-height: 48px; padding: 0; white-space: nowrap; text-decoration: none; font-size: 15px; font-weight: 600; color: var(--muted); cursor: pointer; transition: color 150ms ease; }
-.section-nav__tabs > a:hover { color: var(--text); }
-.section-nav__tabs > a:is([aria-current="page"], [data-current]) { color: var(--accent); }
-.section-nav__tabs > a:focus-visible { outline-offset: -4px; border-radius: 4px; }
-.section-nav__tabs:not([data-bar]) > a:is([aria-current="page"], [data-current])::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--accent); }
+.section-nav__tabs > a, .section-nav__parent { position: relative; display: flex; align-items: center; flex-shrink: 0; min-height: 48px; padding: 0; white-space: nowrap; text-decoration: none; font-size: 15px; font-weight: 600; color: var(--muted); cursor: pointer; transition: color 150ms ease; }
+.section-nav__tabs > a:hover, .section-nav__parent:not([data-current]) > :hover { color: var(--text); }
+.section-nav__tabs > a[aria-current="page"], .section-nav__parent[data-current] { color: var(--accent); }
+.section-nav__tabs > a:focus-visible, .section-nav__parent > :focus-visible { outline-offset: -4px; border-radius: 4px; }
+.section-nav__tabs:not([data-bar]) > :is(a[aria-current="page"], .section-nav__parent[data-current])::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--accent); }
 .section-nav__bar { position: absolute; left: 0; bottom: 0; width: 0; height: 2px; border-radius: 2px 2px 0 0; background: var(--accent); pointer-events: none; }
 .section-nav__tabs:not([data-bar]) > .section-nav__bar { display: none; }
 .section-nav__tabs[data-animate] > .section-nav__bar { transition: transform 220ms cubic-bezier(0.2, 0, 0, 1), width 220ms cubic-bezier(0.2, 0, 0, 1); }
 
+/* Resorts: its name links to `/`; the arrow beside it shows the resort row in place. */
+.section-nav__parent > a { align-self: stretch; display: flex; align-items: center; color: inherit; text-decoration: none; }
+.section-nav__toggle { align-self: stretch; display: flex; align-items: center; justify-content: center; width: 28px; margin-right: -6px; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
+.section-nav__toggle[aria-disabled="true"] { cursor: default; }
+.section-nav__chevron { width: 6px; height: 6px; margin-top: -3px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform 150ms ease; }
+.section-nav__toggle[aria-expanded="true"] .section-nav__chevron { transform: translateY(3px) rotate(225deg); }
 .section-nav__subnav { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows 200ms ease, opacity 200ms ease, visibility 200ms; }
 .section-nav__subnav[data-expanded] { grid-template-rows: 1fr; opacity: 1; visibility: visible; }
 .section-nav__reveal { min-height: 0; overflow: hidden; }
 
 @media (min-width: 901px) {
   .section-nav__tabs { gap: 32px; }
-  .section-nav__tabs > a { min-height: 52px; font-size: var(--fs-body); }
+  .section-nav__tabs > a, .section-nav__parent { min-height: 52px; font-size: var(--fs-body); }
 }
 
 .editorial-page { max-width: 1180px; width: 100%; margin: 0 auto; padding: 24px var(--gutter) 64px; }
@@ -393,7 +399,7 @@ a { color: var(--accent); }
 .page__notes { display: flex; flex-direction: column; gap: 6px; margin-top: calc(24px - var(--page-gap)); }
 
 @media (prefers-reduced-motion: reduce) {
-  .section-nav__tabs[data-animate] > .section-nav__bar, .section-nav__subnav { transition: none; }
+  .section-nav__tabs[data-animate] > .section-nav__bar, .section-nav__chevron, .section-nav__subnav { transition: none; }
 }
 
 /* ---- narrow screens (phones and small tablets) ---- */
